@@ -1,0 +1,23 @@
+{
+  "name": "pocketpilot-backend-functions",
+  "private": true,
+  "main": "lib/index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "serve": "npm run build && firebase emulators:start --config ../firebase/firebase.json",
+    "lint": "echo 'No linter configured for backend/functions yet'"
+  },
+  "dependencies": {
+    "@qdrant/js-client-rest": "^1.15.0",
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,74 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: pocketpilot-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: pocketpilot-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      - ollama
+    environment:
+      OLLAMA_HOST: "http://ollama:11434"
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "until ollama list >/dev/null 2>&1; do sleep 2; done &&
+      ollama pull llama3.2:3b &&
+      ollama pull nomic-embed-text"
+    restart: "no"
+
+  firebase-emulators:
+    build:
+      context: .
+      dockerfile: docker/firebase-emulators.Dockerfile
+    container_name: pocketpilot-firebase
+    environment:
+      OLLAMA_BASE_URL: "http://ollama:11434"
+      OLLAMA_CHAT_MODEL: "llama3.2:3b"
+      OLLAMA_EMBED_MODEL: "nomic-embed-text"
+      QDRANT_URL: "http://qdrant:6333"
+    depends_on:
+      - qdrant
+      - ollama
+    ports:
+      - "4000:4000"
+      - "5001:5001"
+      - "8080:8080"
+      - "9099:9099"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    container_name: pocketpilot-web
+    environment:
+      VITE_FIREBASE_API_KEY: "demo-api-key"
+      VITE_FIREBASE_AUTH_DOMAIN: "demo-pocketpilot.firebaseapp.com"
+      VITE_FIREBASE_PROJECT_ID: "demo-pocketpilot"
+      VITE_FIREBASE_APP_ID: "1:000000000000:web:local"
+      VITE_USE_FIREBASE_EMULATORS: "true"
+      VITE_FUNCTIONS_BASE_URL: "http://127.0.0.1:5001/demo-pocketpilot/us-central1"
+    depends_on:
+      - firebase-emulators
+    ports:
+      - "5173:5173"
+    restart: unless-stopped
+
+volumes:
+  qdrant_data:
+  ollama_data:

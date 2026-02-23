@@ -1,0 +1,11 @@
+{
+  "name": "@pocketpilot/services",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/factory/web.ts",
+  "dependencies": {
+    "@pocketpilot/core": "file:../core",
+    "firebase": "^11.1.0"
+  }
+}
