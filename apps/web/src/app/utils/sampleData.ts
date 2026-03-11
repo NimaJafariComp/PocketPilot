@@ -8,10 +8,30 @@ const merchants = [
   'Panera Bread', 'McDonalds', 'Subway', 'Salary Deposit', 'Freelance Payment'
 ];
 
-const categories = [
-  'Groceries', 'Dining', 'Transportation', 'Entertainment', 
-  'Shopping', 'Bills', 'Health', 'Income'
-];
+const merchantCategoryMap: Record<string, string> = {
+  'Whole Foods': 'Groceries',
+  'Trader Joes': 'Groceries',
+  Costco: 'Groceries',
+  Starbucks: 'Dining',
+  Chipotle: 'Dining',
+  'Panera Bread': 'Dining',
+  McDonalds: 'Dining',
+  Subway: 'Dining',
+  'Shell Gas': 'Transportation',
+  Uber: 'Transportation',
+  Netflix: 'Entertainment',
+  Spotify: 'Entertainment',
+  Amazon: 'Shopping',
+  Target: 'Shopping',
+  'Home Depot': 'Shopping',
+  'Best Buy': 'Shopping',
+  'Apple Store': 'Shopping',
+  'CVS Pharmacy': 'Health',
+  'Salary Deposit': 'Income',
+  'Freelance Payment': 'Income',
+};
+
+const categories = ['Groceries', 'Dining', 'Transportation', 'Entertainment', 'Shopping', 'Bills', 'Health'];
 
 function randomAmount(min: number, max: number): number {
   return Math.round((Math.random() * (max - min) + min) * 100) / 100;
@@ -26,8 +46,8 @@ export function generateSampleTransactions(count: number = 50): Omit<Transaction
   
   for (let i = 0; i < count; i++) {
     const merchant = merchants[Math.floor(Math.random() * merchants.length)];
-    const isIncome = merchant.includes('Salary') || merchant.includes('Freelance');
-    const category = isIncome ? 'Income' : categories[Math.floor(Math.random() * (categories.length - 1))];
+    const category = merchantCategoryMap[merchant] || categories[Math.floor(Math.random() * categories.length)];
+    const isIncome = category === 'Income';
     
     let amount: number;
     if (isIncome) {

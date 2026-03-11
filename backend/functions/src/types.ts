@@ -46,3 +46,28 @@ export interface RagChatBody {
   documents?: RagDocumentInput[];
   topK?: number;
 }
+
+export interface CategorizationRequestItem {
+  merchant: string;
+  amount: number;
+  notes?: string;
+}
+
+export interface CategorizeTransactionsBody {
+  transactions: CategorizationRequestItem[];
+  categories?: string[];
+}
+
+export interface CategorizationResult {
+  category: string;
+  categorySource: "imported" | "manual" | "auto-rule" | "auto-history" | "auto-ai";
+  categoryConfidence: number;
+  categoryNeedsReview: boolean;
+  normalizedMerchant: string;
+  reason?: string;
+}
+
+export interface LearnMerchantCategoryBody {
+  merchant: string;
+  category: string;
+}

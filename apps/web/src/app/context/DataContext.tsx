@@ -24,6 +24,7 @@ interface DataContextType {
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
+const AUTO_CATEGORY_PLACEHOLDER = 'Uncategorized';
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
@@ -33,6 +34,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const seededCategoriesForUser = useRef<string | null>(null);
+  const backfillInFlight = useRef(false);
+  const backfilledTransactionIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (authLoading) return;
@@ -44,6 +47,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setCategories([]);
       setLoading(false);
       seededCategoriesForUser.current = null;
+      backfilledTransactionIds.current = new Set();
+      backfillInFlight.current = false;
       return;
     }
 
@@ -91,9 +96,196 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
   }, [user, authLoading]);
 
+  useEffect(() => {
+    if (!user || loading || backfillInFlight.current) {
+      return;
+    }
+
+    const targets = transactions
+      .filter(
+        (transaction) =>
+          transaction.category === AUTO_CATEGORY_PLACEHOLDER &&
+          !transaction.categorySource &&
+          !backfilledTransactionIds.current.has(transaction.id),
+      )
+      .slice(0, 10);
+
+    if (targets.length === 0) {
+      return;
+    }
+
+    backfillInFlight.current = true;
+    targets.forEach((transaction) => backfilledTransactionIds.current.add(transaction.id));
+
+    const run = async () => {
+      try {
+        const results = await services.categorization.categorizeTransactions({
+          transactions: targets.map((transaction) => ({
+            merchant: transaction.merchant,
+            amount: transaction.amount,
+            notes: transaction.notes ?? '',
+          })),
+          categories: getAvailableCategoryNames(),
+        });
+
+        await Promise.all(
+          targets.map((transaction, index) => {
+            const result = results[index];
+            const updates = result
+              ? {
+                  category: result.category,
+                  categorySource: result.categorySource,
+                  categoryConfidence: result.categoryConfidence,
+                  categoryNeedsReview: result.categoryNeedsReview,
+                  normalizedMerchant: result.normalizedMerchant,
+                }
+              : {
+                  category: AUTO_CATEGORY_PLACEHOLDER,
+                  categorySource: 'auto-ai' as const,
+                  categoryConfidence: 0,
+                  categoryNeedsReview: true,
+                };
+
+            return services.dataStore.updateTransaction(user.id, transaction.id, updates as never);
+          }),
+        );
+      } catch {
+        targets.forEach((transaction) => backfilledTransactionIds.current.delete(transaction.id));
+      } finally {
+        backfillInFlight.current = false;
+      }
+    };
+
+    void run();
+  }, [user, transactions, loading, categories]);
+
+  function getAvailableCategoryNames() {
+    const categoryNames = (categories.length > 0 ? categories : DEFAULT_CATEGORIES).map((category) => category.name);
+    return Array.from(new Set(categoryNames));
+  }
+
+  async function categorizeIfNeeded(
+    transaction: Omit<Transaction, 'id'>,
+    mode: 'manual' | 'imported',
+  ): Promise<Omit<Transaction, 'id'>> {
+    const baseTransaction = {
+      ...transaction,
+      notes: transaction.notes ?? '',
+    };
+
+    if (baseTransaction.category && baseTransaction.category !== AUTO_CATEGORY_PLACEHOLDER) {
+      return {
+        ...baseTransaction,
+        categorySource: mode,
+        categoryConfidence: 1,
+        categoryNeedsReview: false,
+      };
+    }
+
+    const [result] = await services.categorization.categorizeTransactions({
+      transactions: [
+        {
+          merchant: baseTransaction.merchant,
+          amount: baseTransaction.amount,
+          notes: baseTransaction.notes,
+        },
+      ],
+      categories: getAvailableCategoryNames(),
+    });
+
+    if (!result) {
+      return {
+        ...baseTransaction,
+        category: AUTO_CATEGORY_PLACEHOLDER,
+        categorySource: 'auto-ai',
+        categoryConfidence: 0,
+        categoryNeedsReview: true,
+      };
+    }
+
+    return {
+      ...baseTransaction,
+      category: result.category,
+      categorySource: result.categorySource,
+      categoryConfidence: result.categoryConfidence,
+      categoryNeedsReview: result.categoryNeedsReview,
+      normalizedMerchant: result.normalizedMerchant,
+    };
+  }
+
+  async function categorizeManyIfNeeded(
+    newTransactions: Omit<Transaction, 'id'>[],
+  ): Promise<Omit<Transaction, 'id'>[]> {
+    const prepared = newTransactions.map((transaction) => ({
+      ...transaction,
+      notes: transaction.notes ?? '',
+    }));
+
+    const pendingIndices = prepared
+      .map((transaction, index) =>
+        !transaction.category || transaction.category === AUTO_CATEGORY_PLACEHOLDER ? index : -1,
+      )
+      .filter((index) => index >= 0);
+
+    const categorized = prepared.map((transaction) =>
+      transaction.category && transaction.category !== AUTO_CATEGORY_PLACEHOLDER
+        ? {
+            ...transaction,
+            categorySource: 'imported' as const,
+            categoryConfidence: 1,
+            categoryNeedsReview: false,
+          }
+        : transaction,
+    );
+
+    if (pendingIndices.length === 0) {
+      return categorized;
+    }
+
+    const results = await services.categorization.categorizeTransactions({
+      transactions: pendingIndices.map((index) => ({
+        merchant: prepared[index].merchant,
+        amount: prepared[index].amount,
+        notes: prepared[index].notes,
+      })),
+      categories: getAvailableCategoryNames(),
+    });
+
+    pendingIndices.forEach((transactionIndex, resultIndex) => {
+      const result = results[resultIndex];
+      categorized[transactionIndex] = result
+        ? {
+            ...prepared[transactionIndex],
+            category: result.category,
+            categorySource: result.categorySource,
+            categoryConfidence: result.categoryConfidence,
+            categoryNeedsReview: result.categoryNeedsReview,
+            normalizedMerchant: result.normalizedMerchant,
+          }
+        : {
+            ...prepared[transactionIndex],
+            category: AUTO_CATEGORY_PLACEHOLDER,
+            categorySource: 'auto-ai',
+            categoryConfidence: 0,
+            categoryNeedsReview: true,
+          };
+    });
+
+    return categorized;
+  }
+
   async function addTransaction(transaction: Omit<Transaction, 'id'>) {
     if (!user) return;
-    await services.dataStore.addTransaction(user.id, transaction as never);
+    const hadExplicitCategory = !!transaction.category && transaction.category !== AUTO_CATEGORY_PLACEHOLDER;
+    const prepared = await categorizeIfNeeded(transaction, 'manual');
+    await services.dataStore.addTransaction(user.id, prepared as never);
+
+    if (hadExplicitCategory && prepared.category && prepared.category !== AUTO_CATEGORY_PLACEHOLDER) {
+      await services.categorization.learnMerchantCategory({
+        merchant: prepared.merchant,
+        category: prepared.category,
+      });
+    }
   }
 
   async function updateTransaction(id: string, updates: Partial<Transaction>) {
@@ -108,7 +300,30 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   async function importTransactions(newTransactions: Omit<Transaction, 'id'>[]) {
     if (!user || newTransactions.length === 0) return;
-    await Promise.all(newTransactions.map((tx) => services.dataStore.addTransaction(user.id, tx as never)));
+    const preparedTransactions = await categorizeManyIfNeeded(newTransactions);
+    await Promise.all(preparedTransactions.map((tx) => services.dataStore.addTransaction(user.id, tx as never)));
+
+    const rememberedPairs = Array.from(
+      new Map(
+        preparedTransactions
+          .filter(
+            (transaction) =>
+              transaction.category &&
+              transaction.category !== AUTO_CATEGORY_PLACEHOLDER &&
+              transaction.categorySource === 'imported',
+          )
+          .map((transaction) => [`${transaction.merchant}::${transaction.category}`, transaction]),
+      ).values(),
+    );
+
+    await Promise.all(
+      rememberedPairs.map((transaction) =>
+        services.categorization.learnMerchantCategory({
+          merchant: transaction.merchant,
+          category: transaction.category,
+        }),
+      ),
+    );
   }
 
   async function addBudget(budget: Omit<Budget, 'id'>) {

@@ -3,8 +3,14 @@ import { onRequest } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions";
 import type { Request } from "express";
 import { adminAuth } from "./firebaseAdmin.js";
+import {
+  categorizeTransactions as categorizeTransactionsInternal,
+  learnMerchantCategory as learnMerchantCategoryInternal,
+} from "./categorization.js";
 import { ensureVectorCollection, qdrant, vectorCollectionName } from "./qdrant.js";
 import type {
+  CategorizeTransactionsBody,
+  LearnMerchantCategoryBody,
   QueryVectorsBody,
   RagChatBody,
   RagDocumentInput,
@@ -733,6 +739,79 @@ export const queryVectors = onRequest({ region: REGION, cors: true }, async (req
     }
     response.status(500).json({
       error: error instanceof Error ? error.message : "queryVectors failed",
+    });
+  }
+});
+
+export const categorizeTransactions = onRequest({ region: REGION, cors: true }, async (request, response) => {
+  try {
+    if (request.method !== "POST") {
+      response.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+
+    const userId = await verifyUserId(request);
+    const body = request.body as CategorizeTransactionsBody;
+    const transactions = Array.isArray(body?.transactions)
+      ? body.transactions.filter((transaction) => transaction?.merchant && typeof transaction.amount === "number")
+      : [];
+
+    if (transactions.length === 0) {
+      response.status(400).json({ error: "transactions are required" });
+      return;
+    }
+
+    const results = await categorizeTransactionsInternal({
+      userId,
+      transactions,
+      categories: body.categories,
+      ollamaBaseUrl: OLLAMA_BASE_URL,
+      chatModel: OLLAMA_CHAT_MODEL,
+    });
+
+    response.status(200).json({ ok: true, results });
+  } catch (error) {
+    logger.error("categorizeTransactions failed", error);
+    if (isAuthError(error)) {
+      response.status(401).json({ error: error instanceof Error ? error.message : "Unauthorized" });
+      return;
+    }
+    response.status(500).json({
+      error: error instanceof Error ? error.message : "categorizeTransactions failed",
+    });
+  }
+});
+
+export const learnMerchantCategory = onRequest({ region: REGION, cors: true }, async (request, response) => {
+  try {
+    if (request.method !== "POST") {
+      response.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+
+    const userId = await verifyUserId(request);
+    const body = request.body as LearnMerchantCategoryBody;
+
+    if (!body?.merchant?.trim() || !body?.category?.trim()) {
+      response.status(400).json({ error: "merchant and category are required" });
+      return;
+    }
+
+    await learnMerchantCategoryInternal({
+      userId,
+      merchant: body.merchant,
+      category: body.category,
+    });
+
+    response.status(200).json({ ok: true });
+  } catch (error) {
+    logger.error("learnMerchantCategory failed", error);
+    if (isAuthError(error)) {
+      response.status(401).json({ error: error instanceof Error ? error.message : "Unauthorized" });
+      return;
+    }
+    response.status(500).json({
+      error: error instanceof Error ? error.message : "learnMerchantCategory failed",
     });
   }
 });

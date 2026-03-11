@@ -4,6 +4,7 @@ import { fileImportMobile } from '../mobile/file-import.mobile';
 import { exportMobile } from '../mobile/export.mobile';
 import { dialogMobile } from '../mobile/dialog.mobile';
 import { ragHttpMobile } from '../mobile/rag.http.mobile';
+import { categorizationHttpMobile } from '../mobile/categorization.http.mobile';
 
 export function createMobileServices() {
   return {
@@ -12,6 +13,7 @@ export function createMobileServices() {
     fileImport: fileImportMobile,
     dataExport: exportMobile,
     dialog: dialogMobile,
+    categorization: categorizationHttpMobile,
     rag: ragHttpMobile
   };
 }

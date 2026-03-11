@@ -30,6 +30,7 @@ export function ImportCSV() {
     merchant: '',
     amount: '',
     category: '',
+    notes: '',
   });
   const [errors, setErrors] = useState<string[]>([]);
   const [importedCount, setImportedCount] = useState(0);
@@ -56,12 +57,14 @@ export function ImportCSV() {
         const dateCol = cols.find(c => /date/i.test(c)) || '';
         const merchantCol = cols.find(c => /(merchant|description|name|payee)/i.test(c)) || '';
         const amountCol = cols.find(c => /amount/i.test(c)) || '';
+        const notesCol = cols.find(c => /(note|memo|details|location|time)/i.test(c)) || '';
         
         setMapping({
           date: dateCol,
           merchant: merchantCol,
           amount: amountCol,
           category: '',
+          notes: notesCol,
         });
       },
       error: (error) => {
@@ -145,6 +148,7 @@ export function ImportCSV() {
         merchant,
         amount,
         category: mapping.category && row[mapping.category] ? row[mapping.category] : 'Uncategorized',
+        notes: mapping.notes && row[mapping.notes] ? String(row[mapping.notes]).trim() : '',
       };
     });
 
@@ -297,6 +301,24 @@ export function ImportCSV() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label>Notes Column (Optional)</Label>
+                <Select
+                  value={mapping.notes || NO_CATEGORY_VALUE}
+                  onValueChange={(v) => setMapping({ ...mapping, notes: v === NO_CATEGORY_VALUE ? '' : v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select notes column" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_CATEGORY_VALUE}>None</SelectItem>
+                    {headers.map(h => (
+                      <SelectItem key={h} value={h}>{h}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="flex gap-3 pt-4">
@@ -330,6 +352,7 @@ export function ImportCSV() {
                     <TableHead>Merchant</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Category</TableHead>
+                    <TableHead>Notes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -347,6 +370,9 @@ export function ImportCSV() {
                       </TableCell>
                       <TableCell>
                         {mapping.category && row[mapping.category] ? row[mapping.category] : 'Uncategorized'}
+                      </TableCell>
+                      <TableCell className="max-w-[240px] truncate text-muted-foreground">
+                        {mapping.notes && row[mapping.notes] ? row[mapping.notes] : '—'}
                       </TableCell>
                     </TableRow>
                   ))}

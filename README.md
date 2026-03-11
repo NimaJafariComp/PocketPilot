@@ -39,7 +39,7 @@ Useful:
 Or from root:
 - `npm run web:dev`
 
-## Mobile app (scaffold)
+## Mobile app (scaffold) Not implemented yet (optional)
 1. `cd apps/mobile`
 2. `npm install`
 3. `npm run start`

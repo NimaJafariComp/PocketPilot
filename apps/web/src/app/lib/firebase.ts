@@ -4,8 +4,8 @@ import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "demo-api-key",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "pocketpilot-local.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "pocketpilot-local",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "demo-pocketpilot.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "demo-pocketpilot",
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:000000000000:web:local",
 };
 

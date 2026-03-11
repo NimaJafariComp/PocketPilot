@@ -6,6 +6,10 @@ export interface Transaction {
   category: string;
   notes?: string;
   tags?: string[];
+  categorySource?: 'imported' | 'manual' | 'auto-rule' | 'auto-history' | 'auto-ai';
+  categoryConfidence?: number;
+  categoryNeedsReview?: boolean;
+  normalizedMerchant?: string;
 }
 
 export interface Budget {

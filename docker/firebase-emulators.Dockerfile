@@ -24,4 +24,4 @@ COPY backend ./backend
 
 EXPOSE 4000 5001 8080 9099
 
-CMD ["sh", "-c", "npm --prefix backend/functions run build && firebase emulators:start --project demo-pocketpilot --config backend/firebase/firebase.json --only auth,firestore,functions,ui"]
+CMD ["sh", "-c", "mkdir -p backend/firebase/.emulator-data && npm --prefix backend/functions run build && firebase emulators:start --project demo-pocketpilot --config backend/firebase/firebase.json --only auth,firestore,functions,ui --import backend/firebase/.emulator-data --export-on-exit backend/firebase/.emulator-data"]

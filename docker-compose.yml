@@ -44,6 +44,8 @@ services:
     depends_on:
       - qdrant
       - ollama
+    volumes:
+      - firebase_emulator_data:/workspace/backend/firebase/.emulator-data
     ports:
       - "4000:4000"
       - "5001:5001"
@@ -72,3 +74,4 @@ services:
 volumes:
   qdrant_data:
   ollama_data:
+  firebase_emulator_data:

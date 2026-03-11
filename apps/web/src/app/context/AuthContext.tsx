@@ -17,12 +17,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isBootstrapping = true;
+
     const unsubscribe = services.auth.onAuthStateChanged((nextUser) => {
+      if (isBootstrapping) {
+        return;
+      }
       setUser(nextUser);
       setLoading(false);
     });
 
-    return unsubscribe;
+    void services.auth
+      .signOut()
+      .catch(() => {})
+      .finally(() => {
+        isBootstrapping = false;
+        const refreshedUser = services.auth.getCurrentUser();
+        void refreshedUser.then((currentUser) => {
+          setUser(currentUser);
+          setLoading(false);
+        });
+      });
+
+    return () => {
+      isBootstrapping = false;
+      unsubscribe();
+    };
   }, []);
 
   const value = useMemo<AuthContextType>(

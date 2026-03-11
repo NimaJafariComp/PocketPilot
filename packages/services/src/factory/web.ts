@@ -7,6 +7,7 @@ import { fileImportWeb } from '../web/file-import.web';
 import { exportWeb } from '../web/export.web';
 import { dialogWeb } from '../web/dialog.web';
 import { createRagHttpWeb } from '../web/rag.http.web';
+import { createCategorizationHttpWeb } from '../web/categorization.http.web';
 
 export interface WebServicesConfig {
   firebaseConfig: FirebaseOptions;
@@ -41,6 +42,7 @@ export function createWebServices(config: WebServicesConfig) {
     fileImport: fileImportWeb,
     dataExport: exportWeb,
     dialog: dialogWeb,
+    categorization: createCategorizationHttpWeb(auth, config.functionsBaseUrl),
     rag: createRagHttpWeb(auth, config.functionsBaseUrl),
   };
 }

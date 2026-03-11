@@ -1,11 +1,13 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { Transaction } from '../types';
+import { services } from '../lib/services';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../components/ui/sheet';
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -20,7 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../components/ui/alert-dialog';
-import { Filter, Edit2, Trash2, ChevronLeft, ChevronRight, TrendingDown, TrendingUp, X } from 'lucide-react';
+import { Filter, Edit2, Trash2, ChevronLeft, ChevronRight, TrendingDown, TrendingUp, X, Plus } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -29,12 +31,15 @@ const ITEMS_PER_PAGE = 20;
 const CATEGORY_COLORS: Record<string, string> = {
   Food: 'bg-orange-100 text-orange-700 border-orange-200',
   Groceries: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+  Dining: 'bg-orange-100 text-orange-700 border-orange-200',
   Transport: 'bg-blue-100 text-blue-700 border-blue-200',
+  Transportation: 'bg-blue-100 text-blue-700 border-blue-200',
   Entertainment: 'bg-purple-100 text-purple-700 border-purple-200',
   Shopping: 'bg-pink-100 text-pink-700 border-pink-200',
   Health: 'bg-green-100 text-green-700 border-green-200',
   Income: 'bg-emerald-100 text-emerald-700 border-emerald-200',
   Utilities: 'bg-sky-100 text-sky-700 border-sky-200',
+  Bills: 'bg-red-100 text-red-700 border-red-200',
   Uncategorized: 'bg-gray-100 text-gray-500 border-gray-200',
 };
 
@@ -47,8 +52,28 @@ function CategoryBadge({ category }: { category: string }) {
   );
 }
 
+function CategorizationStatusBadge({ transaction }: { transaction: Transaction }) {
+  if (transaction.categoryNeedsReview) {
+    return (
+      <Badge variant="secondary" className="bg-amber-50 text-amber-800 border-amber-200">
+        Needs Review
+      </Badge>
+    );
+  }
+
+  if (transaction.categorySource?.startsWith('auto-')) {
+    return (
+      <Badge variant="secondary" className="bg-sky-50 text-sky-800 border-sky-200">
+        Auto-Categorized
+      </Badge>
+    );
+  }
+
+  return null;
+}
+
 export function Transactions() {
-  const { transactions, categories, updateTransaction, deleteTransaction } = useData();
+  const { transactions, categories, addTransaction, updateTransaction, deleteTransaction } = useData();
   const [merchantFilter, setMerchantFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [amountFilter, setAmountFilter] = useState('');
@@ -60,6 +85,16 @@ export function Transactions() {
   const [editedTransaction, setEditedTransaction] = useState<Transaction | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isCreatingTransaction, setIsCreatingTransaction] = useState(false);
+  const [newTransaction, setNewTransaction] = useState({
+    date: new Date().toISOString().split('T')[0],
+    merchant: '',
+    amount: '',
+    type: 'expense' as 'expense' | 'income',
+    category: 'Uncategorized',
+    notes: '',
+  });
 
   const getDateKey = (isoDate: string) => isoDate.split('T')[0];
 
@@ -134,10 +169,96 @@ export function Transactions() {
     setEditedTransaction({ ...transaction });
   };
 
+  const resetNewTransaction = () => {
+    setNewTransaction({
+      date: new Date().toISOString().split('T')[0],
+      merchant: '',
+      amount: '',
+      type: 'expense',
+      category: 'Uncategorized',
+      notes: '',
+    });
+  };
+
+  const handleCreate = async () => {
+    if (isCreatingTransaction) {
+      return;
+    }
+
+    const merchant = newTransaction.merchant.trim();
+    const parsedAmount = parseFloat(newTransaction.amount);
+
+    if (!merchant) {
+      toast.error('Merchant is required');
+      return;
+    }
+
+    if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
+      toast.error('Enter a valid amount greater than 0');
+      return;
+    }
+
+    try {
+      setIsCreatingTransaction(true);
+      await addTransaction({
+        date: new Date(newTransaction.date).toISOString(),
+        merchant,
+        amount: newTransaction.type === 'expense' ? -parsedAmount : parsedAmount,
+        category: newTransaction.category,
+        notes: newTransaction.notes.trim(),
+      });
+      setIsCreateDialogOpen(false);
+      resetNewTransaction();
+      toast.success('Transaction added');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to add transaction');
+    } finally {
+      setIsCreatingTransaction(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!editedTransaction) return;
     try {
-      await updateTransaction(editedTransaction.id, editedTransaction);
+      let transactionToSave = { ...editedTransaction };
+
+      if (transactionToSave.category === 'Uncategorized') {
+        const [result] = await services.categorization.categorizeTransactions({
+          transactions: [
+            {
+              merchant: transactionToSave.merchant,
+              amount: transactionToSave.amount,
+              notes: transactionToSave.notes || '',
+            },
+          ],
+          categories: categories.map((category) => category.name),
+        });
+
+        if (result) {
+          transactionToSave = {
+            ...transactionToSave,
+            category: result.category,
+            categorySource: result.categorySource,
+            categoryConfidence: result.categoryConfidence,
+            categoryNeedsReview: result.categoryNeedsReview,
+            normalizedMerchant: result.normalizedMerchant,
+          };
+        }
+      } else if (selectedTransaction && transactionToSave.category !== selectedTransaction.category) {
+        transactionToSave = {
+          ...transactionToSave,
+          categorySource: 'manual',
+          categoryConfidence: 1,
+          categoryNeedsReview: false,
+        };
+
+        await services.categorization.learnMerchantCategory({
+          merchant: transactionToSave.merchant,
+          category: transactionToSave.category,
+        });
+      }
+
+      await updateTransaction(transactionToSave.id, transactionToSave);
       setSelectedTransaction(null);
       setEditedTransaction(null);
       toast.success('Transaction updated');
@@ -180,12 +301,115 @@ export function Transactions() {
               {hasActiveFilters && ' (filtered)'}
             </p>
           </div>
-          {uncategorizedCount > 0 && (
-              <Badge variant="secondary" className="w-fit gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-orange-400 inline-block" />
-                {uncategorizedCount} need categorization
-              </Badge>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {uncategorizedCount > 0 && (
+                <Badge variant="secondary" className="w-fit gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-400 inline-block" />
+                  {uncategorizedCount} need categorization
+                </Badge>
+            )}
+            <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+              setIsCreateDialogOpen(open);
+              if (!open) resetNewTransaction();
+            }}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Add Transaction
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-xl">
+                <DialogHeader>
+                  <DialogTitle>New Transaction</DialogTitle>
+                </DialogHeader>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label>Date</Label>
+                    <Input
+                        type="date"
+                        value={newTransaction.date}
+                        onChange={(e) => setNewTransaction({ ...newTransaction, date: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Type</Label>
+                    <Select
+                        value={newTransaction.type}
+                        onValueChange={(value: 'expense' | 'income') => setNewTransaction({ ...newTransaction, type: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="expense">Expense</SelectItem>
+                        <SelectItem value="income">Income</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label>Merchant</Label>
+                    <Input
+                        placeholder="e.g. Whole Foods"
+                        value={newTransaction.merchant}
+                        onChange={(e) => setNewTransaction({ ...newTransaction, merchant: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Amount</Label>
+                    <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={newTransaction.amount}
+                        onChange={(e) => setNewTransaction({ ...newTransaction, amount: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Category</Label>
+                    <Select
+                        value={newTransaction.category}
+                        onValueChange={(value) => setNewTransaction({ ...newTransaction, category: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label>Notes</Label>
+                    <Textarea
+                        value={newTransaction.notes}
+                        onChange={(e) => setNewTransaction({ ...newTransaction, notes: e.target.value })}
+                        placeholder="Location, time, receipt details, or any context"
+                        rows={4}
+                        className="resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleCreate} disabled={isCreatingTransaction}>
+                    {isCreatingTransaction ? 'Saving...' : 'Save Transaction'}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {/* Summary stats */}
@@ -329,8 +553,11 @@ export function Transactions() {
                             <TableCell className="text-sm text-muted-foreground pl-5 py-3.5">
                               {format(parseISO(transaction.date), 'MMM dd, yyyy')}
                             </TableCell>
-                            <TableCell className="font-medium text-sm py-3.5">
-                              {transaction.merchant}
+                            <TableCell className="py-3.5">
+                              <div className="space-y-1">
+                                <p className="font-medium text-sm">{transaction.merchant}</p>
+                                <CategorizationStatusBadge transaction={transaction} />
+                              </div>
                             </TableCell>
                             <TableCell className="py-3.5">
                               <CategoryBadge category={transaction.category} />
@@ -403,97 +630,108 @@ export function Transactions() {
         </Card>
 
         {/* Edit Sheet */}
-        <Sheet open={!!selectedTransaction} onOpenChange={() => setSelectedTransaction(null)}>
-          <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+        <Sheet open={!!selectedTransaction} onOpenChange={() => {
+          setSelectedTransaction(null);
+          setEditedTransaction(null);
+        }}>
+          <SheetContent className="w-full sm:max-w-lg lg:max-w-xl overflow-y-auto p-0">
             {editedTransaction && (
                 <>
-                  <SheetHeader className="pb-2">
-                    <SheetTitle>Edit Transaction</SheetTitle>
-                    <p className="text-sm text-muted-foreground">{editedTransaction.merchant}</p>
-                  </SheetHeader>
+                  <div className="flex h-full flex-col">
+                    <SheetHeader className="border-b pr-14 pb-4">
+                      <SheetTitle>Edit Transaction</SheetTitle>
+                      <p className="text-sm text-muted-foreground">{editedTransaction.merchant}</p>
+                      <div className="pt-1">
+                        <CategorizationStatusBadge transaction={editedTransaction} />
+                      </div>
+                    </SheetHeader>
 
-                  {/* Amount display at top of sheet */}
-                  <div className={`my-4 px-4 py-3 rounded-xl border text-center ${editedTransaction.amount < 0 ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
-                    <p className={`text-2xl font-bold tracking-tight ${editedTransaction.amount < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      {editedTransaction.amount < 0 ? '−' : '+'}${Math.abs(editedTransaction.amount).toFixed(2)}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {format(parseISO(editedTransaction.date), 'MMMM dd, yyyy')}
-                    </p>
-                  </div>
+                    <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
+                      <div className={`rounded-2xl border px-5 py-4 text-center ${editedTransaction.amount < 0 ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
+                        <p className={`text-2xl font-bold tracking-tight ${editedTransaction.amount < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                          {editedTransaction.amount < 0 ? '−' : '+'}${Math.abs(editedTransaction.amount).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {format(parseISO(editedTransaction.date), 'MMMM dd, yyyy')}
+                        </p>
+                      </div>
 
-                  <div className="space-y-4 mt-2">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Date</Label>
-                      <Input
-                          type="date"
-                          value={editedTransaction.date.split('T')[0]}
-                          onChange={(e) => setEditedTransaction({
-                            ...editedTransaction,
-                            date: new Date(e.target.value).toISOString(),
-                          })}
-                          className="h-9"
-                      />
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Date</Label>
+                          <Input
+                              type="date"
+                              value={editedTransaction.date.split('T')[0]}
+                              onChange={(e) => setEditedTransaction({
+                                ...editedTransaction,
+                                date: new Date(e.target.value).toISOString(),
+                              })}
+                              className="h-10"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Amount</Label>
+                          <Input
+                              type="number"
+                              step="0.01"
+                              value={editedTransaction.amount}
+                              onChange={(e) => setEditedTransaction({ ...editedTransaction, amount: parseFloat(e.target.value) })}
+                              className="h-10"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Merchant</Label>
+                        <Input
+                            value={editedTransaction.merchant}
+                            onChange={(e) => setEditedTransaction({ ...editedTransaction, merchant: e.target.value })}
+                            className="h-10"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Category</Label>
+                        <Select
+                            value={editedTransaction.category}
+                            onValueChange={(value) => setEditedTransaction({ ...editedTransaction, category: value })}
+                        >
+                          <SelectTrigger className="h-10">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.map((cat) => (
+                                <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Notes</Label>
+                        <Textarea
+                            value={editedTransaction.notes || ''}
+                            onChange={(e) => setEditedTransaction({ ...editedTransaction, notes: e.target.value })}
+                            placeholder="Add a note..."
+                            rows={5}
+                            className="min-h-28 resize-none text-sm"
+                        />
+                      </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Merchant</Label>
-                      <Input
-                          value={editedTransaction.merchant}
-                          onChange={(e) => setEditedTransaction({ ...editedTransaction, merchant: e.target.value })}
-                          className="h-9"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Amount</Label>
-                      <Input
-                          type="number"
-                          step="0.01"
-                          value={editedTransaction.amount}
-                          onChange={(e) => setEditedTransaction({ ...editedTransaction, amount: parseFloat(e.target.value) })}
-                          className="h-9"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Category</Label>
-                      <Select
-                          value={editedTransaction.category}
-                          onValueChange={(value) => setEditedTransaction({ ...editedTransaction, category: value })}
-                      >
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.map((cat) => (
-                              <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Notes</Label>
-                      <Textarea
-                          value={editedTransaction.notes || ''}
-                          onChange={(e) => setEditedTransaction({ ...editedTransaction, notes: e.target.value })}
-                          placeholder="Add a note..."
-                          rows={3}
-                          className="resize-none text-sm"
-                      />
-                    </div>
-
-                    <div className="flex gap-2 pt-2">
-                      <Button onClick={handleSave} className="flex-1">Save Changes</Button>
-                      <Button
-                          variant="outline"
-                          size="icon"
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200"
-                          onClick={() => setShowDeleteDialog(true)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                    <div className="border-t px-5 py-4 sm:px-6">
+                      <div className="flex gap-2">
+                        <Button onClick={handleSave} className="flex-1 h-10">Save Changes</Button>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-10 w-10 text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200"
+                            onClick={() => setShowDeleteDialog(true)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </>
