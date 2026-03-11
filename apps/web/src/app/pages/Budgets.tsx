@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { Budget } from '../types';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Progress } from '../components/ui/progress';
@@ -10,10 +10,21 @@ import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Slider } from '../components/ui/slider';
-import { Plus, Edit2, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, Edit2, Trash2, AlertTriangle, Info } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { services } from '../lib/services';
+
+type BudgetStatus = 'over' | 'warning' | 'good';
+
+interface BudgetWithStats extends Budget {
+  spent: number;
+  percentage: number;
+  status: BudgetStatus;
+  remaining: number;
+}
+
+const STATUS_ORDER: Record<BudgetStatus, number> = { over: 0, warning: 1, good: 2 };
 
 export function Budgets() {
   const { budgets, transactions, categories, addBudget, updateBudget, deleteBudget } = useData();
@@ -29,7 +40,7 @@ export function Budgets() {
 
   const currentMonth = format(new Date(), 'yyyy-MM');
 
-  const budgetData = useMemo(() => {
+  const budgetData = useMemo((): BudgetWithStats[] => {
     const currentMonthStart = startOfMonth(new Date());
     const currentMonthEnd = endOfMonth(new Date());
 
@@ -51,21 +62,31 @@ export function Budgets() {
         );
 
         const percentage = (spent / budget.amount) * 100;
-        const status =
-          percentage >= budget.limitThreshold
-            ? 'over'
-            : percentage >= budget.warningThreshold
-            ? 'warning'
-            : 'good';
+        const status: BudgetStatus =
+          percentage >= budget.limitThreshold ? 'over'
+          : percentage >= budget.warningThreshold ? 'warning'
+          : 'good';
+        const remaining = budget.amount - spent;
 
-        return { ...budget, spent, percentage, status };
-      });
+        return { ...budget, spent, percentage, status, remaining };
+      })
+      .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
   }, [budgets, transactions, currentMonth]);
 
-  const totalBudget = budgetData.reduce((sum, b) => sum + b.amount, 0);
-  const totalSpent = budgetData.reduce((sum, b) => sum + b.spent, 0);
-  const totalPercentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
+  // ── Overview totals ──
+  const totalBudget   = budgetData.reduce((s, b) => s + b.amount, 0);
+  const totalSpent    = budgetData.reduce((s, b) => s + b.spent, 0);
+  const totalRemaining = totalBudget - totalSpent;
+  const totalPct      = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
+  const overCount    = budgetData.filter(b => b.status === 'over').length;
+  const warningCount = budgetData.filter(b => b.status === 'warning').length;
+  const goodCount    = budgetData.filter(b => b.status === 'good').length;
+
+  // ── Alerts ──
+  const alertBudgets = budgetData.filter(b => b.status === 'over' || b.status === 'warning');
+
+  // ── Dialog helpers ──
   const handleOpenDialog = (budget?: Budget) => {
     if (budget) {
       setEditingBudget(budget);
@@ -89,9 +110,8 @@ export function Budgets() {
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-
     try {
       if (editingBudget) {
         await updateBudget(editingBudget.id, {
@@ -130,13 +150,37 @@ export function Budgets() {
     }
   };
 
+  // ── Badge helpers ──
+  const statusBadgeVariant = (status: BudgetStatus) =>
+    status === 'over' ? 'destructive' : status === 'warning' ? 'secondary' : 'outline';
+
+  const statusLabel = (status: BudgetStatus) =>
+    status === 'over' ? 'Over limit' : status === 'warning' ? 'Warning' : 'On track';
+
+  const progressClass = (status: BudgetStatus) =>
+    status === 'over'
+      ? '[&>div]:bg-destructive'
+      : status === 'warning'
+      ? '[&>div]:bg-amber-500'
+      : '';
+
+  // ── Dollar helpers for dialog sliders ──
+  const budgetAmount = parseFloat(formData.amount) || 0;
+  const warnDollars  = budgetAmount > 0 ? Math.round(budgetAmount * formData.warningThreshold / 100) : null;
+  const limitDollars = budgetAmount > 0 ? Math.round(budgetAmount * formData.limitThreshold / 100) : null;
+
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="p-6 max-w-3xl mx-auto space-y-6">
+
+      {/* ── Page header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Budgets</h1>
-          <p className="text-gray-500 mt-1">Manage your monthly spending limits</p>
+          <h1 className="text-3xl font-bold tracking-tight">Budgets</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {format(new Date(), 'MMMM yyyy')}
+          </p>
         </div>
+
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => handleOpenDialog()}>
@@ -144,28 +188,26 @@ export function Budgets() {
               Create Budget
             </Button>
           </DialogTrigger>
+
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{editingBudget ? 'Edit Budget' : 'Create Budget'}</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label>Category</Label>
                 <Select
                   value={formData.category}
-                  onValueChange={(value) => setFormData({ ...formData, category: value })}
+                  onValueChange={v => setFormData({ ...formData, category: v })}
                   required
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                   <SelectContent>
                     {categories
                       .filter(c => c.name !== 'Uncategorized' && c.name !== 'Income')
                       .map(cat => (
-                        <SelectItem key={cat.id} value={cat.name}>
-                          {cat.name}
-                        </SelectItem>
+                        <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                       ))}
                   </SelectContent>
                 </Select>
@@ -178,7 +220,7 @@ export function Budgets() {
                   step="0.01"
                   placeholder="500.00"
                   value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                  onChange={e => setFormData({ ...formData, amount: e.target.value })}
                   required
                 />
               </div>
@@ -188,30 +230,44 @@ export function Budgets() {
                 <Input
                   type="month"
                   value={formData.month}
-                  onChange={(e) => setFormData({ ...formData, month: e.target.value })}
+                  onChange={e => setFormData({ ...formData, month: e.target.value })}
                   required
                 />
               </div>
 
+              {/* Warning threshold with dollar context */}
               <div className="space-y-2">
-                <Label>Warning Threshold: {formData.warningThreshold}%</Label>
+                <div className="flex items-baseline justify-between">
+                  <Label>Warning Threshold</Label>
+                  <span className="text-sm text-muted-foreground">{formData.warningThreshold}%</span>
+                </div>
+                {warnDollars !== null && (
+                  <p className="text-base font-semibold -mt-1">
+                    Warn me at ${warnDollars.toLocaleString()}
+                  </p>
+                )}
                 <Slider
                   value={[formData.warningThreshold]}
-                  onValueChange={([value]) => setFormData({ ...formData, warningThreshold: value })}
-                  min={50}
-                  max={100}
-                  step={5}
+                  onValueChange={([v]) => setFormData({ ...formData, warningThreshold: v })}
+                  min={50} max={100} step={5}
                 />
               </div>
 
+              {/* Limit threshold with dollar context */}
               <div className="space-y-2">
-                <Label>Limit Threshold: {formData.limitThreshold}%</Label>
+                <div className="flex items-baseline justify-between">
+                  <Label>Limit Threshold</Label>
+                  <span className="text-sm text-muted-foreground">{formData.limitThreshold}%</span>
+                </div>
+                {limitDollars !== null && (
+                  <p className="text-base font-semibold -mt-1">
+                    Stop me at ${limitDollars.toLocaleString()}
+                  </p>
+                )}
                 <Slider
                   value={[formData.limitThreshold]}
-                  onValueChange={([value]) => setFormData({ ...formData, limitThreshold: value })}
-                  min={80}
-                  max={120}
-                  step={5}
+                  onValueChange={([v]) => setFormData({ ...formData, limitThreshold: v })}
+                  min={80} max={120} step={5}
                 />
               </div>
 
@@ -223,99 +279,200 @@ export function Budgets() {
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Overall Monthly Budget</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-baseline justify-between">
-            <div>
-              <div className="text-3xl font-bold">${Math.round(totalSpent).toLocaleString()}</div>
-              <p className="text-sm text-gray-500">of ${totalBudget.toLocaleString()} total budget</p>
-            </div>
-            <Badge
-              variant={
-                totalPercentage >= 100
-                  ? 'destructive'
-                  : totalPercentage >= 80
-                  ? 'secondary'
-                  : 'default'
-              }
-            >
-              {Math.round(totalPercentage)}%
-            </Badge>
-          </div>
-          <Progress value={Math.min(totalPercentage, 100)} />
-        </CardContent>
-      </Card>
+      {/* ── Overview hero ── */}
+      {budgetData.length > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex gap-6 items-start">
 
-      <div className="space-y-4">
-        {budgetData.length > 0 ? (
-          budgetData.map((budget) => (
-            <Card key={budget.id}>
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-lg">{budget.category}</h3>
-                        {budget.status === 'over' && <AlertTriangle className="w-5 h-5 text-red-600" />}
-                        {budget.status === 'warning' && <AlertTriangle className="w-5 h-5 text-orange-600" />}
-                      </div>
-                      <div className="flex items-baseline gap-2 mt-1">
-                        <span className="text-2xl font-bold">${Math.round(budget.spent).toLocaleString()}</span>
-                        <span className="text-gray-500">/ ${budget.amount.toLocaleString()}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant={
-                          budget.status === 'over'
-                            ? 'destructive'
-                            : budget.status === 'warning'
-                            ? 'secondary'
-                            : 'default'
-                        }
-                      >
-                        {Math.round(budget.percentage)}%
-                      </Badge>
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(budget)}>
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(budget.id)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <Progress
-                    value={Math.min(budget.percentage, 100)}
-                    className={
-                      budget.status === 'over'
-                        ? '[&>div]:bg-red-600'
-                        : budget.status === 'warning'
-                        ? '[&>div]:bg-orange-500'
-                        : ''
-                    }
-                  />
-                  <div className="flex justify-between text-sm text-gray-500">
-                    <span>Warning at {budget.warningThreshold}%</span>
-                    <span>Limit at {budget.limitThreshold}%</span>
-                  </div>
+              {/* Left: big spent number + progress */}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+                  Total spent this month
+                </p>
+                <div className="flex items-baseline gap-2 mb-1">
+                  <span className="text-4xl font-bold tracking-tight">
+                    ${Math.round(totalSpent).toLocaleString()}
+                  </span>
+                  <span className="text-muted-foreground text-base">
+                    / ${totalBudget.toLocaleString()}
+                  </span>
                 </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  <span className="text-foreground font-medium">
+                    ${Math.max(0, Math.round(totalRemaining)).toLocaleString()}
+                  </span>{' '}
+                  still available across all budgets
+                </p>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>0%</span>
+                    <span>{Math.round(totalPct)}% used</span>
+                    <span>100%</span>
+                  </div>
+                  <Progress value={Math.min(totalPct, 100)} className="h-2" />
+                </div>
+              </div>
+
+              {/* Right: status mini-stats */}
+              <div className="flex flex-col gap-4 pl-6 border-l shrink-0">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-0.5">
+                    Over limit
+                  </p>
+                  <p className={`text-2xl font-bold tracking-tight ${overCount > 0 ? 'text-destructive' : ''}`}>
+                    {overCount}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-0.5">
+                    Warning
+                  </p>
+                  <p className="text-2xl font-bold tracking-tight">{warningCount}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-0.5">
+                    On track
+                  </p>
+                  <p className="text-2xl font-bold tracking-tight">{goodCount}</p>
+                </div>
+              </div>
+
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Alerts strip ── */}
+      {alertBudgets.length > 0 && (
+        <div className="space-y-2">
+          {alertBudgets.map(budget => (
+            <div
+              key={budget.id}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg border text-sm ${
+                budget.status === 'over'
+                  ? 'bg-destructive/5 border-destructive/20 text-destructive'
+                  : 'bg-amber-50 border-amber-200 text-amber-800'
+              }`}
+            >
+              {budget.status === 'over'
+                ? <AlertTriangle className="w-4 h-4 shrink-0" />
+                : <Info className="w-4 h-4 shrink-0" />
+              }
+              <span className="flex-1">
+                {budget.status === 'over' ? (
+                  <><strong>{budget.category}</strong> is ${Math.round(Math.abs(budget.remaining)).toLocaleString()} over its ${budget.amount.toLocaleString()} limit.</>
+                ) : (
+                  <><strong>{budget.category}</strong> is at {Math.round(budget.percentage)}% — only ${Math.round(budget.remaining).toLocaleString()} left.</>
+                )}
+              </span>
+              <button
+                className="text-xs font-medium underline underline-offset-2 opacity-70 hover:opacity-100 shrink-0"
+                onClick={() => handleOpenDialog(budget)}
+              >
+                {budget.status === 'over' ? 'Adjust budget' : 'View'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Budget cards ── */}
+      <div>
+        <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
+          All Categories
+        </p>
+
+        <div className="space-y-2">
+          {budgetData.length > 0 ? (
+            budgetData.map(budget => (
+              <Card
+                key={budget.id}
+                className={budget.status === 'over' ? 'border-destructive/30' : ''}
+              >
+                <CardContent className="pt-0 pb-0">
+                  {/* Coloured top strip */}
+                  <div
+                    className="h-0.5 -mx-6 mb-5 mt-0 rounded-t-lg"
+                    style={{
+                      background:
+                        budget.status === 'over'   ? 'var(--destructive)'  :
+                        budget.status === 'warning' ? 'var(--chart-5)'     :
+                        'var(--chart-2)',
+                    }}
+                  />
+
+                  <div className="flex gap-4 items-center pb-5">
+
+                    {/* Left: name + progress */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{
+                            background:
+                              budget.status === 'over'    ? 'var(--destructive)' :
+                              budget.status === 'warning' ? 'var(--chart-5)'     :
+                              'var(--chart-2)',
+                          }}
+                        />
+                        <span className="font-medium text-sm">{budget.category}</span>
+                        <Badge variant={statusBadgeVariant(budget.status)} className="text-xs py-0">
+                          {statusLabel(budget.status)}
+                        </Badge>
+                      </div>
+
+                      <Progress
+                        value={Math.min(budget.percentage, 100)}
+                        className={`h-2 mb-1.5 ${progressClass(budget.status)}`}
+                      />
+
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>$0</span>
+                        <span>
+                          {budget.status === 'over'
+                            ? `${Math.round(Math.abs(budget.remaining)).toLocaleString()} over ${budget.amount.toLocaleString()} budget`
+                            : `${Math.round(budget.spent).toLocaleString()} of ${budget.amount.toLocaleString()}`
+                          }
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Right: remaining — the hero number */}
+                    <div className="pl-4 border-l text-right flex flex-col items-end gap-1 shrink-0 min-w-[96px]">
+                      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                        {budget.status === 'over' ? 'Over by' : 'Remaining'}
+                      </p>
+                      <p className={`text-2xl font-bold tracking-tight leading-none ${budget.status === 'over' ? 'text-destructive' : ''}`}>
+                        ${Math.round(Math.abs(budget.remaining)).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">spent ${Math.round(budget.spent).toLocaleString()}</p>
+                      <div className="flex gap-1 mt-1">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenDialog(budget)}>
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(budget.id)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground mb-4">No budgets for this month</p>
+                <Button onClick={() => handleOpenDialog()}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Your First Budget
+                </Button>
               </CardContent>
             </Card>
-          ))
-        ) : (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-gray-400 mb-4">No budgets for this month</p>
-              <Button onClick={() => handleOpenDialog()}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Your First Budget
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
