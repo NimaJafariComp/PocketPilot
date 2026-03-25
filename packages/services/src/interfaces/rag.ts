@@ -17,10 +17,28 @@ export interface RagDocument {
   metadata?: RagDocumentMetadata;
 }
 
+export interface RagSyncIndexParams {
+  documents: RagDocument[];
+  removedIds?: string[];
+  batchIndex?: number;
+  batchCount?: number;
+  totalOperations?: number;
+}
+
+export interface RagSyncIndexResult {
+  indexed: number;
+  skipped: number;
+  removed: number;
+  model: string;
+  processed: number;
+  total: number;
+  batchIndex: number;
+  batchCount: number;
+  done: boolean;
+}
+
 export interface RagAdapter {
-  syncIndex(params: {
-    documents: RagDocument[];
-  }): Promise<{ indexed: number; skipped: number; removed: number; model: string }>;
+  syncIndex(params: RagSyncIndexParams): Promise<RagSyncIndexResult>;
   ask(params: {
     query: string;
     messages: RagMessage[];

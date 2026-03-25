@@ -51,6 +51,10 @@ export interface RagChatBody {
 
 export interface SyncRagIndexBody {
   documents?: RagDocumentInput[];
+  removedIds?: string[];
+  batchIndex?: number;
+  batchCount?: number;
+  totalOperations?: number;
 }
 
 export interface CategorizationRequestItem {

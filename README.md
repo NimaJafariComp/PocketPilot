@@ -62,4 +62,5 @@ Useful commands:
 
 Notes:
 - The stack uses a local demo Firebase project ID: `demo-pocketpilot`.
-- `ollama-init` pulls `llama3.2:3b` and `nomic-embed-text:v1.5` on first boot; first startup can take longer.
+- Chat uses `qwen2.5:1.5b` locally and embeddings use `nomic-embed-text:v1.5`.
+- `ollama-init` pulls `qwen2.5:1.5b` and `nomic-embed-text:v1.5` on first boot; first startup can take longer.

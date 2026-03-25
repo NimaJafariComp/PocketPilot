@@ -3,6 +3,7 @@ import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { Progress } from '../components/ui/progress';
 import { Sparkles, TrendingUp, TrendingDown, Repeat, Send, Info, ArrowUpRight, ArrowDownRight, Activity, Package } from 'lucide-react';
 import {
   PieChart,
@@ -72,7 +73,7 @@ function Avatar({ name }: { name: string }) {
 }
 
 export function Insights() {
-  const { transactions } = useData();
+  const { transactions, ragSync } = useData();
   const { user: currentUser } = useAuth();
   const [tab, setTab] = useState<'summary' | 'assistant'>('summary');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -137,7 +138,7 @@ export function Insights() {
   // ── Send message ──────────────────────────────────────────────────
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isSending) return;
+    if (!input.trim() || isSending || !ragSync.isChatAvailable) return;
     const userMessage = input.trim();
     setInput('');
     setAssistantError('');
@@ -379,6 +380,22 @@ export function Insights() {
 
           <div className="border border-border rounded-lg bg-card overflow-hidden flex flex-col h-[600px]">
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {ragSync.status !== 'idle' && (
+                <div className="rounded-lg border border-border bg-muted/50 p-4">
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <div>
+                      <p className="text-sm font-medium">{ragSync.statusText}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Chat is unavailable until the sync finishes.
+                      </p>
+                    </div>
+                    <span className="text-xs font-mono text-muted-foreground">{ragSync.progressPct}%</span>
+                  </div>
+                  <Progress value={ragSync.progressPct} className="h-2" />
+                  {ragSync.lastError && <p className="text-xs text-destructive mt-2">{ragSync.lastError}</p>}
+                </div>
+              )}
+
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center pt-10 pb-6">
                   <div className="w-12 h-12 rounded-xl bg-foreground flex items-center justify-center mb-4">
@@ -437,15 +454,18 @@ export function Insights() {
                 <Input
                   value={input}
                   onChange={e => setInput(e.target.value)}
-                  placeholder="Ask about your spending…"
+                  placeholder={ragSync.isChatAvailable ? 'Ask about your spending…' : 'Syncing insights index. Chat will unlock when finished.'}
                   className="flex-1"
-                  disabled={isSending || !currentUser}
+                  disabled={isSending || !currentUser || !ragSync.isChatAvailable}
                 />
-                <Button type="submit" size="icon" disabled={!input.trim() || isSending || !currentUser}>
+                <Button type="submit" size="icon" disabled={!input.trim() || isSending || !currentUser || !ragSync.isChatAvailable}>
                   <Send className="w-4 h-4" />
                 </Button>
               </form>
               {!currentUser && <p className="text-xs text-muted-foreground mt-2">Connecting to local auth…</p>}
+              {currentUser && !ragSync.isChatAvailable && (
+                <p className="text-xs text-muted-foreground mt-2">Please wait for sync to finish before chatting.</p>
+              )}
             </div>
           </div>
         </div>

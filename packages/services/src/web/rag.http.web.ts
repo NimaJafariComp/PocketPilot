@@ -28,6 +28,11 @@ export function createRagHttpWeb(auth: AuthAdapter, functionsBaseUrl: string): R
         skipped: json.skipped,
         removed: json.removed,
         model: json.model,
+        processed: json.processed,
+        total: json.total,
+        batchIndex: json.batchIndex,
+        batchCount: json.batchCount,
+        done: json.done,
       };
     },
     async ask(params) {

@@ -31,7 +31,7 @@ import type {
 
 const REGION = "us-central1";
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
-const OLLAMA_CHAT_MODEL = process.env.OLLAMA_CHAT_MODEL || "llama3.2:3b";
+const OLLAMA_CHAT_MODEL = process.env.OLLAMA_CHAT_MODEL || "qwen2.5:1.5b";
 const OLLAMA_EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL || "nomic-embed-text:v1.5";
 const SYNC_EMBED_BATCH_SIZE = 25;
 
@@ -62,6 +62,11 @@ type RagIntentRoute = "structured" | "hybrid";
 
 interface RagIntent {
   route: RagIntentRoute;
+  reason: string;
+}
+
+interface ConversationalShortcut {
+  answer: string;
   reason: string;
 }
 
@@ -415,9 +420,10 @@ function findMentionedMerchant(query: string, transactions: ParsedTransaction[])
   return null;
 }
 
-function findMentionedCategory(query: string, transactions: ParsedTransaction[]): string | null {
+function findMentionedCategories(query: string, transactions: ParsedTransaction[]): string[] {
   const normalizedQuery = normalizeLookup(query);
   const compactQuery = compactLookup(query);
+  const matches = new Set<string>();
   const categories = Array.from(
     new Map(
       transactions.map((transaction) => {
@@ -439,15 +445,37 @@ function findMentionedCategory(query: string, transactions: ParsedTransaction[])
       compactQuery.includes(category.compact) ||
       normalizedQuery.includes(category.normalized)
     ) {
-      return category.raw;
+      matches.add(category.raw);
     }
   }
 
   if (/\bgrocer(y|ies)\b/.test(query.toLowerCase())) {
-    return "Groceries";
+    matches.add("Groceries");
   }
 
-  return null;
+  if (/\bgas\b/.test(query.toLowerCase())) {
+    const gasAlias = categories.find((category) =>
+      /\b(gas|fuel|transportation)\b/.test(category.normalized),
+    );
+    if (gasAlias) {
+      matches.add(gasAlias.raw);
+    } else {
+      matches.add("Transportation");
+    }
+  }
+
+  if (/\bgames?\b/.test(query.toLowerCase())) {
+    const gamesAlias = categories.find((category) =>
+      /\b(games?|gaming|entertainment)\b/.test(category.normalized),
+    );
+    if (gamesAlias) {
+      matches.add(gamesAlias.raw);
+    } else {
+      matches.add("Entertainment");
+    }
+  }
+
+  return Array.from(matches);
 }
 
 function inferRelativeDateWindow(query: string): RelativeDateWindow | null {
@@ -488,6 +516,12 @@ function inferRelativeDateWindow(query: string): RelativeDateWindow | null {
     return { fromMs: start.getTime(), toMs: end.getTime() };
   }
 
+  if (/\b(year to date|year-to-date|whole year(?:\s+to\s+now)?)\b/.test(q)) {
+    const start = new Date(now.getFullYear(), 0, 1);
+    const end = new Date(now.getTime() + 1);
+    return { fromMs: start.getTime(), toMs: end.getTime() };
+  }
+
   if (/\blast year\b/.test(q)) {
     const start = new Date(now.getFullYear() - 1, 0, 1);
     const end = new Date(now.getFullYear(), 0, 1);
@@ -509,6 +543,56 @@ function inferAmountDirection(query: string): "expense" | "income" | "any" {
   }
 
   return "any";
+}
+
+function classifyConversationalShortcut(query: string): ConversationalShortcut | null {
+  const q = query.trim().toLowerCase();
+  if (!q) return null;
+
+  const isBareGreeting = /^(hi|hello|hey|yo|sup|good morning|good afternoon|good evening|hola)\b[!.?]*$/.test(q);
+  if (isBareGreeting) {
+    return {
+      answer: "Hello! I'm ready to help with your spending, budgets, goals, and transaction questions.",
+      reason: "greeting-shortcut",
+    };
+  }
+
+  const isHowAreYou =
+    /^(how are you|how's it going|hows it going|how are things|how's your day|hows your day)\b[!.?]*$/.test(q);
+  if (isHowAreYou) {
+    return {
+      answer: "Doing well and ready to help. Ask me about your transactions, spending patterns, budgets, or goals.",
+      reason: "smalltalk-status-shortcut",
+    };
+  }
+
+  const isThanks = /^(thanks|thank you|thx|tysm|awesome thanks|great thanks)\b[!.?]*$/.test(q);
+  if (isThanks) {
+    return {
+      answer: "You're welcome. I'm here whenever you want to dig into your finances.",
+      reason: "gratitude-shortcut",
+    };
+  }
+
+  const isGoodbye = /^(bye|goodbye|see you|talk later|catch you later)\b[!.?]*$/.test(q);
+  if (isGoodbye) {
+    return {
+      answer: "See you later. Come back anytime if you want help with your finances.",
+      reason: "farewell-shortcut",
+    };
+  }
+
+  const isCapabilityQuestion =
+    /^(what can you do|help|help me|what do you do|who are you|what are you)\b[!.?]*$/.test(q);
+  if (isCapabilityQuestion) {
+    return {
+      answer:
+        "I can answer questions about your transactions, spending totals, merchants, categories, budgets, goals, and broader spending patterns.",
+      reason: "capability-shortcut",
+    };
+  }
+
+  return null;
 }
 
 function classifyFinanceIntent(query: string): RagIntent {
@@ -601,12 +685,14 @@ function inferTransactionSearchConstraints(
     );
   }
 
-  const category = findMentionedCategory(query, filteredTransactions);
-  if (category) {
+  const categories = findMentionedCategories(query, filteredTransactions);
+  if (categories.length > 0) {
     filteredTransactions = filteredTransactions.filter(
-      (transaction) => transaction.category.toLowerCase() === category.toLowerCase() ||
+      (transaction) => categories.some((category) =>
+        transaction.category.toLowerCase() === category.toLowerCase() ||
         transaction.category.toLowerCase().includes(category.toLowerCase()) ||
         category.toLowerCase().includes(transaction.category.toLowerCase()),
+      ),
     );
   }
 
@@ -1186,7 +1272,11 @@ async function loadExistingIndexPoints(userId: string) {
   }
 }
 
-async function syncRagDocuments(userId: string, documents: RagDocumentInput[]): Promise<SyncStats> {
+async function syncRagDocuments(
+  userId: string,
+  documents: RagDocumentInput[],
+  removedRefIds: string[] = [],
+): Promise<SyncStats> {
   const existingPoints = await loadExistingIndexPoints(userId);
   const existingByRefId = new Map(
     existingPoints
@@ -1204,14 +1294,11 @@ async function syncRagDocuments(userId: string, documents: RagDocumentInput[]): 
       .filter((value): value is readonly [string, { id: string | number; contentHash: string }] => value !== null),
   );
 
-  const desiredRefIds = new Set<string>();
   const changedDocuments: Array<RagDocumentInput & { contentHash: string }> = [];
   let skipped = 0;
 
   for (const document of documents) {
     const contentHash = hashContent(document.text);
-    desiredRefIds.add(document.id);
-
     const existing = existingByRefId.get(document.id);
     if (existing && existing.contentHash === contentHash) {
       skipped += 1;
@@ -1221,12 +1308,9 @@ async function syncRagDocuments(userId: string, documents: RagDocumentInput[]): 
     changedDocuments.push({ ...document, contentHash });
   }
 
-  const removedIds = existingPoints
-    .filter((point) => {
-      const refId = typeof point.payload?.refId === "string" ? point.payload.refId : "";
-      return !desiredRefIds.has(refId);
-    })
-    .map((point) => point.id);
+  const removedIds = removedRefIds
+    .map((refId) => existingByRefId.get(refId)?.id)
+    .filter((value): value is string | number => value !== undefined);
 
   if (changedDocuments.length > 0) {
     for (const batch of chunkArray(changedDocuments, SYNC_EMBED_BATCH_SIZE)) {
@@ -1326,12 +1410,26 @@ export const syncRagIndex = onRequest({ region: REGION, cors: true, timeoutSecon
     const documents = Array.isArray(body?.documents)
       ? body.documents.filter((document) => document?.id && document?.text)
       : [];
+    const removedIds = Array.isArray(body?.removedIds)
+      ? body.removedIds.filter((value): value is string => typeof value === "string" && value.length > 0)
+      : [];
+    const batchIndex = typeof body?.batchIndex === "number" ? body.batchIndex : 1;
+    const batchCount = typeof body?.batchCount === "number" ? body.batchCount : 1;
+    const totalOperations =
+      typeof body?.totalOperations === "number" && body.totalOperations > 0
+        ? body.totalOperations
+        : documents.length + removedIds.length;
 
-    const stats = await syncRagDocuments(userId, documents);
+    const stats = await syncRagDocuments(userId, documents, removedIds);
     response.status(200).json({
       ok: true,
       ...stats,
       model: OLLAMA_EMBED_MODEL,
+      processed: stats.indexed + stats.skipped + stats.removed,
+      total: totalOperations,
+      batchIndex,
+      batchCount,
+      done: batchIndex >= batchCount,
     });
   } catch (error) {
     logger.error("syncRagIndex failed", error);
@@ -1530,6 +1628,19 @@ export const ragChat = onRequest({ region: REGION, cors: true, timeoutSeconds: 3
 
     if (!query) {
       response.status(400).json({ error: "query is required" });
+      return;
+    }
+
+    const conversationalShortcut = classifyConversationalShortcut(query);
+    if (conversationalShortcut) {
+      response.status(200).json({
+        ok: true,
+        answer: conversationalShortcut.answer,
+        retrieved: 0,
+        model: "conversational-shortcut-v1",
+        route: "structured",
+        reason: conversationalShortcut.reason,
+      });
       return;
     }
 

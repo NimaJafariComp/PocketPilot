@@ -27,7 +27,7 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command: >
       "until ollama list >/dev/null 2>&1; do sleep 2; done &&
-      ollama pull llama3.2:3b &&
+      ollama pull qwen2.5:1.5b &&
       ollama pull nomic-embed-text:v1.5"
     restart: "no"
 
@@ -38,7 +38,7 @@ services:
     container_name: pocketpilot-firebase
     environment:
       OLLAMA_BASE_URL: "http://ollama:11434"
-      OLLAMA_CHAT_MODEL: "llama3.2:3b"
+      OLLAMA_CHAT_MODEL: "qwen2.5:1.5b"
       OLLAMA_EMBED_MODEL: "nomic-embed-text:v1.5"
       QDRANT_URL: "http://qdrant:6333"
     depends_on:

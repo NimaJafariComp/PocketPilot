@@ -24,16 +24,20 @@ Vector payloads always include `userId`. Queries enforce a filter on `userId` so
 ## Local setup
 1. Start Qdrant:
    - `docker compose -f backend/infra/docker-compose.yml up -d`
-2. Start Ollama and pull lightweight models:
+2. Start Ollama:
    - `ollama serve`
-   - `ollama pull llama3.2:3b`
+   - `ollama pull qwen2.5:1.5b`
    - `ollama pull nomic-embed-text:v1.5`
 3. Install function dependencies:
    - `cd backend/functions && npm install`
 4. Install Firebase CLI if needed:
    - `npm install -g firebase-tools`
 5. Start Firebase emulators from backend/firebase:
-   - `cd backend/firebase && OLLAMA_BASE_URL=http://127.0.0.1:11434 OLLAMA_CHAT_MODEL=llama3.2:3b OLLAMA_EMBED_MODEL=nomic-embed-text:v1.5 firebase emulators:start`
+   - `cd backend/firebase && OLLAMA_BASE_URL=http://127.0.0.1:11434 OLLAMA_CHAT_MODEL=qwen2.5:1.5b OLLAMA_EMBED_MODEL=nomic-embed-text:v1.5 firebase emulators:start`
+
+Notes:
+- Chat is configured locally via `qwen2.5:1.5b`.
+- Embeddings still run locally via `nomic-embed-text:v1.5`.
 
 Emulator ports:
 - UI: `http://127.0.0.1:4000`

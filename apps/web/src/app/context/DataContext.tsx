@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import type { RagDocument } from '@pocketpilot/services/src/interfaces/rag';
 import { type Budget, type Category, DEFAULT_CATEGORIES, type Goal, type Transaction } from '../types';
 import { useAuth } from './AuthContext';
 import { services } from '../lib/services';
@@ -22,10 +23,35 @@ interface DataContextType {
   addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
   importTransactions: (transactions: Omit<Transaction, 'id'>[]) => Promise<void>;
   clearAllData: () => Promise<void>;
+  ragSync: {
+    status: 'idle' | 'scheduled' | 'syncing' | 'error';
+    progressPct: number;
+    statusText: string;
+    isChatAvailable: boolean;
+    lastError: string;
+  };
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 const AUTO_CATEGORY_PLACEHOLDER = 'Uncategorized';
+const RAG_SYNC_BATCH_SIZE = 25;
+
+function serializeRagDocument(document: RagDocument): string {
+  return JSON.stringify([
+    document.kind,
+    document.text,
+    document.tags || [],
+    document.metadata || {},
+  ]);
+}
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
@@ -39,9 +65,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const backfilledTransactionIds = useRef<Set<string>>(new Set());
   const ragSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ragSyncVersion = useRef(0);
-  const lastSyncedRagSignature = useRef('');
+  const lastSyncedRagDocs = useRef<Map<string, string>>(new Map());
   const ragSyncInFlight = useRef(false);
-  const queuedRagSync = useRef<{ signature: string; documents: ReturnType<typeof buildRagDocuments> } | null>(null);
+  const queuedRagSync = useRef<{
+    changedDocuments: RagDocument[];
+    removedIds: string[];
+    totalOperations: number;
+  } | null>(null);
+  const [ragSync, setRagSync] = useState<DataContextType['ragSync']>({
+    status: 'idle',
+    progressPct: 100,
+    statusText: 'Insights index is ready',
+    isChatAvailable: true,
+    lastError: '',
+  });
 
   const ragDocuments = useMemo(
     () =>
@@ -54,8 +91,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [transactions, budgets, goals, user],
   );
 
-  const ragSignature = useMemo(
-    () => JSON.stringify(ragDocuments.map((document) => [document.id, document.kind, document.text, document.tags || []])),
+  const ragDocumentMap = useMemo(
+    () =>
+      new Map(
+        ragDocuments.map((document) => [document.id, { document, signature: serializeRagDocument(document) }] as const),
+      ),
     [ragDocuments],
   );
 
@@ -76,9 +116,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
         ragSyncTimer.current = null;
       }
       ragSyncVersion.current = 0;
-      lastSyncedRagSignature.current = '';
+      lastSyncedRagDocs.current = new Map();
       ragSyncInFlight.current = false;
       queuedRagSync.current = null;
+      setRagSync({
+        status: 'idle',
+        progressPct: 100,
+        statusText: 'Insights index is ready',
+        isChatAvailable: true,
+        lastError: '',
+      });
       return;
     }
 
@@ -194,33 +241,137 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (ragSignature === lastSyncedRagSignature.current) {
+    const changedDocuments = ragDocuments.filter((document) => {
+      const current = ragDocumentMap.get(document.id);
+      const previousSignature = lastSyncedRagDocs.current.get(document.id);
+      return current ? current.signature !== previousSignature : false;
+    });
+    const removedIds = Array.from(lastSyncedRagDocs.current.keys()).filter((id) => !ragDocumentMap.has(id));
+    const totalOperations = changedDocuments.length + removedIds.length;
+
+    if (totalOperations === 0) {
+      setRagSync((prev) =>
+        prev.status === 'idle'
+          ? prev
+          : {
+              status: 'idle',
+              progressPct: 100,
+              statusText: 'Insights index is ready',
+              isChatAvailable: true,
+              lastError: '',
+            },
+      );
       return;
     }
 
-    const runSync = (documents: typeof ragDocuments, signature: string, version: number) => {
+    const runSync = (
+      documents: RagDocument[],
+      idsToRemove: string[],
+      operationTotal: number,
+      version: number,
+    ) => {
       ragSyncInFlight.current = true;
-      void services.rag
-        .syncIndex({ documents })
+      setRagSync({
+        status: 'syncing',
+        progressPct: 0,
+        statusText: 'Syncing insights index... 0%',
+        isChatAvailable: false,
+        lastError: '',
+      });
+
+      const batches = chunkArray(documents, RAG_SYNC_BATCH_SIZE);
+      const totalBatches = Math.max(batches.length, idsToRemove.length > 0 ? 1 : 0, 1);
+      let processedSoFar = 0;
+
+      const syncSequence = async () => {
+        if (documents.length === 0 && idsToRemove.length > 0) {
+          const result = await services.rag.syncIndex({
+            documents: [],
+            removedIds: idsToRemove,
+            batchIndex: 1,
+            batchCount: 1,
+            totalOperations: operationTotal,
+          });
+          processedSoFar += result.processed;
+          const progressPct = operationTotal > 0 ? Math.min(100, Math.round((processedSoFar / operationTotal) * 100)) : 100;
+          setRagSync({
+            status: 'syncing',
+            progressPct,
+            statusText: `Syncing insights index... ${progressPct}%`,
+            isChatAvailable: false,
+            lastError: '',
+          });
+        } else {
+          for (let index = 0; index < batches.length; index += 1) {
+            const result = await services.rag.syncIndex({
+              documents: batches[index],
+              removedIds: index === 0 ? idsToRemove : [],
+              batchIndex: index + 1,
+              batchCount: totalBatches,
+              totalOperations: operationTotal,
+            });
+            processedSoFar += result.processed;
+            const progressPct = operationTotal > 0 ? Math.min(100, Math.round((processedSoFar / operationTotal) * 100)) : 100;
+            setRagSync({
+              status: 'syncing',
+              progressPct,
+              statusText: `Syncing insights index... ${progressPct}%`,
+              isChatAvailable: false,
+              lastError: '',
+            });
+          }
+        }
+      };
+
+      void syncSequence()
         .then(() => {
           if (ragSyncVersion.current === version) {
-            lastSyncedRagSignature.current = signature;
+            documents.forEach((document) => {
+              const current = ragDocumentMap.get(document.id);
+              if (current) {
+                lastSyncedRagDocs.current.set(document.id, current.signature);
+              }
+            });
+            idsToRemove.forEach((id) => {
+              lastSyncedRagDocs.current.delete(id);
+            });
+            setRagSync({
+              status: 'idle',
+              progressPct: 100,
+              statusText: 'Insights index is ready',
+              isChatAvailable: true,
+              lastError: '',
+            });
           }
         })
         .catch((error) => {
           console.error('RAG index sync failed', error);
+          setRagSync({
+            status: 'error',
+            progressPct: 100,
+            statusText: 'Insights sync failed',
+            isChatAvailable: true,
+            lastError: error instanceof Error ? error.message : 'Insights sync failed',
+          });
         })
         .finally(() => {
           ragSyncInFlight.current = false;
           const queued = queuedRagSync.current;
           queuedRagSync.current = null;
 
-          if (queued && queued.signature !== lastSyncedRagSignature.current) {
+          if (queued && queued.totalOperations > 0) {
             ragSyncVersion.current += 1;
             const queuedVersion = ragSyncVersion.current;
+            setRagSync({
+              status: 'scheduled',
+              progressPct: 0,
+              statusText: 'Insights sync queued...',
+              isChatAvailable: false,
+              lastError: '',
+            });
             ragSyncTimer.current = setTimeout(() => {
               ragSyncTimer.current = null;
-              runSync(queued.documents, queued.signature, queuedVersion);
+              runSync(queued.changedDocuments, queued.removedIds, queued.totalOperations, queuedVersion);
             }, 1000);
           }
         });
@@ -228,24 +379,33 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     ragSyncVersion.current += 1;
     const syncVersion = ragSyncVersion.current;
-    const scheduledSignature = ragSignature;
-    const scheduledDocuments = ragDocuments;
+    const scheduledDocuments = changedDocuments;
+    const scheduledRemovedIds = removedIds;
 
     if (ragSyncTimer.current) {
       clearTimeout(ragSyncTimer.current);
     }
 
+    setRagSync({
+      status: 'scheduled',
+      progressPct: 0,
+      statusText: 'Insights sync scheduled...',
+      isChatAvailable: false,
+      lastError: '',
+    });
+
     ragSyncTimer.current = setTimeout(() => {
       ragSyncTimer.current = null;
       if (ragSyncInFlight.current) {
         queuedRagSync.current = {
-          signature: scheduledSignature,
-          documents: scheduledDocuments,
+          changedDocuments: scheduledDocuments,
+          removedIds: scheduledRemovedIds,
+          totalOperations,
         };
         return;
       }
 
-      runSync(scheduledDocuments, scheduledSignature, syncVersion);
+      runSync(scheduledDocuments, scheduledRemovedIds, totalOperations, syncVersion);
     }, 10000);
 
     return () => {
@@ -254,7 +414,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         ragSyncTimer.current = null;
       }
     };
-  }, [user, authLoading, loading, ragDocuments, ragSignature]);
+  }, [user, authLoading, loading, ragDocumentMap, ragDocuments]);
 
   function getAvailableCategoryNames() {
     const categoryNames = (categories.length > 0 ? categories : DEFAULT_CATEGORIES).map((category) => category.name);
@@ -480,6 +640,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       goals,
       categories,
       loading,
+      ragSync,
       addTransaction,
       updateTransaction,
       deleteTransaction,
@@ -493,7 +654,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       importTransactions,
       clearAllData,
     }),
-    [transactions, budgets, goals, categories, loading],
+    [transactions, budgets, goals, categories, loading, ragSync],
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
