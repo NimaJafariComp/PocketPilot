@@ -853,11 +853,52 @@ function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]
     );
   }
 
+  const asksTopCategoriesThisYear =
+    /\btop\s*[1-9]?\s*(categories|category)\b.*\b(this year|year to date|ytd|this calendar year|current year|of the year)\b/.test(q) ||
+    /\b(this year|year to date|ytd|this calendar year|current year|of the year)\b.*\btop\s*[1-9]?\s*(categories|category)\b/.test(q);
+
   const asksTopCategoriesThisMonth =
     /\btop\s*[1-9]?\s*(categories|category)\b.*\bthis month\b/.test(q) ||
     /\bthis month\b.*\btop\s*[1-9]?\s*(categories|category)\b/.test(q) ||
-    /\btop\s*3\s*(categories|category)\b/.test(q);
-  if (asksTopCategoriesThisMonth) {
+    (!asksTopCategoriesThisYear && /\btop\s*3\s*(categories|category)\b/.test(q));
+
+  if (asksTopCategoriesThisYear) {
+    const now = new Date();
+    const yearStart = new Date(now.getFullYear(), 0, 1);
+    const nextYearStart = new Date(now.getFullYear() + 1, 0, 1);
+    const inThisYear = (iso: string): boolean => {
+      const ms = new Date(iso).getTime();
+      return !Number.isNaN(ms) && ms >= yearStart.getTime() && ms < nextYearStart.getTime();
+    };
+
+    const yearlyExpenses = transactions.filter(
+      (transaction) => transaction.amount < 0 && inThisYear(transaction.date),
+    );
+    const categoryTotals = yearlyExpenses.reduce(
+      (acc, transaction) => {
+        acc[transaction.category] = (acc[transaction.category] || 0) + Math.abs(transaction.amount);
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+    const topCategories = Object.entries(categoryTotals)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+    const yearLabel = yearStart.getFullYear();
+
+    if (topCategories.length === 0) {
+      answerParts.push(`No expense transactions were found for ${yearLabel}.`);
+    } else {
+      answerParts.push(
+        [
+          `Top categories for ${yearLabel}:`,
+          ...topCategories.map(
+            ([category, amount], index) => `${index + 1}. ${category} ($${amount.toFixed(2)})`,
+          ),
+        ].join("\n"),
+      );
+    }
+  } else if (asksTopCategoriesThisMonth) {
     const now = new Date();
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
