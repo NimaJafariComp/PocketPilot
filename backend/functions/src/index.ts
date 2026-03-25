@@ -367,6 +367,11 @@ function findMentionedTransactionId(query: string, transactions: ParsedTransacti
   return null;
 }
 
+function extractTransactionIdCandidate(query: string): string | null {
+  const match = query.match(/\b([a-z]{1,6}-[a-z0-9]{2,}|\btx-\d+\b)\b/i);
+  return match ? match[1] : null;
+}
+
 function findMentionedMerchant(query: string, transactions: ParsedTransaction[]): string | null {
   const queryLower = query.toLowerCase();
   const normalizedQuery = normalizeLookup(query);
@@ -534,6 +539,13 @@ function inferRelativeDateWindow(query: string): RelativeDateWindow | null {
     return { fromMs: start.getTime(), toMs: end.getTime() };
   }
 
+  if (/\b(a|an|one)\s+year\s+ago\b/.test(q)) {
+    const targetYear = now.getFullYear() - 1;
+    const start = new Date(targetYear, 0, 1);
+    const end = new Date(targetYear + 1, 0, 1);
+    return { fromMs: start.getTime(), toMs: end.getTime() };
+  }
+
   const yearsAgoMatch = q.match(/\b(\d+)\s+years?\s+ago\b/);
   if (yearsAgoMatch) {
     const yearsAgo = Number(yearsAgoMatch[1]);
@@ -561,6 +573,15 @@ function inferRelativeYearReference(query: string): RelativeYearReference | null
   }
 
   if (/\blast year\b/.test(q)) {
+    const targetYear = now.getFullYear() - 1;
+    return {
+      year: targetYear,
+      label: String(targetYear),
+      mode: "calendar",
+    };
+  }
+
+  if (/\b(a|an|one)\s+year\s+ago\b/.test(q)) {
     const targetYear = now.getFullYear() - 1;
     return {
       year: targetYear,
@@ -820,6 +841,7 @@ function inferTransactionSearchConstraints(
 function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]): string | null {
   const q = query.toLowerCase();
   const answerParts: string[] = [];
+  const transactionIdCandidate = extractTransactionIdCandidate(query);
   const mentionedTransactionId = findMentionedTransactionId(query, transactions);
   const expenses = transactions.filter((transaction) => transaction.amount < 0);
   const incomes = transactions.filter((transaction) => transaction.amount > 0);
@@ -844,6 +866,10 @@ function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]
         .filter(Boolean)
         .join("\n");
     }
+  }
+
+  if (transactionIdCandidate && !mentionedTransactionId) {
+    return `I couldn't find a transaction with ID ${transactionIdCandidate}.`;
   }
 
   const asksWhyLastMonth =
@@ -1263,7 +1289,11 @@ function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]
   const asksLatestTransaction =
     /\b(when\b.*\blast\b|last time|most recent|latest)\b/.test(q) &&
     !/\b(last month|last year|last 30 days)\b/.test(q);
-  if (asksLatestTransaction && answerParts.length === 0) {
+  const asksLastOrderLike =
+    /\blast\b/.test(q) &&
+    /\b(order|purchase|charge|transaction)\b/.test(q) &&
+    !/\b(last month|last year|last 30 days)\b/.test(q);
+  if ((asksLatestTransaction || asksLastOrderLike) && answerParts.length === 0) {
     const latestTransaction = datedTransactions
       .slice()
       .sort((a, b) => b.dateMs - a.dateMs)[0];
