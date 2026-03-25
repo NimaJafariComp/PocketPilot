@@ -16,7 +16,7 @@ export const db = getFirestore(app);
 
 const shouldUseEmulators =
   import.meta.env.VITE_USE_FIREBASE_EMULATORS !== "false" &&
-  window.location.hostname === "localhost";
+  ["localhost", "127.0.0.1"].includes(window.location.hostname);
 
 if (shouldUseEmulators) {
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });

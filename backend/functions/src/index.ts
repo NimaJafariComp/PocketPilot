@@ -33,6 +33,7 @@ const REGION = "us-central1";
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
 const OLLAMA_CHAT_MODEL = process.env.OLLAMA_CHAT_MODEL || "llama3.2:3b";
 const OLLAMA_EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL || "nomic-embed-text:v1.5";
+const SYNC_EMBED_BATCH_SIZE = 25;
 
 interface ParsedTransaction {
   id: string;
@@ -55,6 +56,18 @@ interface TransactionSearchConstraints {
   extraMust: PayloadFilterCondition[];
   filteredTransactions: ParsedTransaction[];
   kinds?: Array<"transaction">;
+}
+
+type RagIntentRoute = "structured" | "hybrid";
+
+interface RagIntent {
+  route: RagIntentRoute;
+  reason: string;
+}
+
+interface RelativeDateWindow {
+  fromMs: number;
+  toMs: number;
 }
 
 const MERCHANT_NOISE_TOKENS = new Set([
@@ -114,6 +127,14 @@ function hashPointId(userId: string, documentId: string): string {
 
 function hashContent(text: string): string {
   return createHash("sha256").update(text).digest("hex");
+}
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
 }
 
 function sanitizeMetadata(
@@ -201,8 +222,7 @@ function buildMerchantMatchKey(merchant: string, category?: string): string {
 async function loadUserTransactions(userId: string): Promise<ParsedTransaction[]> {
   const snapshot = await adminDb.collection("users").doc(userId).collection("transactions").get();
 
-  return snapshot.docs
-    .map((doc) => {
+  const transactions = snapshot.docs.map((doc): ParsedTransaction | null => {
       const data = doc.data() as Partial<ParsedTransaction>;
       if (
         typeof data.date !== "string" ||
@@ -213,7 +233,7 @@ async function loadUserTransactions(userId: string): Promise<ParsedTransaction[]
         return null;
       }
 
-      return {
+      const transaction: ParsedTransaction = {
         id: doc.id,
         date: data.date,
         merchant: data.merchant,
@@ -231,10 +251,16 @@ async function loadUserTransactions(userId: string): Promise<ParsedTransaction[]
             : data.merchant,
           data.category,
         ),
-        notes: typeof data.notes === "string" ? data.notes : undefined,
       };
-    })
-    .filter((value): value is ParsedTransaction => value !== null);
+
+      if (typeof data.notes === "string") {
+        transaction.notes = data.notes;
+      }
+
+      return transaction;
+    });
+
+  return transactions.filter((value): value is ParsedTransaction => value !== null);
 }
 
 function parseDateMs(value: string): number | null {
@@ -334,6 +360,7 @@ function findMentionedMerchant(query: string, transactions: ParsedTransaction[])
   const queryLower = query.toLowerCase();
   const normalizedQuery = normalizeLookup(query);
   const compactQuery = compactLookup(query);
+  const queryTokens = tokenizeForLookup(query);
   const merchants = Array.from(
     new Map(
       transactions.map((transaction) => [
@@ -342,6 +369,7 @@ function findMentionedMerchant(query: string, transactions: ParsedTransaction[])
           merchantLower: transaction.merchant.toLowerCase(),
           normalizedMerchant: transaction.normalizedMerchant,
           merchantMatchKey: transaction.merchantMatchKey,
+          merchantTokens: tokenizeForLookup(transaction.normalizedMerchant),
         },
       ]),
     ).values(),
@@ -357,7 +385,170 @@ function findMentionedMerchant(query: string, transactions: ParsedTransaction[])
     }
   }
 
+  let bestMatch: { merchantMatchKey: string; score: number } | null = null;
+  for (const merchant of merchants) {
+    const score = queryTokens.reduce((total, token) => {
+      if (merchant.merchantTokens.includes(token)) {
+        return total + 3;
+      }
+      if (merchant.normalizedMerchant.includes(token)) {
+        return total + 2;
+      }
+      if (merchant.merchantMatchKey.includes(token)) {
+        return total + 2;
+      }
+      return total;
+    }, 0);
+
+    if (score > 0 && (!bestMatch || score > bestMatch.score)) {
+      bestMatch = {
+        merchantMatchKey: merchant.merchantMatchKey,
+        score,
+      };
+    }
+  }
+
+  if (bestMatch) {
+    return bestMatch.merchantMatchKey;
+  }
+
   return null;
+}
+
+function findMentionedCategory(query: string, transactions: ParsedTransaction[]): string | null {
+  const normalizedQuery = normalizeLookup(query);
+  const compactQuery = compactLookup(query);
+  const categories = Array.from(
+    new Map(
+      transactions.map((transaction) => {
+        const category = transaction.category.trim();
+        return [
+          category.toLowerCase(),
+          {
+            raw: category,
+            normalized: normalizeLookup(category),
+            compact: compactLookup(category),
+          },
+        ] as const;
+      }),
+    ).values(),
+  ).sort((a, b) => b.compact.length - a.compact.length);
+
+  for (const category of categories) {
+    if (
+      compactQuery.includes(category.compact) ||
+      normalizedQuery.includes(category.normalized)
+    ) {
+      return category.raw;
+    }
+  }
+
+  if (/\bgrocer(y|ies)\b/.test(query.toLowerCase())) {
+    return "Groceries";
+  }
+
+  return null;
+}
+
+function inferRelativeDateWindow(query: string): RelativeDateWindow | null {
+  const q = query.toLowerCase();
+  const now = new Date();
+
+  if (/\btoday\b/.test(q)) {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    return { fromMs: start.getTime(), toMs: end.getTime() };
+  }
+
+  if (/\byesterday\b/.test(q)) {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return { fromMs: start.getTime(), toMs: end.getTime() };
+  }
+
+  if (/\bthis month\b/.test(q)) {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    return { fromMs: start.getTime(), toMs: end.getTime() };
+  }
+
+  if (/\blast month\b/.test(q)) {
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 1);
+    return { fromMs: start.getTime(), toMs: end.getTime() };
+  }
+
+  if (/\blast 30 days\b|\b30 days\b/.test(q)) {
+    return { fromMs: now.getTime() - 30 * 24 * 60 * 60 * 1000, toMs: now.getTime() + 1 };
+  }
+
+  if (/\bthis year\b/.test(q)) {
+    const start = new Date(now.getFullYear(), 0, 1);
+    const end = new Date(now.getFullYear() + 1, 0, 1);
+    return { fromMs: start.getTime(), toMs: end.getTime() };
+  }
+
+  if (/\blast year\b/.test(q)) {
+    const start = new Date(now.getFullYear() - 1, 0, 1);
+    const end = new Date(now.getFullYear(), 0, 1);
+    return { fromMs: start.getTime(), toMs: end.getTime() };
+  }
+
+  return null;
+}
+
+function inferAmountDirection(query: string): "expense" | "income" | "any" {
+  const q = query.toLowerCase();
+
+  if (/\b(income|earned|earn|salary|paycheck|deposit|deposits)\b/.test(q)) {
+    return "income";
+  }
+
+  if (/\b(spent|spend|expense|expenses|purchase|purchases|bought|buy|paid)\b/.test(q)) {
+    return "expense";
+  }
+
+  return "any";
+}
+
+function classifyFinanceIntent(query: string): RagIntent {
+  const q = query.toLowerCase();
+
+  const exploratorySignals =
+    /\b(why|pattern|patterns|trend|trends|anomaly|anomalies|insight|insights|recommend|suggest|improve|optimi[sz]e|advice|forecast|predict|recurring|subscription|subscriptions|compare|comparison|summarize|summary|overall)\b/.test(
+      q,
+    );
+
+  const exploratorySemanticSignals =
+    /\b(recurring|subscription|subscriptions|pattern|patterns|trend|trends|anomaly|anomalies|insight|insights|compare|comparison|summarize|summary|overall)\b/.test(
+      q,
+    );
+
+  const strongStructuredSignals =
+    hasPrecisionSignals(query) ||
+    /\b(show|list|find|how much|how many|count|total|latest|last|recent|first|oldest|earliest|largest|highest|biggest|lowest|smallest)\b/.test(
+      q,
+    ) ||
+    /\b(transaction|transactions|merchant|category|grocer(y|ies)|income|expense|expenses|spent|spending|deposit|deposits)\b/.test(
+      q,
+    );
+
+  const structuredSignals =
+    strongStructuredSignals || /\bwhen\b/.test(q);
+
+  if (exploratorySemanticSignals && !hasPrecisionSignals(query)) {
+    return { route: "hybrid", reason: "exploratory-semantic-query" };
+  }
+
+  if (exploratorySignals && !structuredSignals) {
+    return { route: "hybrid", reason: "exploratory-query" };
+  }
+
+  if (structuredSignals) {
+    return { route: "structured", reason: "structured-finance-query" };
+  }
+
+  return { route: "hybrid", reason: "ambiguous-query" };
 }
 
 function hasPrecisionSignals(query: string): boolean {
@@ -410,6 +601,15 @@ function inferTransactionSearchConstraints(
     );
   }
 
+  const category = findMentionedCategory(query, filteredTransactions);
+  if (category) {
+    filteredTransactions = filteredTransactions.filter(
+      (transaction) => transaction.category.toLowerCase() === category.toLowerCase() ||
+        transaction.category.toLowerCase().includes(category.toLowerCase()) ||
+        category.toLowerCase().includes(transaction.category.toLowerCase()),
+    );
+  }
+
   const queryYears = extractQueryYears(query);
   if (queryYears.length === 1) {
     extraMust.push({
@@ -452,6 +652,21 @@ function inferTransactionSearchConstraints(
     });
   }
 
+  const relativeWindow = inferRelativeDateWindow(query);
+  if (relativeWindow) {
+    filteredTransactions = filteredTransactions.filter((transaction) => {
+      const ms = parseDateMs(transaction.date);
+      return ms !== null && ms >= relativeWindow.fromMs && ms < relativeWindow.toMs;
+    });
+  }
+
+  const amountDirection = inferAmountDirection(query);
+  if (amountDirection === "expense") {
+    filteredTransactions = filteredTransactions.filter((transaction) => transaction.amount < 0);
+  } else if (amountDirection === "income") {
+    filteredTransactions = filteredTransactions.filter((transaction) => transaction.amount > 0);
+  }
+
   return {
     extraMust,
     filteredTransactions,
@@ -463,6 +678,14 @@ function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]
   const q = query.toLowerCase();
   const answerParts: string[] = [];
   const mentionedTransactionId = findMentionedTransactionId(query, transactions);
+  const expenses = transactions.filter((transaction) => transaction.amount < 0);
+  const incomes = transactions.filter((transaction) => transaction.amount > 0);
+  const datedTransactions = transactions
+    .map((transaction) => {
+      const dateMs = parseDateMs(transaction.date);
+      return dateMs === null ? null : { ...transaction, dateMs };
+    })
+    .filter((transaction): transaction is ParsedTransaction & { dateMs: number } => transaction !== null);
 
   if (mentionedTransactionId) {
     const exactTransaction = transactions.find((transaction) => transaction.id === mentionedTransactionId);
@@ -608,6 +831,32 @@ function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]
     answerParts.push(`Your grocery spending in the last 30 days is $${total.toFixed(2)}.`);
   }
 
+  const asksLastGroceries =
+    /\bwhen\b.*\blast\b.*\b(grocer(y|ies))\b/.test(q) ||
+    /\blast\b.*\btime\b.*\b(grocer(y|ies))\b/.test(q) ||
+    /\b(grocer(y|ies))\b.*\blast\b.*\bwhen\b/.test(q) ||
+    /\b(grocer(y|ies))\b.*\blast\b.*\btime\b/.test(q);
+  if (asksLastGroceries) {
+    const latestGroceryExpense = transactions
+      .filter((transaction) => {
+        if (transaction.amount >= 0) {
+          return false;
+        }
+        const category = transaction.category.toLowerCase();
+        return category.includes("grocery") || category.includes("grocer");
+      })
+      .slice()
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+
+    if (!latestGroceryExpense) {
+      answerParts.push("I couldn't find any grocery purchases in your transactions yet.");
+    } else {
+      answerParts.push(
+        `Your most recent grocery purchase was on ${latestGroceryExpense.date} at ${latestGroceryExpense.merchant} for $${Math.abs(latestGroceryExpense.amount).toFixed(2)}.`,
+      );
+    }
+  }
+
   const yearListMatch =
     q.match(/\b(show|list)\b.*\btransactions?\b.*\b(20\d{2})\b/) ||
     q.match(/\btransactions?\b.*\b(20\d{2})\b/);
@@ -664,7 +913,6 @@ function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]
 
   const asksMostExpensive = /\b(most expensive|largest expense|biggest expense|highest expense)\b/.test(q);
   if (asksMostExpensive) {
-    const expenses = transactions.filter((transaction) => transaction.amount < 0);
     if (expenses.length === 0) {
       answerParts.push("No expense transactions are available yet.");
     } else {
@@ -679,7 +927,6 @@ function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]
 
   const asksOldestExpense = /\b(oldest expense|earliest expense|first expense)\b/.test(q);
   if (asksOldestExpense) {
-    const expenses = transactions.filter((transaction) => transaction.amount < 0);
     if (expenses.length === 0) {
       answerParts.push("No expense transactions are available yet.");
     } else {
@@ -688,6 +935,115 @@ function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]
       );
       answerParts.push(
         `Your oldest recorded expense is ${oldestExpense.merchant} (${oldestExpense.category}) on ${oldestExpense.date} for $${Math.abs(oldestExpense.amount).toFixed(2)}.`,
+      );
+    }
+  }
+
+  const asksLatestTransaction =
+    /\b(when\b.*\blast\b|last time|most recent|latest)\b/.test(q) &&
+    !/\b(last month|last year|last 30 days)\b/.test(q);
+  if (asksLatestTransaction && answerParts.length === 0) {
+    const latestTransaction = datedTransactions
+      .slice()
+      .sort((a, b) => b.dateMs - a.dateMs)[0];
+
+    if (latestTransaction) {
+      answerParts.push(
+        `Your most recent matching transaction was on ${latestTransaction.date} at ${latestTransaction.merchant} for $${Math.abs(latestTransaction.amount).toFixed(2)} (${latestTransaction.category}).`,
+      );
+    }
+  }
+
+  const asksFirstTransaction =
+    /\b(first|earliest|oldest)\b/.test(q) && /\b(transaction|purchase|expense|income|deposit)\b/.test(q);
+  if (asksFirstTransaction && answerParts.length === 0) {
+    const earliestTransaction = datedTransactions
+      .slice()
+      .sort((a, b) => a.dateMs - b.dateMs)[0];
+
+    if (earliestTransaction) {
+      answerParts.push(
+        `Your earliest matching transaction was on ${earliestTransaction.date} at ${earliestTransaction.merchant} for $${Math.abs(earliestTransaction.amount).toFixed(2)} (${earliestTransaction.category}).`,
+      );
+    }
+  }
+
+  const asksCount =
+    /\bhow many\b/.test(q) ||
+    (/\bcount\b/.test(q) && /\b(transaction|transactions|purchase|purchases|expense|expenses|deposit|deposits)\b/.test(q));
+  if (asksCount && answerParts.length === 0) {
+    answerParts.push(`I found ${transactions.length} matching transactions.`);
+  }
+
+  const asksTotal =
+    (/\bhow much\b/.test(q) || /\btotal\b/.test(q)) &&
+    /\b(spent|spend|expense|expenses|income|earned|earn|deposit|deposits|purchase|purchases)\b/.test(q);
+  if (asksTotal && answerParts.length === 0) {
+    const direction = inferAmountDirection(query);
+    const base = direction === "income" ? incomes : direction === "expense" ? expenses : transactions;
+    const signedTotal = base.reduce((sum, transaction) => sum + transaction.amount, 0);
+    const displayTotal = direction === "income" ? signedTotal : Math.abs(signedTotal);
+    const descriptor =
+      direction === "income" ? "total matching income" :
+      direction === "expense" ? "total matching spending" :
+      "total across matching transactions";
+    answerParts.push(`${descriptor.charAt(0).toUpperCase()}${descriptor.slice(1)} is $${displayTotal.toFixed(2)}.`);
+  }
+
+  const asksMerchantSpend =
+    /\bwhat\b.*\bspend\b.*\bat\b/.test(q) ||
+    /\bhow much\b.*\bspend\b.*\bat\b/.test(q) ||
+    /\bspend\b.*\bat\b/.test(q);
+  if (asksMerchantSpend && answerParts.length === 0) {
+    if (expenses.length === 0) {
+      answerParts.push("I couldn't find any matching spending transactions.");
+    } else {
+      const totalSpent = Math.abs(expenses.reduce((sum, transaction) => sum + transaction.amount, 0));
+      const dateRange = datedTransactions
+        .slice()
+        .sort((a, b) => a.dateMs - b.dateMs);
+      const firstDate = dateRange[0]?.date;
+      const lastDate = dateRange[dateRange.length - 1]?.date;
+      answerParts.push(
+        [
+          `You spent $${totalSpent.toFixed(2)} across ${expenses.length} matching transaction${expenses.length === 1 ? "" : "s"}.`,
+          firstDate && lastDate && firstDate !== lastDate ? `Date range: ${firstDate} to ${lastDate}.` : "",
+          expenses.length > 0
+            ? `Matches: ${expenses
+                .slice()
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .slice(0, 3)
+                .map((transaction) => `${transaction.date} ${transaction.merchant} $${Math.abs(transaction.amount).toFixed(2)}`)
+                .join("; ")}.`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" "),
+      );
+    }
+  }
+
+  const listMatch = q.match(/\b(last|recent)\s+(\d+)\b/);
+  const asksList =
+    /\b(show|list)\b/.test(q) && /\b(transaction|transactions|purchase|purchases|expense|expenses|deposit|deposits)\b/.test(q);
+  if (asksList && answerParts.length === 0) {
+    const limit = Math.min(Math.max(Number(listMatch?.[2] || 5), 1), 10);
+    const recentMatches = datedTransactions
+      .slice()
+      .sort((a, b) => b.dateMs - a.dateMs)
+      .slice(0, limit);
+
+    if (recentMatches.length === 0) {
+      answerParts.push("I couldn't find any matching transactions.");
+    } else {
+      answerParts.push(
+        [
+          `Here are the ${recentMatches.length} most recent matching transactions:`,
+          ...recentMatches.map(
+            (transaction, index) =>
+              `${index + 1}. ${transaction.date} - ${transaction.merchant} - ${transaction.category} - $${Math.abs(transaction.amount).toFixed(2)}`,
+          ),
+        ].join("\n"),
       );
     }
   }
@@ -873,29 +1229,31 @@ async function syncRagDocuments(userId: string, documents: RagDocumentInput[]): 
     .map((point) => point.id);
 
   if (changedDocuments.length > 0) {
-    const embeddings = await Promise.all(changedDocuments.map((document) => embedText(document.text)));
-    await ensureVectorCollection(embeddings[0].length);
+    for (const batch of chunkArray(changedDocuments, SYNC_EMBED_BATCH_SIZE)) {
+      const embeddings = await Promise.all(batch.map((document) => embedText(document.text)));
+      await ensureVectorCollection(embeddings[0].length);
 
-    const now = new Date().toISOString();
-    await upsertPoints(
-      changedDocuments.map((document, index) => ({
-        id: hashPointId(userId, document.id),
-        denseVector: embeddings[index],
-        sparseVector: buildSparseVector(document.text, buildSparseBoosts(document)),
-        payload: {
-          userId,
-          kind: document.kind,
-          refId: document.id,
-          text: document.text,
-          tags: document.tags || [],
-          ...sanitizeMetadata(document.metadata),
-          source: ragVectorSource,
-          contentHash: document.contentHash,
-          createdAt: now,
-          updatedAt: now,
-        },
-      })),
-    );
+      const now = new Date().toISOString();
+      await upsertPoints(
+        batch.map((document, index) => ({
+          id: hashPointId(userId, document.id),
+          denseVector: embeddings[index],
+          sparseVector: buildSparseVector(document.text, buildSparseBoosts(document)),
+          payload: {
+            userId,
+            kind: document.kind,
+            refId: document.id,
+            text: document.text,
+            tags: document.tags || [],
+            ...sanitizeMetadata(document.metadata),
+            source: ragVectorSource,
+            contentHash: document.contentHash,
+            createdAt: now,
+            updatedAt: now,
+          },
+        })),
+      );
+    }
   }
 
   if (removedIds.length > 0) {
@@ -956,7 +1314,7 @@ export const health = onRequest({ region: REGION }, async (_request, response) =
   });
 });
 
-export const syncRagIndex = onRequest({ region: REGION, cors: true }, async (request, response) => {
+export const syncRagIndex = onRequest({ region: REGION, cors: true, timeoutSeconds: 300 }, async (request, response) => {
   try {
     if (request.method !== "POST") {
       response.status(405).json({ error: "Method not allowed" });
@@ -1159,7 +1517,7 @@ export const learnMerchantCategory = onRequest({ region: REGION, cors: true }, a
   }
 });
 
-export const ragChat = onRequest({ region: REGION, cors: true }, async (request, response) => {
+export const ragChat = onRequest({ region: REGION, cors: true, timeoutSeconds: 300 }, async (request, response) => {
   try {
     if (request.method !== "POST") {
       response.status(405).json({ error: "Method not allowed" });
@@ -1175,7 +1533,9 @@ export const ragChat = onRequest({ region: REGION, cors: true }, async (request,
       return;
     }
 
-    const transactions = needsStructuredTransactions(query) ? await loadUserTransactions(userId) : [];
+    const intent = classifyFinanceIntent(query);
+    const shouldLoadTransactions = intent.route === "structured" || needsStructuredTransactions(query);
+    const transactions = shouldLoadTransactions ? await loadUserTransactions(userId) : [];
     const transactionConstraints = inferTransactionSearchConstraints(query, transactions);
     const deterministicAnswer = tryDeterministicAnswer(query, transactionConstraints.filteredTransactions);
     if (deterministicAnswer) {
@@ -1183,7 +1543,22 @@ export const ragChat = onRequest({ region: REGION, cors: true }, async (request,
         ok: true,
         answer: deterministicAnswer,
         retrieved: 0,
-        model: "deterministic-rules-v2",
+        model: "deterministic-rules-v3",
+        route: intent.route,
+        reason: intent.reason,
+      });
+      return;
+    }
+
+    if (intent.route === "structured") {
+      response.status(200).json({
+        ok: true,
+        answer:
+          "I couldn't confidently answer that structured finance question from the exact transaction data I loaded. Try narrowing it with a merchant, category, or date range.",
+        retrieved: 0,
+        model: "deterministic-rules-v3",
+        route: intent.route,
+        reason: intent.reason,
       });
       return;
     }
@@ -1243,6 +1618,8 @@ export const ragChat = onRequest({ region: REGION, cors: true }, async (request,
       answer,
       retrieved: matches.length,
       model: OLLAMA_CHAT_MODEL,
+      route: intent.route,
+      reason: intent.reason,
     });
   } catch (error) {
     logger.error("ragChat failed", error);

@@ -38,6 +38,11 @@ interface BuildRagDocumentsParams {
   user: AuthUser | null;
 }
 
+const MAX_RECENT_TRANSACTION_DOCS = 40;
+const MAX_LARGEST_TRANSACTION_DOCS = 20;
+const MAX_MERCHANT_SUMMARY_DOCS = 20;
+const MAX_CATEGORY_SUMMARY_DOCS = 12;
+
 function normalizeMerchantForRag(merchant: string, category?: string): string {
   let normalized = merchant
     .toLowerCase()
@@ -154,6 +159,134 @@ export function buildRagDocuments({
     tags: ['insight', 'largest-expenses', 'all-time'],
   };
 
+  const merchantSummaryDocs: RagDocument[] = Array.from(
+    transactions.reduce((acc, transaction) => {
+      const merchantMatchKey = buildMerchantMatchKey(
+        transaction.normalizedMerchant || transaction.merchant,
+        transaction.category,
+      );
+      const normalizedMerchant = normalizeMerchantForRag(
+        transaction.normalizedMerchant || transaction.merchant,
+        transaction.category,
+      );
+      const existing = acc.get(merchantMatchKey) || {
+        merchant: transaction.merchant,
+        normalizedMerchant,
+        merchantMatchKey,
+        categories: new Map<string, number>(),
+        totalSpent: 0,
+        totalIncome: 0,
+        count: 0,
+        latestDate: transaction.date,
+      };
+
+      existing.count += 1;
+      existing.latestDate = existing.latestDate > transaction.date ? existing.latestDate : transaction.date;
+      if (transaction.amount < 0) {
+        existing.totalSpent += Math.abs(transaction.amount);
+      } else {
+        existing.totalIncome += transaction.amount;
+      }
+      existing.categories.set(
+        transaction.category,
+        (existing.categories.get(transaction.category) || 0) + 1,
+      );
+
+      acc.set(merchantMatchKey, existing);
+      return acc;
+    }, new Map<string, {
+      merchant: string;
+      normalizedMerchant: string;
+      merchantMatchKey: string;
+      categories: Map<string, number>;
+      totalSpent: number;
+      totalIncome: number;
+      count: number;
+      latestDate: string;
+    }>())
+      .values(),
+  )
+    .sort((a, b) => b.totalSpent - a.totalSpent || b.count - a.count)
+    .slice(0, MAX_MERCHANT_SUMMARY_DOCS)
+    .map((merchant) => ({
+      id: `merchant-summary-${merchant.merchantMatchKey}`,
+      kind: 'insight' as const,
+      text: [
+        `Merchant Summary: ${merchant.merchant}`,
+        `MerchantNormalized: ${merchant.normalizedMerchant}`,
+        `MerchantMatchKey: ${merchant.merchantMatchKey}`,
+        `TransactionCount: ${merchant.count}`,
+        `TotalSpent: ${merchant.totalSpent.toFixed(2)}`,
+        `TotalIncome: ${merchant.totalIncome.toFixed(2)}`,
+        `LatestTransactionDate: ${merchant.latestDate}`,
+        `TopCategories: ${Array.from(merchant.categories.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([category, count]) => `${category} (${count})`)
+          .join('; ') || 'None'}`,
+      ].join('\n'),
+      tags: ['insight', 'merchant-summary', merchant.merchantMatchKey, merchant.normalizedMerchant],
+      metadata: {
+        merchant: merchant.merchant,
+        normalizedMerchant: merchant.normalizedMerchant,
+        merchantMatchKey: merchant.merchantMatchKey,
+        transactionCount: merchant.count,
+        totalSpent: Number(merchant.totalSpent.toFixed(2)),
+        latestTransactionDate: merchant.latestDate,
+      },
+    }));
+
+  const categorySummaryDocs: RagDocument[] = Array.from(
+    transactions.reduce((acc, transaction) => {
+      const existing = acc.get(transaction.category) || {
+        category: transaction.category,
+        count: 0,
+        totalSpent: 0,
+        totalIncome: 0,
+        latestDate: transaction.date,
+      };
+
+      existing.count += 1;
+      existing.latestDate = existing.latestDate > transaction.date ? existing.latestDate : transaction.date;
+      if (transaction.amount < 0) {
+        existing.totalSpent += Math.abs(transaction.amount);
+      } else {
+        existing.totalIncome += transaction.amount;
+      }
+
+      acc.set(transaction.category, existing);
+      return acc;
+    }, new Map<string, {
+      category: string;
+      count: number;
+      totalSpent: number;
+      totalIncome: number;
+      latestDate: string;
+    }>())
+      .values(),
+  )
+    .sort((a, b) => b.totalSpent - a.totalSpent || b.count - a.count)
+    .slice(0, MAX_CATEGORY_SUMMARY_DOCS)
+    .map((category) => ({
+      id: `category-summary-${category.category.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      kind: 'insight' as const,
+      text: [
+        `Category Summary: ${category.category}`,
+        `TransactionCount: ${category.count}`,
+        `TotalSpent: ${category.totalSpent.toFixed(2)}`,
+        `TotalIncome: ${category.totalIncome.toFixed(2)}`,
+        `LatestTransactionDate: ${category.latestDate}`,
+      ].join('\n'),
+      tags: ['insight', 'category-summary', category.category.toLowerCase()],
+      metadata: {
+        category: category.category,
+        categoryLower: category.category.toLowerCase(),
+        transactionCount: category.count,
+        totalSpent: Number(category.totalSpent.toFixed(2)),
+        latestTransactionDate: category.latestDate,
+      },
+    }));
+
   const monthlySummaryDocs: RagDocument[] = Array.from({ length: 6 }, (_, offset) => {
     const monthDate = subMonths(new Date(), offset);
     const monthStart = startOfMonth(monthDate);
@@ -199,7 +332,23 @@ export function buildRagDocuments({
     };
   });
 
-  const transactionDocs: RagDocument[] = transactions.map((transaction) => {
+  const transactionDocCandidates = Array.from(
+    new Map(
+      [
+        ...transactions
+          .slice()
+          .sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime())
+          .slice(0, MAX_RECENT_TRANSACTION_DOCS),
+        ...transactions
+          .filter((transaction) => transaction.amount < 0)
+          .slice()
+          .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
+          .slice(0, MAX_LARGEST_TRANSACTION_DOCS),
+      ].map((transaction) => [transaction.id, transaction]),
+    ).values(),
+  );
+
+  const transactionDocs: RagDocument[] = transactionDocCandidates.map((transaction) => {
     const transactionDate = parseISO(transaction.date);
     const monthIndex = Number.isNaN(transactionDate.getTime()) ? null : transactionDate.getMonth() + 1;
     const monthName =
@@ -221,15 +370,12 @@ export function buildRagDocuments({
       text: [
         `Transaction ${transaction.id}`,
         `TransactionId: ${transaction.id}`,
-        `TransactionLookup: ${transaction.id} ${transaction.id}`,
         `Date: ${transaction.date}`,
         `Merchant: ${transaction.merchant}`,
         `MerchantNormalized: ${normalizedMerchant}`,
         `MerchantMatchKey: ${merchantMatchKey}`,
-        `MerchantLookup: ${transaction.merchant} ${transaction.merchant} ${normalizedMerchant} ${normalizedMerchant} ${merchantMatchKey}`,
         `Category: ${transaction.category}`,
         `Amount: ${transaction.amount}`,
-        `AmountLookup: ${amountAbs.toFixed(2)} $${amountAbs.toFixed(2)}`,
         monthName && year ? `MonthLookup: ${monthName} ${year}` : '',
         transaction.notes ? `Notes: ${transaction.notes}` : '',
       ]
@@ -290,6 +436,8 @@ export function buildRagDocuments({
     allTimeLargestExpensesDoc,
     ...yearlySummaryDocs,
     ...monthlySummaryDocs,
+    ...merchantSummaryDocs,
+    ...categorySummaryDocs,
     ...transactionDocs,
     ...budgetDocs,
     ...goalDocs,

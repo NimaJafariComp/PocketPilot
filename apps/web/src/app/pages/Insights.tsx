@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Sparkles, TrendingUp, TrendingDown, Repeat, Send, Info, ArrowUpRight, ArrowDownRight, Activity, Package } from 'lucide-react';
@@ -72,6 +73,7 @@ function Avatar({ name }: { name: string }) {
 
 export function Insights() {
   const { transactions } = useData();
+  const { user: currentUser } = useAuth();
   const [tab, setTab] = useState<'summary' | 'assistant'>('summary');
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');

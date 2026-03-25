@@ -106,8 +106,8 @@ function createFilter(
   userId: string,
   kinds?: string[],
   extraMust: PayloadFilterCondition[] = [],
-): Record<string, unknown> {
-  const must: Array<Record<string, unknown>> = [
+): { must: Array<Record<string, unknown> | PayloadFilterCondition> } {
+  const must: Array<Record<string, unknown> | PayloadFilterCondition> = [
     {
       key: "userId",
       match: { value: userId },

@@ -40,6 +40,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const ragSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ragSyncVersion = useRef(0);
   const lastSyncedRagSignature = useRef('');
+  const ragSyncInFlight = useRef(false);
+  const queuedRagSync = useRef<{ signature: string; documents: ReturnType<typeof buildRagDocuments> } | null>(null);
 
   const ragDocuments = useMemo(
     () =>
@@ -75,6 +77,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       }
       ragSyncVersion.current = 0;
       lastSyncedRagSignature.current = '';
+      ragSyncInFlight.current = false;
+      queuedRagSync.current = null;
       return;
     }
 
@@ -194,9 +198,38 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const runSync = (documents: typeof ragDocuments, signature: string, version: number) => {
+      ragSyncInFlight.current = true;
+      void services.rag
+        .syncIndex({ documents })
+        .then(() => {
+          if (ragSyncVersion.current === version) {
+            lastSyncedRagSignature.current = signature;
+          }
+        })
+        .catch((error) => {
+          console.error('RAG index sync failed', error);
+        })
+        .finally(() => {
+          ragSyncInFlight.current = false;
+          const queued = queuedRagSync.current;
+          queuedRagSync.current = null;
+
+          if (queued && queued.signature !== lastSyncedRagSignature.current) {
+            ragSyncVersion.current += 1;
+            const queuedVersion = ragSyncVersion.current;
+            ragSyncTimer.current = setTimeout(() => {
+              ragSyncTimer.current = null;
+              runSync(queued.documents, queued.signature, queuedVersion);
+            }, 1000);
+          }
+        });
+    };
+
     ragSyncVersion.current += 1;
     const syncVersion = ragSyncVersion.current;
     const scheduledSignature = ragSignature;
+    const scheduledDocuments = ragDocuments;
 
     if (ragSyncTimer.current) {
       clearTimeout(ragSyncTimer.current);
@@ -204,17 +237,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     ragSyncTimer.current = setTimeout(() => {
       ragSyncTimer.current = null;
-      void services.rag
-        .syncIndex({ documents: ragDocuments })
-        .then(() => {
-          if (ragSyncVersion.current === syncVersion) {
-            lastSyncedRagSignature.current = scheduledSignature;
-          }
-        })
-        .catch((error) => {
-          console.error('RAG index sync failed', error);
-        });
-    }, 400);
+      if (ragSyncInFlight.current) {
+        queuedRagSync.current = {
+          signature: scheduledSignature,
+          documents: scheduledDocuments,
+        };
+        return;
+      }
+
+      runSync(scheduledDocuments, scheduledSignature, syncVersion);
+    }, 10000);
 
     return () => {
       if (ragSyncTimer.current) {
