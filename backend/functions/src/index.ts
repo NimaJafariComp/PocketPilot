@@ -855,9 +855,12 @@ function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]
 
   const queryYears = extractQueryYears(q);
   const asksTopCategories = /\btop\s*[1-9]?\s*(categories|category)\b/.test(q);
+  const asksTopCategoriesYtd =
+    asksTopCategories &&
+    /\b(this year|year to date|ytd|this calendar year|current year|of the year)\b/.test(q);
   const asksTopCategoriesThisYear =
     asksTopCategories &&
-    (/\b(this year|year to date|ytd|this calendar year|current year|of the year)\b/.test(q) || queryYears.length > 0);
+    (asksTopCategoriesYtd || queryYears.length > 0);
   const asksTopCategoriesThisMonth =
     asksTopCategories &&
     /\bthis month\b/.test(q);
@@ -923,7 +926,26 @@ function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]
 
   if (asksTopCategories && (queryYears.length > 0 || asksTopCategoriesThisYear)) {
     const targetYear = queryYears.length > 0 ? queryYears[0] : new Date().getFullYear();
-    const { topCategories, yearLabel, yearlyExpensesCount } = resolveTopCategoriesForYear(targetYear);
+    const isExplicitYearQuery = queryYears.length > 0;
+    const ytdExpenses = transactions.filter((transaction) => transaction.amount < 0);
+    const ytdCategoryTotals = ytdExpenses.reduce(
+      (acc, transaction) => {
+        acc[transaction.category] = (acc[transaction.category] || 0) + Math.abs(transaction.amount);
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+    const ytdTopCategories = Object.entries(ytdCategoryTotals)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+
+    const { topCategories, yearLabel, yearlyExpensesCount } = isExplicitYearQuery
+      ? resolveTopCategoriesForYear(targetYear)
+      : {
+          topCategories: ytdTopCategories,
+          yearLabel: `${targetYear} year to date`,
+          yearlyExpensesCount: ytdExpenses.length,
+        };
 
     if (topCategories.length > 0) {
       answerParts.push(
@@ -951,7 +973,24 @@ function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]
     }
 
     if (!processedTopCategories) {
-      answerParts.push(`No expense transactions were found for ${queryYears.length > 0 ? queryYears[0] : new Date().getFullYear()}.`);
+      if (!isExplicitYearQuery) {
+        const allCurrentYearExpenses = resolveTopCategoriesForYear(targetYear).yearlyExpensesCount;
+        const todayLabel = new Date().toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+
+        if (allCurrentYearExpenses > 0) {
+          answerParts.push(
+            `No expense transactions were found from January 1, ${targetYear} through ${todayLabel}, although there are transactions elsewhere in ${targetYear}.`,
+          );
+        } else {
+          answerParts.push(`No expense transactions were found so far in ${targetYear}.`);
+        }
+      } else {
+        answerParts.push(`No expense transactions were found for ${queryYears[0]}.`);
+      }
       processedTopCategories = true;
     }
   }
