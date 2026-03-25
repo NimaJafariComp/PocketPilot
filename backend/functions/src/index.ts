@@ -2,26 +2,88 @@ import { createHash } from "node:crypto";
 import { onRequest } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions";
 import type { Request } from "express";
-import { adminAuth } from "./firebaseAdmin.js";
+import { adminAuth, adminDb } from "./firebaseAdmin.js";
 import {
   categorizeTransactions as categorizeTransactionsInternal,
   learnMerchantCategory as learnMerchantCategoryInternal,
 } from "./categorization.js";
-import { ensureVectorCollection, qdrant, vectorCollectionName } from "./qdrant.js";
+import {
+  buildSparseVector,
+  deletePoints,
+  ensureVectorCollection,
+  type PayloadFilterCondition,
+  queryDensePoints,
+  ragVectorSource,
+  searchHybridPoints,
+  type SparseBoost,
+  scrollUserSourcePoints,
+  upsertPoints,
+} from "./qdrant.js";
 import type {
   CategorizeTransactionsBody,
   LearnMerchantCategoryBody,
   QueryVectorsBody,
   RagChatBody,
   RagDocumentInput,
+  SyncRagIndexBody,
   UpsertVectorBody,
-  VectorPayload,
 } from "./types.js";
 
 const REGION = "us-central1";
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
 const OLLAMA_CHAT_MODEL = process.env.OLLAMA_CHAT_MODEL || "llama3.2:3b";
-const OLLAMA_EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL || "nomic-embed-text";
+const OLLAMA_EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL || "nomic-embed-text:v1.5";
+
+interface ParsedTransaction {
+  id: string;
+  date: string;
+  merchant: string;
+  normalizedMerchant: string;
+  merchantMatchKey: string;
+  category: string;
+  amount: number;
+  notes?: string;
+}
+
+interface SyncStats {
+  indexed: number;
+  skipped: number;
+  removed: number;
+}
+
+interface TransactionSearchConstraints {
+  extraMust: PayloadFilterCondition[];
+  filteredTransactions: ParsedTransaction[];
+  kinds?: Array<"transaction">;
+}
+
+const MERCHANT_NOISE_TOKENS = new Set([
+  "ach",
+  "auth",
+  "card",
+  "check",
+  "checkcard",
+  "com",
+  "dbt",
+  "debit",
+  "inc",
+  "llc",
+  "online",
+  "payment",
+  "pos",
+  "purchase",
+  "sq",
+  "tap",
+  "visa",
+  "withdrawal",
+]);
+
+const US_STATE_CODES = [
+  "al", "ak", "az", "ar", "ca", "co", "ct", "de", "fl", "ga", "hi", "id", "il", "in", "ia",
+  "ks", "ky", "la", "me", "md", "ma", "mi", "mn", "ms", "mo", "mt", "ne", "nv", "nh", "nj",
+  "nm", "ny", "nc", "nd", "oh", "ok", "or", "pa", "ri", "sc", "sd", "tn", "tx", "ut", "vt",
+  "va", "wa", "wv", "wi", "wy",
+].join("|");
 
 async function verifyUserId(request: Request): Promise<string> {
   const authHeader = request.headers.authorization;
@@ -50,67 +112,373 @@ function hashPointId(userId: string, documentId: string): string {
   return createHash("sha256").update(`${userId}:${documentId}`).digest("hex").slice(0, 32);
 }
 
-function toPayloadRecord(payload: VectorPayload): Record<string, unknown> {
-  return payload as unknown as Record<string, unknown>;
+function hashContent(text: string): string {
+  return createHash("sha256").update(text).digest("hex");
 }
 
-function extractLineValue(text: string, key: string): string | null {
-  const line = text
-    .split("\n")
-    .find((candidate) => candidate.toLowerCase().startsWith(`${key.toLowerCase()}:`));
-  if (!line) return null;
-  return line.split(":").slice(1).join(":").trim() || null;
-}
+function sanitizeMetadata(
+  metadata: RagDocumentInput["metadata"],
+): Record<string, string | number | boolean | null> {
+  if (!metadata) {
+    return {};
+  }
 
-function parseTransactionDoc(doc: RagDocumentInput): {
-  date: string;
-  merchant: string;
-  category: string;
-  amount: number;
-} | null {
-  if (doc.kind !== "transaction") return null;
-
-  const date = extractLineValue(doc.text, "Date");
-  const merchant = extractLineValue(doc.text, "Merchant");
-  const category = extractLineValue(doc.text, "Category");
-  const amountRaw = extractLineValue(doc.text, "Amount");
-
-  if (!date || !merchant || !category || !amountRaw) return null;
-  const amount = Number(amountRaw);
-  if (Number.isNaN(amount)) return null;
-
-  return { date, merchant, category, amount };
-}
-
-function parseIdentity(docs: RagDocumentInput[]): { displayName?: string; email?: string; uid?: string } {
-  const identityDoc = docs.find(
-    (doc) =>
-      doc.kind === "insight" &&
-      (doc.id === "insight-user-identity" || doc.text.includes("Authenticated User Context")),
+  return Object.fromEntries(
+    Object.entries(metadata).filter((entry): entry is [string, string | number | boolean | null] => entry[1] !== undefined),
   );
-  if (!identityDoc) return {};
-
-  const displayName = extractLineValue(identityDoc.text, "DisplayName");
-  const email = extractLineValue(identityDoc.text, "Email");
-  const uid = extractLineValue(identityDoc.text, "Uid");
-  return { displayName: displayName || undefined, email: email || undefined, uid: uid || undefined };
 }
 
-function isUnknownIdentityValue(value: string | undefined): boolean {
-  if (!value) return true;
-  return value.trim().toLowerCase() === "unknown";
+function addSparseBoost(boosts: SparseBoost[], value: unknown, weight: number): void {
+  if (typeof value !== "string" && typeof value !== "number") {
+    return;
+  }
+
+  const token = String(value).trim().toLowerCase();
+  if (!token) {
+    return;
+  }
+
+  boosts.push({ token, weight });
 }
 
-function tryDeterministicAnswer(query: string, docs: RagDocumentInput[]): string | null {
+function buildSparseBoosts(document: RagDocumentInput): SparseBoost[] {
+  const boosts: SparseBoost[] = [];
+  const metadata = document.metadata || {};
+
+  if (document.kind === "transaction") {
+    addSparseBoost(boosts, metadata.transactionId, 12);
+    addSparseBoost(boosts, metadata.transactionId, 8);
+    addSparseBoost(boosts, metadata.merchantMatchKey, 10);
+    addSparseBoost(boosts, metadata.normalizedMerchant, 8);
+    addSparseBoost(boosts, metadata.merchant, 7);
+    addSparseBoost(boosts, metadata.merchantLower, 7);
+    addSparseBoost(boosts, metadata.transactionDate, 6);
+    addSparseBoost(boosts, metadata.transactionMonthName, 4);
+    addSparseBoost(boosts, metadata.transactionYear, 4);
+    addSparseBoost(boosts, metadata.amountAbs, 4);
+    addSparseBoost(boosts, metadata.category, 2);
+  }
+
+  return boosts;
+}
+
+function normalizeMerchantForSearch(merchant: string, category?: string): string {
+  let normalized = merchant
+    .toLowerCase()
+    .replace(/\s+#\s*\d+[a-z0-9-]*\b/g, " ")
+    .replace(/\s+store\s+\d+\b/g, " ")
+    .replace(/\s*-\s*\d+\b/g, " ")
+    .replace(/\s+[a-z0-9]+\s+(street|st|road|rd|avenue|ave|boulevard|blvd|drive|dr|lane|ln|way|plaza|mall|suite|ste|center|centre)\b$/g, " ")
+    .replace(/[*]/g, " ")
+    .replace(new RegExp(`(?:\\s+|,)(?:${US_STATE_CODES})\\b$`, "g"), " ")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\b\d{2,}\b/g, " ");
+
+  const tokens = normalized
+    .split(/\s+/)
+    .filter((token) => token && !MERCHANT_NOISE_TOKENS.has(token));
+
+  normalized = tokens.join(" ").trim();
+
+  const categoryLower = category?.toLowerCase() || "";
+  if (categoryLower.includes("grocery")) {
+    normalized = normalized.replace(/\s+market$/, "");
+  }
+  if (categoryLower.includes("dining") || categoryLower.includes("restaurant")) {
+    normalized = normalized.replace(/\s+(coffee|cafe|restaurant)$/, "");
+  }
+  if (categoryLower.includes("shopping")) {
+    normalized = normalized.replace(/\s+store$/, "");
+  }
+
+  return normalized || merchant.trim().toLowerCase();
+}
+
+function buildMerchantMatchKey(merchant: string, category?: string): string {
+  return normalizeMerchantForSearch(merchant, category).replace(/[^a-z0-9]/g, "");
+}
+
+async function loadUserTransactions(userId: string): Promise<ParsedTransaction[]> {
+  const snapshot = await adminDb.collection("users").doc(userId).collection("transactions").get();
+
+  return snapshot.docs
+    .map((doc) => {
+      const data = doc.data() as Partial<ParsedTransaction>;
+      if (
+        typeof data.date !== "string" ||
+        typeof data.merchant !== "string" ||
+        typeof data.category !== "string" ||
+        typeof data.amount !== "number"
+      ) {
+        return null;
+      }
+
+      return {
+        id: doc.id,
+        date: data.date,
+        merchant: data.merchant,
+        category: data.category,
+        amount: data.amount,
+        normalizedMerchant: normalizeMerchantForSearch(
+          typeof data.normalizedMerchant === "string" && data.normalizedMerchant.trim()
+            ? data.normalizedMerchant
+            : data.merchant,
+          data.category,
+        ),
+        merchantMatchKey: buildMerchantMatchKey(
+          typeof data.normalizedMerchant === "string" && data.normalizedMerchant.trim()
+            ? data.normalizedMerchant
+            : data.merchant,
+          data.category,
+        ),
+        notes: typeof data.notes === "string" ? data.notes : undefined,
+      };
+    })
+    .filter((value): value is ParsedTransaction => value !== null);
+}
+
+function parseDateMs(value: string): number | null {
+  const ms = new Date(value).getTime();
+  return Number.isNaN(ms) ? null : ms;
+}
+
+function extractQueryYears(query: string): number[] {
+  const matches = query.match(/\b20\d{2}\b/g) || [];
+  return Array.from(new Set(matches.map((value) => Number(value))));
+}
+
+function extractQueryAmounts(query: string): number[] {
+  const matches = query.match(/\$?\d+(?:\.\d+)?/g) || [];
+  return Array.from(
+    new Set(
+      matches
+        .map((value) => Number(value.replace("$", "")))
+        .filter((value) => !Number.isNaN(value)),
+    ),
+  );
+}
+
+function extractQueryMonths(query: string): number[] {
+  const monthKeys = [
+    "jan",
+    "feb",
+    "mar",
+    "apr",
+    "may",
+    "jun",
+    "jul",
+    "aug",
+    "sep",
+    "oct",
+    "nov",
+    "dec",
+  ];
+  const lowered = query.toLowerCase();
+  return monthKeys
+    .map((month, index) => ({ month, index }))
+    .filter(({ month }) => new RegExp(`\\b${month}(?:[a-z]+)?\\b`).test(lowered))
+    .map(({ index }) => index);
+}
+
+function tokenizeForLookup(input: string): string[] {
+  return (input.toLowerCase().match(/[a-z0-9]{3,}/g) || []).filter(
+    (token) =>
+      ![
+        "what",
+        "when",
+        "where",
+        "which",
+        "with",
+        "from",
+        "that",
+        "this",
+        "transaction",
+        "transactions",
+        "spending",
+        "expense",
+        "expenses",
+        "income",
+        "total",
+        "show",
+        "list",
+        "details",
+        "history",
+      ].includes(token),
+  );
+}
+
+function normalizeLookup(input: string): string {
+  return input.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function compactLookup(input: string): string {
+  return normalizeLookup(input).replace(/\s+/g, "");
+}
+
+function findMentionedTransactionId(query: string, transactions: ParsedTransaction[]): string | null {
+  const queryLower = query.toLowerCase();
+  const uniqueIds = Array.from(new Set(transactions.map((transaction) => transaction.id)))
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+
+  for (const id of uniqueIds) {
+    if (queryLower.includes(id.toLowerCase())) {
+      return id;
+    }
+  }
+
+  return null;
+}
+
+function findMentionedMerchant(query: string, transactions: ParsedTransaction[]): string | null {
+  const queryLower = query.toLowerCase();
+  const normalizedQuery = normalizeLookup(query);
+  const compactQuery = compactLookup(query);
+  const merchants = Array.from(
+    new Map(
+      transactions.map((transaction) => [
+        transaction.merchantMatchKey,
+        {
+          merchantLower: transaction.merchant.toLowerCase(),
+          normalizedMerchant: transaction.normalizedMerchant,
+          merchantMatchKey: transaction.merchantMatchKey,
+        },
+      ]),
+    ).values(),
+  ).sort((a, b) => b.merchantMatchKey.length - a.merchantMatchKey.length);
+
+  for (const merchant of merchants) {
+    if (
+      compactQuery.includes(merchant.merchantMatchKey) ||
+      queryLower.includes(merchant.merchantLower) ||
+      normalizedQuery.includes(merchant.normalizedMerchant)
+    ) {
+      return merchant.merchantMatchKey;
+    }
+  }
+
+  return null;
+}
+
+function hasPrecisionSignals(query: string): boolean {
   const q = query.toLowerCase();
-  const transactions = docs.map(parseTransactionDoc).filter(Boolean) as Array<{
-    date: string;
-    merchant: string;
-    category: string;
-    amount: number;
-  }>;
-  const identity = parseIdentity(docs);
+  return (
+    /\b\d{4}-\d{2}(?:-\d{2})?\b/.test(q) ||
+    /\$\s*\d/.test(q) ||
+    /\b\d+\.\d+\b/.test(q) ||
+    /\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{4}\b/.test(q) ||
+    /\b[a-z]{1,4}-[a-z0-9]{4,}\b/.test(q)
+  );
+}
+
+function needsStructuredTransactions(query: string): boolean {
+  const q = query.toLowerCase();
+  return (
+    shouldAttachWideTransactionContext(query) ||
+    hasPrecisionSignals(query) ||
+    /\b(last month|this month|grocer(y|ies)|income|expense|expenses|spent|spending|largest expense|most expensive|highest expense|oldest expense|earliest expense|first expense)\b/.test(
+      q,
+    ) ||
+    /\b20\d{2}\b/.test(q)
+  );
+}
+
+function inferTransactionSearchConstraints(
+  query: string,
+  transactions: ParsedTransaction[],
+): TransactionSearchConstraints {
+  const extraMust: PayloadFilterCondition[] = [];
+  let filteredTransactions = transactions.slice();
+
+  const transactionId = findMentionedTransactionId(query, filteredTransactions);
+  if (transactionId) {
+    extraMust.push({
+      key: "transactionId",
+      match: { value: transactionId },
+    });
+    filteredTransactions = filteredTransactions.filter((transaction) => transaction.id === transactionId);
+  }
+
+  const merchant = findMentionedMerchant(query, filteredTransactions);
+  if (merchant) {
+    extraMust.push({
+      key: "merchantMatchKey",
+      match: { value: merchant },
+    });
+    filteredTransactions = filteredTransactions.filter(
+      (transaction) => transaction.merchantMatchKey === merchant,
+    );
+  }
+
+  const queryYears = extractQueryYears(query);
+  if (queryYears.length === 1) {
+    extraMust.push({
+      key: "transactionYear",
+      match: { value: queryYears[0] },
+    });
+    filteredTransactions = filteredTransactions.filter((transaction) => {
+      const ms = parseDateMs(transaction.date);
+      return ms !== null && new Date(ms).getFullYear() === queryYears[0];
+    });
+  } else if (queryYears.length > 1) {
+    extraMust.push({
+      key: "transactionYear",
+      match: { any: queryYears },
+    });
+    filteredTransactions = filteredTransactions.filter((transaction) => {
+      const ms = parseDateMs(transaction.date);
+      return ms !== null && queryYears.includes(new Date(ms).getFullYear());
+    });
+  }
+
+  const queryMonths = extractQueryMonths(query).map((month) => month + 1);
+  if (queryMonths.length === 1) {
+    extraMust.push({
+      key: "transactionMonth",
+      match: { value: queryMonths[0] },
+    });
+    filteredTransactions = filteredTransactions.filter((transaction) => {
+      const ms = parseDateMs(transaction.date);
+      return ms !== null && new Date(ms).getMonth() + 1 === queryMonths[0];
+    });
+  } else if (queryMonths.length > 1) {
+    extraMust.push({
+      key: "transactionMonth",
+      match: { any: queryMonths },
+    });
+    filteredTransactions = filteredTransactions.filter((transaction) => {
+      const ms = parseDateMs(transaction.date);
+      return ms !== null && queryMonths.includes(new Date(ms).getMonth() + 1);
+    });
+  }
+
+  return {
+    extraMust,
+    filteredTransactions,
+    kinds: extraMust.length > 0 ? ["transaction"] : undefined,
+  };
+}
+
+function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]): string | null {
+  const q = query.toLowerCase();
   const answerParts: string[] = [];
+  const mentionedTransactionId = findMentionedTransactionId(query, transactions);
+
+  if (mentionedTransactionId) {
+    const exactTransaction = transactions.find((transaction) => transaction.id === mentionedTransactionId);
+    if (exactTransaction) {
+      return [
+        `Transaction ${exactTransaction.id}`,
+        `Date: ${exactTransaction.date}`,
+        `Merchant: ${exactTransaction.merchant}`,
+        `Category: ${exactTransaction.category}`,
+        `Amount: $${exactTransaction.amount.toFixed(2)}`,
+        exactTransaction.notes ? `Notes: ${exactTransaction.notes}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+    }
+  }
 
   const asksWhyLastMonth =
     /\bwhy\b.*\blast month\b.*\b(expensive|high|higher|costly)\b/.test(q) ||
@@ -218,29 +586,6 @@ function tryDeterministicAnswer(query: string, docs: RagDocumentInput[]): string
     }
   }
 
-  const asksName = /\b(my name|full name|who am i)\b/.test(q);
-  const asksUsername = /\b(user ?name|username|login)\b/.test(q);
-  if (asksName) {
-    const displayName = !isUnknownIdentityValue(identity.displayName) ? identity.displayName : undefined;
-    if (displayName) {
-      answerParts.push(`Your name is ${displayName}.`);
-    } else {
-      answerParts.push("Your name is not available in the current user profile data.");
-    }
-  }
-
-  if (asksUsername) {
-    const email = !isUnknownIdentityValue(identity.email) ? identity.email : undefined;
-    const uid = !isUnknownIdentityValue(identity.uid) ? identity.uid : undefined;
-    if (email) {
-      answerParts.push(`Your username is ${email}.`);
-    } else if (uid) {
-      answerParts.push(`Your username is ${uid}.`);
-    } else {
-      answerParts.push("Your username is not available in the current user profile data.");
-    }
-  }
-
   const asksGroceriesLast30Days =
     /\b(grocer(y|ies))\b.*\b(last\s*30\s*days|30\s*days|last month)\b/.test(q) ||
     /\b(last\s*30\s*days|30\s*days|last month)\b.*\b(grocer(y|ies))\b/.test(q);
@@ -259,13 +604,8 @@ function tryDeterministicAnswer(query: string, docs: RagDocumentInput[]): string
       return category.includes("grocery") || category.includes("grocer");
     });
 
-    const total = Math.abs(
-      groceryExpenses.reduce((sum, transaction) => sum + transaction.amount, 0),
-    );
-
-    answerParts.push(
-      `Your grocery spending in the last 30 days is $${total.toFixed(2)}.`,
-    );
+    const total = Math.abs(groceryExpenses.reduce((sum, transaction) => sum + transaction.amount, 0));
+    answerParts.push(`Your grocery spending in the last 30 days is $${total.toFixed(2)}.`);
   }
 
   const yearListMatch =
@@ -296,7 +636,13 @@ function tryDeterministicAnswer(query: string, docs: RagDocumentInput[]): string
           .reduce((sum, transaction) => sum + transaction.amount, 0),
       );
       answerParts.push(
-        [`Here are your transactions for ${year}:`, ...lines, "", `Total income: $${totalIncome.toFixed(2)}`, `Total expenses: $${totalExpenses.toFixed(2)}`].join("\n"),
+        [
+          `Here are your transactions for ${year}:`,
+          ...lines,
+          "",
+          `Total income: $${totalIncome.toFixed(2)}`,
+          `Total expenses: $${totalExpenses.toFixed(2)}`,
+        ].join("\n"),
       );
     }
   }
@@ -353,84 +699,6 @@ function shouldAttachWideTransactionContext(query: string): boolean {
   const q = query.toLowerCase();
   return /\b(all|almost all|list|show|detail|details|specific|history|transactions?|spending)\b/.test(q);
 }
-
-function isParsedTransaction(
-  value: ReturnType<typeof parseTransactionDoc>,
-): value is NonNullable<ReturnType<typeof parseTransactionDoc>> {
-  return value !== null;
-}
-
-function parseDateMs(value: string): number | null {
-  const ms = new Date(value).getTime();
-  return Number.isNaN(ms) ? null : ms;
-}
-
-function extractQueryYears(query: string): number[] {
-  const matches = query.match(/\b20\d{2}\b/g) || [];
-  return Array.from(new Set(matches.map((value) => Number(value))));
-}
-
-function extractQueryAmounts(query: string): number[] {
-  const matches = query.match(/\$?\d+(?:\.\d+)?/g) || [];
-  return Array.from(
-    new Set(
-      matches
-        .map((value) => Number(value.replace("$", "")))
-        .filter((value) => !Number.isNaN(value)),
-    ),
-  );
-}
-
-function extractQueryMonths(query: string): number[] {
-  const monthKeys = [
-    "jan",
-    "feb",
-    "mar",
-    "apr",
-    "may",
-    "jun",
-    "jul",
-    "aug",
-    "sep",
-    "oct",
-    "nov",
-    "dec",
-  ];
-  const lowered = query.toLowerCase();
-  return monthKeys
-    .map((month, index) => ({ month, index }))
-    .filter(({ month }) => new RegExp(`\\b${month}(?:[a-z]+)?\\b`).test(lowered))
-    .map(({ index }) => index);
-}
-
-function tokenizeForLookup(input: string): string[] {
-  return (input.toLowerCase().match(/[a-z0-9]{3,}/g) || []).filter(
-    (token) =>
-      ![
-        "what",
-        "when",
-        "where",
-        "which",
-        "with",
-        "from",
-        "that",
-        "this",
-        "transaction",
-        "transactions",
-        "spending",
-        "expense",
-        "expenses",
-        "income",
-        "total",
-        "show",
-        "list",
-        "details",
-        "history",
-      ].includes(token),
-  );
-}
-
-type ParsedTransaction = NonNullable<ReturnType<typeof parseTransactionDoc>>;
 
 function buildHybridTransactionContext(query: string, transactions: ParsedTransaction[]): string {
   if (transactions.length === 0) return "";
@@ -495,7 +763,7 @@ function buildHybridTransactionContext(query: string, transactions: ParsedTransa
   if (deduped.length === 0) return "";
 
   return [
-    "Wide Transaction Context (hybrid: recent + targeted from full history, user-scoped):",
+    "Wide Transaction Context (structured exact data, user-scoped):",
     ...deduped.map(
       (transaction) =>
         `${transaction.date} | ${transaction.merchant} | ${transaction.category} | ${transaction.amount.toFixed(2)}`,
@@ -534,7 +802,6 @@ async function embedText(text: string): Promise<number[]> {
     throw new Error(errorJson.error || `Ollama embed failed with ${embedResponse.status}`);
   }
 
-  // Backward-compatible fallback for older Ollama versions.
   const legacyResponse = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -552,31 +819,94 @@ async function embedText(text: string): Promise<number[]> {
   return legacyJson.embedding;
 }
 
-async function upsertRagDocuments(userId: string, documents: RagDocumentInput[]): Promise<void> {
-  if (documents.length === 0) {
-    return;
+async function loadExistingIndexPoints(userId: string) {
+  try {
+    return await scrollUserSourcePoints(userId);
+  } catch (error) {
+    if (error instanceof Error && error.message === "QDRANT_NOT_FOUND") {
+      return [];
+    }
+    throw error;
+  }
+}
+
+async function syncRagDocuments(userId: string, documents: RagDocumentInput[]): Promise<SyncStats> {
+  const existingPoints = await loadExistingIndexPoints(userId);
+  const existingByRefId = new Map(
+    existingPoints
+      .map((point) => {
+        const payload = point.payload;
+        if (!payload?.refId) return null;
+        return [
+          payload.refId,
+          {
+            id: point.id,
+            contentHash: typeof payload.contentHash === "string" ? payload.contentHash : "",
+          },
+        ] as const;
+      })
+      .filter((value): value is readonly [string, { id: string | number; contentHash: string }] => value !== null),
+  );
+
+  const desiredRefIds = new Set<string>();
+  const changedDocuments: Array<RagDocumentInput & { contentHash: string }> = [];
+  let skipped = 0;
+
+  for (const document of documents) {
+    const contentHash = hashContent(document.text);
+    desiredRefIds.add(document.id);
+
+    const existing = existingByRefId.get(document.id);
+    if (existing && existing.contentHash === contentHash) {
+      skipped += 1;
+      continue;
+    }
+
+    changedDocuments.push({ ...document, contentHash });
   }
 
-  const embeddings = await Promise.all(documents.map((doc) => embedText(doc.text)));
-  await ensureVectorCollection(embeddings[0].length);
+  const removedIds = existingPoints
+    .filter((point) => {
+      const refId = typeof point.payload?.refId === "string" ? point.payload.refId : "";
+      return !desiredRefIds.has(refId);
+    })
+    .map((point) => point.id);
 
-  const now = new Date().toISOString();
-  await qdrant.upsert(vectorCollectionName, {
-    wait: true,
-    points: documents.map((doc, index) => ({
-      id: hashPointId(userId, doc.id),
-      vector: embeddings[index],
-      payload: {
-        userId,
-        kind: doc.kind,
-        refId: doc.id,
-        text: doc.text,
-        tags: doc.tags || [],
-        createdAt: now,
-        updatedAt: now,
-      },
-    })),
-  });
+  if (changedDocuments.length > 0) {
+    const embeddings = await Promise.all(changedDocuments.map((document) => embedText(document.text)));
+    await ensureVectorCollection(embeddings[0].length);
+
+    const now = new Date().toISOString();
+    await upsertPoints(
+      changedDocuments.map((document, index) => ({
+        id: hashPointId(userId, document.id),
+        denseVector: embeddings[index],
+        sparseVector: buildSparseVector(document.text, buildSparseBoosts(document)),
+        payload: {
+          userId,
+          kind: document.kind,
+          refId: document.id,
+          text: document.text,
+          tags: document.tags || [],
+          ...sanitizeMetadata(document.metadata),
+          source: ragVectorSource,
+          contentHash: document.contentHash,
+          createdAt: now,
+          updatedAt: now,
+        },
+      })),
+    );
+  }
+
+  if (removedIds.length > 0) {
+    await deletePoints(removedIds);
+  }
+
+  return {
+    indexed: changedDocuments.length,
+    skipped,
+    removed: removedIds.length,
+  };
 }
 
 async function askOllamaChat(prompt: string): Promise<string> {
@@ -590,7 +920,7 @@ async function askOllamaChat(prompt: string): Promise<string> {
         {
           role: "system",
           content:
-            "You are PocketPilot's financial assistant. Use only provided context + user messages. The user is already authenticated and user-scoped data is already provided, so never ask for username, user ID, or authentication details. If needed data is missing, state exactly which financial data is missing.",
+            "You are PocketPilot's financial assistant. Use only provided context plus the recent conversation. Structured transaction context contains exact user-scoped values and should win over semantic hints when numbers or dates are involved. The user is already authenticated, so never ask for usernames, user IDs, or login details. If data is missing, say exactly which financial data is missing.",
         },
         {
           role: "user",
@@ -626,6 +956,37 @@ export const health = onRequest({ region: REGION }, async (_request, response) =
   });
 });
 
+export const syncRagIndex = onRequest({ region: REGION, cors: true }, async (request, response) => {
+  try {
+    if (request.method !== "POST") {
+      response.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+
+    const userId = await verifyUserId(request);
+    const body = request.body as SyncRagIndexBody;
+    const documents = Array.isArray(body?.documents)
+      ? body.documents.filter((document) => document?.id && document?.text)
+      : [];
+
+    const stats = await syncRagDocuments(userId, documents);
+    response.status(200).json({
+      ok: true,
+      ...stats,
+      model: OLLAMA_EMBED_MODEL,
+    });
+  } catch (error) {
+    logger.error("syncRagIndex failed", error);
+    if (isAuthError(error)) {
+      response.status(401).json({ error: error instanceof Error ? error.message : "Unauthorized" });
+      return;
+    }
+    response.status(500).json({
+      error: error instanceof Error ? error.message : "syncRagIndex failed",
+    });
+  }
+});
+
 export const upsertVector = onRequest({ region: REGION, cors: true }, async (request, response) => {
   try {
     if (request.method !== "POST") {
@@ -652,34 +1013,30 @@ export const upsertVector = onRequest({ region: REGION, cors: true }, async (req
 
     const now = new Date().toISOString();
     const pointId = hashPointId(userId, `${body.payload.kind}:${body.payload.refId}`);
-    const payload: VectorPayload = {
-      userId,
-      kind: body.payload.kind,
-      refId: body.payload.refId,
-      text: body.payload.text,
-      tags: body.payload.tags || [],
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    await qdrant.upsert(vectorCollectionName, {
-      wait: true,
-      points: [
-        {
-          id: pointId,
-          vector: body.vector,
-          payload: toPayloadRecord(payload),
+    await upsertPoints([
+      {
+        id: pointId,
+        denseVector: body.vector,
+        sparseVector: buildSparseVector(body.payload.text),
+        payload: {
+          userId,
+          kind: body.payload.kind,
+          refId: body.payload.refId,
+          text: body.payload.text,
+          tags: body.payload.tags || [],
+          source: ragVectorSource,
+          contentHash: hashContent(body.payload.text),
+          createdAt: now,
+          updatedAt: now,
         },
-      ],
-    });
+      },
+    ]);
 
     response.status(200).json({ ok: true, id: pointId });
   } catch (error) {
     logger.error("upsertVector failed", error);
     if (isAuthError(error)) {
-      response
-        .status(401)
-        .json({ error: error instanceof Error ? error.message : "Unauthorized" });
+      response.status(401).json({ error: error instanceof Error ? error.message : "Unauthorized" });
       return;
     }
     response.status(500).json({
@@ -703,26 +1060,14 @@ export const queryVectors = onRequest({ region: REGION, cors: true }, async (req
       return;
     }
 
-    const kindsFilter = (body.kinds || []).map((kind) => ({
-      key: "kind",
-      match: { value: kind },
-    }));
+    await ensureVectorCollection(body.vector.length);
 
-    const result = await qdrant.search(vectorCollectionName, {
+    const result = await queryDensePoints({
       vector: body.vector,
+      userId,
+      kinds: body.kinds,
       limit: Math.min(body.limit || 8, 20),
-      score_threshold: body.scoreThreshold,
-      filter: {
-        must: [
-          {
-            key: "userId",
-            match: { value: userId },
-          },
-        ],
-        ...(kindsFilter.length > 0 ? { should: kindsFilter } : {}),
-      },
-      with_payload: true,
-      with_vector: false,
+      scoreThreshold: body.scoreThreshold,
     });
 
     response.status(200).json({
@@ -732,9 +1077,7 @@ export const queryVectors = onRequest({ region: REGION, cors: true }, async (req
   } catch (error) {
     logger.error("queryVectors failed", error);
     if (isAuthError(error)) {
-      response
-        .status(401)
-        .json({ error: error instanceof Error ? error.message : "Unauthorized" });
+      response.status(401).json({ error: error instanceof Error ? error.message : "Unauthorized" });
       return;
     }
     response.status(500).json({
@@ -825,56 +1168,43 @@ export const ragChat = onRequest({ region: REGION, cors: true }, async (request,
 
     const userId = await verifyUserId(request);
     const body = request.body as RagChatBody;
+    const query = body?.query?.trim();
 
-    if (!body?.query?.trim()) {
+    if (!query) {
       response.status(400).json({ error: "query is required" });
       return;
     }
 
-    const docs = Array.isArray(body.documents) ? body.documents.filter((d) => d?.id && d?.text) : [];
-    if (docs.length > 0) {
-      await upsertRagDocuments(userId, docs);
-    }
-
-    const deterministicAnswer = tryDeterministicAnswer(body.query, docs);
+    const transactions = needsStructuredTransactions(query) ? await loadUserTransactions(userId) : [];
+    const transactionConstraints = inferTransactionSearchConstraints(query, transactions);
+    const deterministicAnswer = tryDeterministicAnswer(query, transactionConstraints.filteredTransactions);
     if (deterministicAnswer) {
       response.status(200).json({
         ok: true,
         answer: deterministicAnswer,
-        retrieved: docs.length,
-        model: "deterministic-rules-v1",
+        retrieved: 0,
+        model: "deterministic-rules-v2",
       });
       return;
     }
 
-    const queryEmbedding = await embedText(body.query.trim());
+    const queryEmbedding = await embedText(query);
     await ensureVectorCollection(queryEmbedding.length);
 
-    const matches = await qdrant.search(vectorCollectionName, {
-      vector: queryEmbedding,
-      limit: Math.min(body.topK || 20, 40),
-      filter: {
-        must: [
-          {
-            key: "userId",
-            match: { value: userId },
-          },
-        ],
-      },
-      with_payload: true,
-      with_vector: false,
+    const matches = await searchHybridPoints({
+      denseVector: queryEmbedding,
+      sparseVector: buildSparseVector(query),
+      userId,
+      kinds: transactionConstraints.kinds,
+      extraMust: transactionConstraints.extraMust,
+      limit: Math.min(body.topK || 12, 32),
+      preferSparse: hasPrecisionSignals(query),
     });
 
-    const wideTransactionContext = (() => {
-      if (!shouldAttachWideTransactionContext(body.query)) {
-        return "";
-      }
-
-      const transactions = docs
-        .map(parseTransactionDoc)
-        .filter(isParsedTransaction);
-      return buildHybridTransactionContext(body.query, transactions);
-    })();
+    const wideTransactionContext =
+      transactionConstraints.filteredTransactions.length > 0 && shouldAttachWideTransactionContext(query)
+        ? buildHybridTransactionContext(query, transactionConstraints.filteredTransactions)
+        : "";
 
     const contextBlocks = matches
       .map((match, index) => {
@@ -890,19 +1220,20 @@ export const ragChat = onRequest({ region: REGION, cors: true }, async (request,
 
     const prompt = [
       "Use this user-specific financial context to answer the question.",
+      "Hybrid retrieval already blended semantic matches with exact keyword matches.",
       "If the answer cannot be derived from context, clearly say that.",
       "Keep answers concise and practical.",
       "If monthly summary context is available, use it first for month-over-month or total spending questions.",
       "Prefer concrete numbers and a short explanation of the biggest drivers.",
       "",
       "Retrieved Context:",
-      contextBlocks || "No context found.",
+      contextBlocks || "No indexed context found.",
       ...(wideTransactionContext ? ["", wideTransactionContext] : []),
       "",
       "Recent Conversation:",
       chatHistory || "None",
       "",
-      `User Question: ${body.query.trim()}`,
+      `User Question: ${query}`,
     ].join("\n");
 
     const answer = await askOllamaChat(prompt);

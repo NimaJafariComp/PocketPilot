@@ -62,4 +62,4 @@ Useful commands:
 
 Notes:
 - The stack uses a local demo Firebase project ID: `demo-pocketpilot`.
-- `ollama-init` pulls `llama3.2:3b` and `nomic-embed-text` on first boot; first startup can take longer.
+- `ollama-init` pulls `llama3.2:3b` and `nomic-embed-text:v1.5` on first boot; first startup can take longer.

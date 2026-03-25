@@ -10,7 +10,6 @@ import {
   Tooltip,
 } from 'recharts';
 import { startOfMonth, endOfMonth, subMonths, parseISO, format } from 'date-fns';
-import { useAuth } from '../context/AuthContext';
 import { services } from '../lib/services';
 
 const CHART_COLORS = [
@@ -72,129 +71,12 @@ function Avatar({ name }: { name: string }) {
 }
 
 export function Insights() {
-  const { transactions, budgets, goals } = useData();
-  const { user: currentUser } = useAuth();
+  const { transactions } = useData();
   const [tab, setTab] = useState<'summary' | 'assistant'>('summary');
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [assistantError, setAssistantError] = useState('');
-
-  // ── RAG documents ──────────────────────────────────────────────
-  const ragDocuments = useMemo(() => {
-    const identityDoc = {
-      id: 'insight-user-identity',
-      kind: 'insight' as const,
-      text: [
-        'Authenticated User Context',
-        `DisplayName: ${currentUser?.displayName || 'Unknown'}`,
-        `Email: ${currentUser?.email || 'Unknown'}`,
-        `Uid: ${currentUser?.id || 'Unknown'}`,
-      ].join('\n'),
-      tags: ['insight', 'identity', 'user-profile'],
-    };
-
-    const yearlySummaryDocs = (() => {
-      const years = new Set<number>();
-      transactions.forEach((t) => {
-        const d = parseISO(t.date);
-        if (!Number.isNaN(d.getTime())) years.add(d.getFullYear());
-      });
-      return Array.from(years).sort((a, b) => b - a).map((year) => {
-        const yt = transactions.filter((t) => {
-          const d = parseISO(t.date);
-          return !Number.isNaN(d.getTime()) && d.getFullYear() === year;
-        });
-        const expenses = yt.filter(t => t.amount < 0);
-        const incomes  = yt.filter(t => t.amount > 0);
-        const totalExpenses = Math.abs(expenses.reduce((s, t) => s + t.amount, 0));
-        const totalIncome   = incomes.reduce((s, t) => s + t.amount, 0);
-        const largest = expenses.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))[0];
-        return {
-          id: `insight-year-${year}`,
-          kind: 'insight' as const,
-          text: [
-            `Yearly Financial Summary: ${year}`,
-            `TotalIncome: ${totalIncome.toFixed(2)}`,
-            `TotalExpenses: ${totalExpenses.toFixed(2)}`,
-            `NetCashFlow: ${(totalIncome - totalExpenses).toFixed(2)}`,
-            `TransactionCount: ${yt.length}`,
-            `LargestExpense: ${largest ? `${largest.merchant} (${largest.category}) ${Math.abs(largest.amount).toFixed(2)}` : 'None'}`,
-          ].join('\n'),
-          tags: ['insight', 'yearly-summary', String(year)],
-        };
-      });
-    })();
-
-    const allTimeLargestExpensesDoc = {
-      id: 'insight-largest-expenses-all-time',
-      kind: 'insight' as const,
-      text: [
-        'All-Time Largest Expenses',
-        ...transactions
-          .filter(t => t.amount < 0)
-          .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
-          .slice(0, 10)
-          .map(t => `${t.date} | ${t.merchant} | ${t.category} | ${Math.abs(t.amount).toFixed(2)}`),
-      ].join('\n'),
-      tags: ['insight', 'largest-expenses', 'all-time'],
-    };
-
-    const monthlySummaryDocs = Array.from({ length: 6 }, (_, offset) => {
-      const monthDate  = subMonths(new Date(), offset);
-      const monthStart = startOfMonth(monthDate);
-      const monthEnd   = endOfMonth(monthDate);
-      const monthId    = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}`;
-      const monthLabel = monthStart.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-      const mt = transactions.filter(t => { const d = parseISO(t.date); return d >= monthStart && d <= monthEnd; });
-      const expenses = mt.filter(t => t.amount < 0);
-      const incomes  = mt.filter(t => t.amount > 0);
-      const totalExpenses = Math.abs(expenses.reduce((s, t) => s + t.amount, 0));
-      const totalIncome   = incomes.reduce((s, t) => s + t.amount, 0);
-      const categoryTotals = expenses.reduce((acc, t) => {
-        acc[t.category] = (acc[t.category] || 0) + Math.abs(t.amount); return acc;
-      }, {} as Record<string, number>);
-      const topCategories = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]).slice(0, 3)
-        .map(([cat, amt]) => `${cat}: ${amt.toFixed(2)}`);
-      const largestExpenses = expenses.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)).slice(0, 3)
-        .map(t => `${t.merchant} (${t.category}): ${Math.abs(t.amount).toFixed(2)}`);
-      return {
-        id: `insight-month-${monthId}`,
-        kind: 'insight' as const,
-        text: [
-          `Monthly Spending Summary: ${monthLabel}`,
-          `MonthId: ${monthId}`,
-          `TotalExpenses: ${totalExpenses.toFixed(2)}`,
-          `TotalIncome: ${totalIncome.toFixed(2)}`,
-          `NetCashFlow: ${(totalIncome - totalExpenses).toFixed(2)}`,
-          `TransactionCount: ${mt.length}`,
-          `TopExpenseCategories: ${topCategories.join('; ') || 'None'}`,
-          `LargestExpenses: ${largestExpenses.join('; ') || 'None'}`,
-        ].join('\n'),
-        tags: ['insight', 'monthly-summary', monthId],
-      };
-    });
-
-    const transactionDocs = transactions.map(t => ({
-      id: `tx-${t.id}`, kind: 'transaction' as const,
-      text: [`Transaction ${t.id}`, `Date: ${t.date}`, `Merchant: ${t.merchant}`, `Category: ${t.category}`, `Amount: ${t.amount}`, t.notes ? `Notes: ${t.notes}` : ''].filter(Boolean).join('\n'),
-      tags: [t.category.toLowerCase(), 'transaction'],
-    }));
-
-    const budgetDocs = budgets.map(b => ({
-      id: `budget-${b.id}`, kind: 'budget' as const,
-      text: [`Budget ${b.id}`, `Category: ${b.category}`, `Month: ${b.month}`, `Amount: ${b.amount}`, `WarningThreshold: ${b.warningThreshold}`, `LimitThreshold: ${b.limitThreshold}`].join('\n'),
-      tags: [b.category.toLowerCase(), b.month, 'budget'],
-    }));
-
-    const goalDocs = goals.map(g => ({
-      id: `goal-${g.id}`, kind: 'goal' as const,
-      text: [`Goal ${g.id}`, `Name: ${g.name}`, `TargetAmount: ${g.targetAmount}`, `CurrentAmount: ${g.currentAmount}`, g.deadline ? `Deadline: ${g.deadline}` : ''].filter(Boolean).join('\n'),
-      tags: ['goal', g.name.toLowerCase()],
-    }));
-
-    return [identityDoc, allTimeLargestExpensesDoc, ...yearlySummaryDocs, ...monthlySummaryDocs, ...transactionDocs, ...budgetDocs, ...goalDocs];
-  }, [transactions, budgets, goals, currentUser]);
 
   // ── Computed insights ─────────────────────────────────────────────
   const insights = useMemo(() => {
@@ -261,7 +143,7 @@ export function Insights() {
     setMessages(nextMessages);
     setIsSending(true);
     try {
-      const response = await services.rag.ask({ query: userMessage, messages: nextMessages.slice(-8), documents: ragDocuments, topK: 20 });
+      const response = await services.rag.ask({ query: userMessage, messages: nextMessages.slice(-8), topK: 12 });
       setMessages(prev => [...prev, { role: 'assistant', content: response.answer }]);
     } catch (error) {
       setAssistantError(error instanceof Error ? error.message : 'Assistant failed');

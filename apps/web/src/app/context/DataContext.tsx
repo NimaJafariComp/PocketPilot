@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import { type Budget, type Category, DEFAULT_CATEGORIES, type Goal, type Transaction } from '../types';
 import { useAuth } from './AuthContext';
 import { services } from '../lib/services';
+import { buildRagDocuments } from '../lib/ragDocuments';
 
 interface DataContextType {
   transactions: Transaction[];
@@ -36,6 +37,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const seededCategoriesForUser = useRef<string | null>(null);
   const backfillInFlight = useRef(false);
   const backfilledTransactionIds = useRef<Set<string>>(new Set());
+  const ragSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ragSyncVersion = useRef(0);
+  const lastSyncedRagSignature = useRef('');
+
+  const ragDocuments = useMemo(
+    () =>
+      buildRagDocuments({
+        transactions,
+        budgets,
+        goals,
+        user,
+      }),
+    [transactions, budgets, goals, user],
+  );
+
+  const ragSignature = useMemo(
+    () => JSON.stringify(ragDocuments.map((document) => [document.id, document.kind, document.text, document.tags || []])),
+    [ragDocuments],
+  );
 
   useEffect(() => {
     if (authLoading) return;
@@ -49,6 +69,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
       seededCategoriesForUser.current = null;
       backfilledTransactionIds.current = new Set();
       backfillInFlight.current = false;
+      if (ragSyncTimer.current) {
+        clearTimeout(ragSyncTimer.current);
+        ragSyncTimer.current = null;
+      }
+      ragSyncVersion.current = 0;
+      lastSyncedRagSignature.current = '';
       return;
     }
 
@@ -158,6 +184,45 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     void run();
   }, [user, transactions, loading, categories]);
+
+  useEffect(() => {
+    if (!user || authLoading || loading) {
+      return;
+    }
+
+    if (ragSignature === lastSyncedRagSignature.current) {
+      return;
+    }
+
+    ragSyncVersion.current += 1;
+    const syncVersion = ragSyncVersion.current;
+    const scheduledSignature = ragSignature;
+
+    if (ragSyncTimer.current) {
+      clearTimeout(ragSyncTimer.current);
+    }
+
+    ragSyncTimer.current = setTimeout(() => {
+      ragSyncTimer.current = null;
+      void services.rag
+        .syncIndex({ documents: ragDocuments })
+        .then(() => {
+          if (ragSyncVersion.current === syncVersion) {
+            lastSyncedRagSignature.current = scheduledSignature;
+          }
+        })
+        .catch((error) => {
+          console.error('RAG index sync failed', error);
+        });
+    }, 400);
+
+    return () => {
+      if (ragSyncTimer.current) {
+        clearTimeout(ragSyncTimer.current);
+        ragSyncTimer.current = null;
+      }
+    };
+  }, [user, authLoading, loading, ragDocuments, ragSignature]);
 
   function getAvailableCategoryNames() {
     const categoryNames = (categories.length > 0 ? categories : DEFAULT_CATEGORIES).map((category) => category.name);

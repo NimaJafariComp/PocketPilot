@@ -10,6 +10,8 @@ export interface VectorPayload {
   kind: EmbeddingKind;
   refId: string;
   text: string;
+  source?: string;
+  contentHash?: string;
   createdAt: string;
   updatedAt?: string;
   tags?: string[];
@@ -33,6 +35,7 @@ export interface RagDocumentInput {
   kind: EmbeddingKind;
   text: string;
   tags?: string[];
+  metadata?: Record<string, string | number | boolean | null | undefined>;
 }
 
 export interface RagMessage {
@@ -43,8 +46,11 @@ export interface RagMessage {
 export interface RagChatBody {
   query: string;
   messages?: RagMessage[];
-  documents?: RagDocumentInput[];
   topK?: number;
+}
+
+export interface SyncRagIndexBody {
+  documents?: RagDocumentInput[];
 }
 
 export interface CategorizationRequestItem {
