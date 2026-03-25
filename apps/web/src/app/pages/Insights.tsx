@@ -15,13 +15,22 @@ import { startOfMonth, endOfMonth, subMonths, parseISO, format } from 'date-fns'
 import { services } from '../lib/services';
 
 const CHART_COLORS = [
-  'oklch(0.646 0.222 41.116)',
-  'oklch(0.6 0.118 184.704)',
-  'oklch(0.398 0.07 227.392)',
-  'oklch(0.828 0.189 84.429)',
-  'oklch(0.769 0.188 70.08)',
-  '#d1d5db',
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-4)',
+  'var(--chart-3)',
+  'var(--chart-5)',
+  'var(--muted-foreground)',
 ];
+
+const TOOLTIP_STYLE = {
+  backgroundColor: 'var(--popover)',
+  color: 'var(--popover-foreground)',
+  border: '1px solid var(--border)',
+  borderRadius: '0.75rem',
+  fontSize: '0.75rem',
+  boxShadow: '0 18px 40px rgba(2, 6, 23, 0.24)',
+};
 
 interface Message {
   role: 'user' | 'assistant';
@@ -182,7 +191,7 @@ export function Insights() {
             className={[
               'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
               tab === t
-                ? 'border-foreground text-foreground'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground',
             ].join(' ')}
           >
@@ -202,7 +211,7 @@ export function Insights() {
               <div className="absolute left-0 top-[20%] bottom-[20%] w-0.5 bg-foreground rounded-r" />
               <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">This Month</p>
               <p className="text-2xl font-semibold tracking-tight">${Math.round(insights.thisMonthSpent).toLocaleString()}</p>
-              <p className={`text-xs mt-1 flex items-center gap-1 ${insights.changePercent > 0 ? 'text-destructive' : 'text-emerald-600'}`}>
+              <p className={`text-xs mt-1 flex items-center gap-1 ${insights.changePercent > 0 ? 'text-destructive' : 'text-success'}`}>
                 {insights.changePercent > 0
                   ? <TrendingUp className="w-3 h-3" />
                   : <TrendingDown className="w-3 h-3" />}
@@ -248,7 +257,7 @@ export function Insights() {
                             <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="none" />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(v) => [`$${v}`, '']} contentStyle={{ border: '1px solid rgba(0,0,0,0.1)', borderRadius: '0.5rem', fontSize: '0.75rem' }} />
+                        <Tooltip formatter={(v) => [`$${v}`, '']} contentStyle={TOOLTIP_STYLE} />
                       </PieChart>
                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                         <span className="text-sm font-semibold tracking-tight">${Math.round(insights.thisMonthSpent).toLocaleString()}</span>
@@ -308,10 +317,10 @@ export function Insights() {
                   return (
                     <div key={item.category} className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isUp ? 'bg-orange-50' : 'bg-emerald-50'}`}>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isUp ? 'bg-warning/12' : 'bg-success/12'}`}>
                           {isUp
-                            ? <ArrowUpRight className="w-4 h-4 text-orange-500" />
-                            : <ArrowDownRight className="w-4 h-4 text-emerald-600" />}
+                            ? <ArrowUpRight className="w-4 h-4 text-warning" />
+                            : <ArrowDownRight className="w-4 h-4 text-success" />}
                         </div>
                         <div>
                           <p className="text-sm font-medium">{item.category}</p>
@@ -321,7 +330,7 @@ export function Insights() {
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-0.5">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded ${isUp ? 'bg-orange-50 text-orange-600' : 'bg-emerald-50 text-emerald-700'}`}>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded ${isUp ? 'bg-warning/12 text-warning-foreground' : 'bg-success/12 text-success'}`}>
                           {isUp ? '+' : ''}{Math.round(item.change)}%
                         </span>
                         <span className="text-xs font-mono text-muted-foreground">
@@ -366,7 +375,7 @@ export function Insights() {
       {/* ══════════ AI ASSISTANT ══════════ */}
       {tab === 'assistant' && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2 px-4 py-3 bg-muted rounded-lg text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 rounded-lg border border-info/20 bg-info/10 px-4 py-3 text-sm text-info-foreground">
             <Info className="w-3.5 h-3.5 flex-shrink-0" />
             <span>Powered by local Ollama + Qdrant RAG — your data never leaves your machine.</span>
           </div>
@@ -398,8 +407,8 @@ export function Insights() {
 
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center pt-10 pb-6">
-                  <div className="w-12 h-12 rounded-xl bg-foreground flex items-center justify-center mb-4">
-                    <Sparkles className="w-5 h-5 text-primary-foreground" />
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                    <Sparkles className="w-5 h-5" />
                   </div>
                   <h3 className="text-base font-semibold tracking-tight mb-1">Financial Assistant</h3>
                   <p className="text-sm text-muted-foreground mb-6">Ask anything about your spending patterns</p>
@@ -409,7 +418,7 @@ export function Insights() {
                       <button
                         key={text}
                         onClick={() => setInput(text)}
-                        className="flex items-center gap-2.5 px-4 py-2.5 border border-border rounded-lg text-sm text-left hover:bg-muted hover:border-border/80 transition-colors"
+                        className="flex items-center gap-2.5 rounded-lg border border-border px-4 py-2.5 text-left text-sm transition-colors hover:border-primary/20 hover:bg-muted"
                       >
                         <span className="text-muted-foreground">{icon}</span>
                         {text}
@@ -421,14 +430,14 @@ export function Insights() {
                 messages.map((message, idx) => (
                   <div key={idx} className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     {message.role === 'assistant' && (
-                      <div className="w-7 h-7 rounded-lg bg-foreground flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
+                      <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                        <Sparkles className="w-3.5 h-3.5" />
                       </div>
                     )}
                     <div className={[
                       'max-w-[80%] px-4 py-3 rounded-lg text-sm whitespace-pre-wrap leading-relaxed',
                       message.role === 'user'
-                        ? 'bg-foreground text-primary-foreground'
+                        ? 'bg-primary text-primary-foreground'
                         : 'bg-muted text-foreground',
                     ].join(' ')}>
                       {message.content}
@@ -439,8 +448,8 @@ export function Insights() {
 
               {isSending && (
                 <div className="flex gap-3 justify-start">
-                  <div className="w-7 h-7 rounded-lg bg-foreground flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
+                  <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                    <Sparkles className="w-3.5 h-3.5" />
                   </div>
                   <div className="bg-muted px-4 py-3 rounded-lg text-sm text-muted-foreground">
                     Thinking…

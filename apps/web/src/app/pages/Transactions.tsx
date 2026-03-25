@@ -29,24 +29,24 @@ import { toast } from 'sonner';
 const ITEMS_PER_PAGE = 20;
 
 const CATEGORY_COLORS: Record<string, string> = {
-  Food: 'bg-orange-100 text-orange-700 border-orange-200',
-  Groceries: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-  Dining: 'bg-orange-100 text-orange-700 border-orange-200',
-  Transport: 'bg-blue-100 text-blue-700 border-blue-200',
-  Transportation: 'bg-blue-100 text-blue-700 border-blue-200',
-  Entertainment: 'bg-purple-100 text-purple-700 border-purple-200',
-  Shopping: 'bg-pink-100 text-pink-700 border-pink-200',
-  Health: 'bg-green-100 text-green-700 border-green-200',
-  Income: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  Utilities: 'bg-sky-100 text-sky-700 border-sky-200',
-  Bills: 'bg-red-100 text-red-700 border-red-200',
-  Uncategorized: 'bg-gray-100 text-gray-500 border-gray-200',
+  Food: 'border-orange-500/25 bg-orange-500/12 text-orange-700 dark:border-orange-400/25 dark:bg-orange-400/10 dark:text-orange-300',
+  Groceries: 'border-yellow-500/25 bg-yellow-500/12 text-yellow-700 dark:border-yellow-400/25 dark:bg-yellow-400/10 dark:text-yellow-300',
+  Dining: 'border-orange-500/25 bg-orange-500/12 text-orange-700 dark:border-orange-400/25 dark:bg-orange-400/10 dark:text-orange-300',
+  Transport: 'border-blue-500/25 bg-blue-500/12 text-blue-700 dark:border-blue-400/25 dark:bg-blue-400/10 dark:text-blue-300',
+  Transportation: 'border-blue-500/25 bg-blue-500/12 text-blue-700 dark:border-blue-400/25 dark:bg-blue-400/10 dark:text-blue-300',
+  Entertainment: 'border-violet-500/25 bg-violet-500/12 text-violet-700 dark:border-violet-400/25 dark:bg-violet-400/10 dark:text-violet-300',
+  Shopping: 'border-pink-500/25 bg-pink-500/12 text-pink-700 dark:border-pink-400/25 dark:bg-pink-400/10 dark:text-pink-300',
+  Health: 'border-emerald-500/25 bg-emerald-500/12 text-emerald-700 dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-300',
+  Income: 'border-success/25 bg-success/12 text-success',
+  Utilities: 'border-sky-500/25 bg-sky-500/12 text-sky-700 dark:border-sky-400/25 dark:bg-sky-400/10 dark:text-sky-300',
+  Bills: 'border-red-500/25 bg-red-500/12 text-red-700 dark:border-red-400/25 dark:bg-red-400/10 dark:text-red-300',
+  Uncategorized: 'border-border bg-muted text-muted-foreground',
 };
 
 function CategoryBadge({ category }: { category: string }) {
   const colors = CATEGORY_COLORS[category] ?? 'bg-secondary text-secondary-foreground border-border';
   return (
-      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${colors}`}>
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${colors}`}>
       {category}
     </span>
   );
@@ -55,7 +55,7 @@ function CategoryBadge({ category }: { category: string }) {
 function CategorizationStatusBadge({ transaction }: { transaction: Transaction }) {
   if (transaction.categoryNeedsReview) {
     return (
-      <Badge variant="secondary" className="bg-amber-50 text-amber-800 border-amber-200">
+      <Badge variant="outline" className="border-warning/25 bg-warning/12 text-warning-foreground">
         Needs Review
       </Badge>
     );
@@ -63,7 +63,7 @@ function CategorizationStatusBadge({ transaction }: { transaction: Transaction }
 
   if (transaction.categorySource?.startsWith('auto-')) {
     return (
-      <Badge variant="secondary" className="bg-sky-50 text-sky-800 border-sky-200">
+      <Badge variant="outline" className="border-info/25 bg-info/10 text-info-foreground">
         Auto-Categorized
       </Badge>
     );
@@ -303,8 +303,8 @@ export function Transactions() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {uncategorizedCount > 0 && (
-                <Badge variant="secondary" className="w-fit gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-orange-400 inline-block" />
+                <Badge variant="outline" className="w-fit gap-1.5 border-warning/25 bg-warning/12 text-warning-foreground">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-warning" />
                   {uncategorizedCount} need categorization
                 </Badge>
             )}
@@ -415,23 +415,23 @@ export function Transactions() {
         {/* Summary stats */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-card border border-border rounded-xl px-4 py-3 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
-              <TrendingDown className="w-4 h-4 text-red-500" />
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-destructive/10">
+              <TrendingDown className="w-4 h-4 text-destructive" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground font-medium">Total Spent</p>
-              <p className="text-lg font-semibold tracking-tight text-red-600">
+              <p className="text-lg font-semibold tracking-tight text-destructive">
                 ${stats.spent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
           </div>
           <div className="bg-card border border-border rounded-xl px-4 py-3 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
-              <TrendingUp className="w-4 h-4 text-green-600" />
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-success/12">
+              <TrendingUp className="w-4 h-4 text-success" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground font-medium">Total Income</p>
-              <p className="text-lg font-semibold tracking-tight text-green-600">
+              <p className="text-lg font-semibold tracking-tight text-success">
                 ${stats.income.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
@@ -562,7 +562,7 @@ export function Transactions() {
                             <TableCell className="py-3.5">
                               <CategoryBadge category={transaction.category} />
                             </TableCell>
-                            <TableCell className={`text-right font-semibold text-sm pr-5 py-3.5 ${transaction.amount < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            <TableCell className={`text-right font-semibold text-sm pr-5 py-3.5 ${transaction.amount < 0 ? 'text-destructive' : 'text-success'}`}>
                               {transaction.amount < 0 ? '−' : '+'}${Math.abs(transaction.amount).toFixed(2)}
                             </TableCell>
                             <TableCell className="py-3.5 pr-3">
@@ -647,8 +647,8 @@ export function Transactions() {
                     </SheetHeader>
 
                     <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
-                      <div className={`rounded-2xl border px-5 py-4 text-center ${editedTransaction.amount < 0 ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
-                        <p className={`text-2xl font-bold tracking-tight ${editedTransaction.amount < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      <div className={`rounded-2xl border px-5 py-4 text-center ${editedTransaction.amount < 0 ? 'border-destructive/20 bg-destructive/10' : 'border-success/20 bg-success/12'}`}>
+                        <p className={`text-2xl font-bold tracking-tight ${editedTransaction.amount < 0 ? 'text-destructive' : 'text-success'}`}>
                           {editedTransaction.amount < 0 ? '−' : '+'}${Math.abs(editedTransaction.amount).toFixed(2)}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
@@ -661,7 +661,7 @@ export function Transactions() {
                           <Label className="text-xs text-muted-foreground">Date</Label>
                           <Input
                               type="date"
-                              value={editedTransaction.date.split('T')[0]}
+                              value={editedTransaction.date.includes('T') ? editedTransaction.date.split('T')[0] : editedTransaction.date}
                               onChange={(e) => setEditedTransaction({
                                 ...editedTransaction,
                                 date: new Date(e.target.value).toISOString(),
@@ -726,7 +726,7 @@ export function Transactions() {
                         <Button
                             variant="outline"
                             size="icon"
-                            className="h-10 w-10 text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200"
+                            className="h-10 w-10 border-destructive/25 text-destructive hover:bg-destructive/10 hover:text-destructive"
                             onClick={() => setShowDeleteDialog(true)}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -750,7 +750,7 @@ export function Transactions() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+              <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
                 Delete
               </AlertDialogAction>
             </AlertDialogFooter>

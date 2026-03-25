@@ -1,10 +1,15 @@
 import { Toaster as Sonner, ToasterProps } from "sonner";
+import { useTheme } from "next-themes";
 
 const Toaster = ({ ...props }: ToasterProps) => {
+  const { resolvedTheme } = useTheme();
+
   return (
     <Sonner
-      theme="light"
+      closeButton
       className="toaster group"
+      richColors
+      theme={resolvedTheme === "dark" ? "dark" : "light"}
       style={
         {
           "--normal-bg": "var(--popover)",

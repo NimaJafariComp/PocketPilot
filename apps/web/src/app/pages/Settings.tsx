@@ -71,7 +71,7 @@ export function Settings() {
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-gray-500 mt-1">Manage your categories, data, and privacy settings</p>
+        <p className="mt-1 text-muted-foreground">Manage your categories, data, and privacy settings</p>
       </div>
 
       <Card>
@@ -130,7 +130,7 @@ export function Settings() {
         <CardContent>
           <div className="space-y-2">
             {categories.map((category) => (
-              <div key={category.id} className="flex items-center justify-between p-3 border rounded-lg">
+              <div key={category.id} className="flex items-center justify-between rounded-lg border p-3">
                 <div className="flex items-center gap-3">
                   <div className="w-4 h-4 rounded-full" style={{ backgroundColor: category.color }} />
                   <span className="font-medium">{category.name}</span>
@@ -170,16 +170,16 @@ export function Settings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <h4 className="font-medium text-blue-900 mb-2">Data Storage</h4>
-            <p className="text-sm text-blue-800">
+          <div className="rounded-lg border border-info/25 bg-info/10 p-4">
+            <h4 className="mb-2 font-medium text-info-foreground">Data Storage</h4>
+            <p className="text-sm text-info-foreground/90">
               Your data is stored in your user-scoped Firestore collections and protected by Firebase Auth
               and Firestore security rules.
             </p>
           </div>
-          <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
-            <h4 className="font-medium text-orange-900 mb-2">Important Note</h4>
-            <p className="text-sm text-orange-800">
+          <div className="rounded-lg border border-warning/25 bg-warning/12 p-4">
+            <h4 className="mb-2 font-medium text-warning-foreground">Important Note</h4>
+            <p className="text-sm text-warning-foreground/90">
               PocketPilot is not meant for collecting personally identifiable information (PII)
               or securing highly sensitive data. Always follow best practices for financial data security.
             </p>
@@ -201,7 +201,7 @@ export function Settings() {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleClearAllData} className="bg-red-600 hover:bg-red-700">
+                <AlertDialogAction onClick={handleClearAllData} className="bg-destructive hover:bg-destructive/90">
                   Clear All Data
                 </AlertDialogAction>
               </AlertDialogFooter>

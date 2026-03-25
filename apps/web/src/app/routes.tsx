@@ -16,7 +16,7 @@ function RequireAuth() {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return <div className="flex min-h-screen items-center justify-center bg-background text-foreground">Loading...</div>;
   }
 
   if (!user) {
@@ -30,7 +30,7 @@ function PublicOnly() {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return <div className="flex min-h-screen items-center justify-center bg-background text-foreground">Loading...</div>;
   }
 
   if (user) {

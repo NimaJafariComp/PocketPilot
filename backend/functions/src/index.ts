@@ -853,26 +853,26 @@ function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]
     );
   }
 
+  const queryYears = extractQueryYears(q);
+  const asksTopCategories = /\btop\s*[1-9]?\s*(categories|category)\b/.test(q);
   const asksTopCategoriesThisYear =
-    /\btop\s*[1-9]?\s*(categories|category)\b.*\b(this year|year to date|ytd|this calendar year|current year|of the year)\b/.test(q) ||
-    /\b(this year|year to date|ytd|this calendar year|current year|of the year)\b.*\btop\s*[1-9]?\s*(categories|category)\b/.test(q);
-
+    asksTopCategories &&
+    (/\b(this year|year to date|ytd|this calendar year|current year|of the year)\b/.test(q) || queryYears.length > 0);
   const asksTopCategoriesThisMonth =
-    /\btop\s*[1-9]?\s*(categories|category)\b.*\bthis month\b/.test(q) ||
-    /\bthis month\b.*\btop\s*[1-9]?\s*(categories|category)\b/.test(q) ||
-    (!asksTopCategoriesThisYear && /\btop\s*3\s*(categories|category)\b/.test(q));
+    asksTopCategories &&
+    /\bthis month\b/.test(q);
+  const ambiguousYearAndMonth = asksTopCategoriesThisYear && asksTopCategoriesThisMonth;
 
-  if (asksTopCategoriesThisYear) {
-    const now = new Date();
-    const yearStart = new Date(now.getFullYear(), 0, 1);
-    const nextYearStart = new Date(now.getFullYear() + 1, 0, 1);
-    const inThisYear = (iso: string): boolean => {
+  const resolveTopCategoriesForYear = (year: number) => {
+    const yearStart = new Date(year, 0, 1);
+    const nextYearStart = new Date(year + 1, 0, 1);
+    const inYear = (iso: string): boolean => {
       const ms = new Date(iso).getTime();
       return !Number.isNaN(ms) && ms >= yearStart.getTime() && ms < nextYearStart.getTime();
     };
 
     const yearlyExpenses = transactions.filter(
-      (transaction) => transaction.amount < 0 && inThisYear(transaction.date),
+      (transaction) => transaction.amount < 0 && inYear(transaction.date),
     );
     const categoryTotals = yearlyExpenses.reduce(
       (acc, transaction) => {
@@ -884,21 +884,15 @@ function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]
     const topCategories = Object.entries(categoryTotals)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3);
-    const yearLabel = yearStart.getFullYear();
 
-    if (topCategories.length === 0) {
-      answerParts.push(`No expense transactions were found for ${yearLabel}.`);
-    } else {
-      answerParts.push(
-        [
-          `Top categories for ${yearLabel}:`,
-          ...topCategories.map(
-            ([category, amount], index) => `${index + 1}. ${category} ($${amount.toFixed(2)})`,
-          ),
-        ].join("\n"),
-      );
-    }
-  } else if (asksTopCategoriesThisMonth) {
+    return {
+      topCategories,
+      yearLabel: year,
+      yearlyExpensesCount: yearlyExpenses.length,
+    };
+  };
+
+  const resolveTopCategoriesForMonth = () => {
     const now = new Date();
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -920,8 +914,50 @@ function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]
     const topCategories = Object.entries(categoryTotals)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3);
-    const monthLabel = thisMonthStart.toLocaleString("en-US", { month: "long", year: "numeric" });
+    const monthLabel = thisMonthStart.toLocaleString('en-US', { month: 'long', year: 'numeric' });
 
+    return { topCategories, monthLabel, monthlyExpensesCount: monthlyExpenses.length };
+  };
+
+  let processedTopCategories = false;
+
+  if (asksTopCategories && (queryYears.length > 0 || asksTopCategoriesThisYear)) {
+    const targetYear = queryYears.length > 0 ? queryYears[0] : new Date().getFullYear();
+    const { topCategories, yearLabel, yearlyExpensesCount } = resolveTopCategoriesForYear(targetYear);
+
+    if (topCategories.length > 0) {
+      answerParts.push(
+        [
+          `Top categories for ${yearLabel}:`,
+          ...topCategories.map(
+            ([category, amount], index) => `${index + 1}. ${category} ($${amount.toFixed(2)})`,
+          ),
+        ].join('\n'),
+      );
+      processedTopCategories = true;
+    } else if (ambiguousYearAndMonth || asksTopCategoriesThisMonth) {
+      const { topCategories: monthTopCategories, monthLabel, monthlyExpensesCount } = resolveTopCategoriesForMonth();
+      if (monthTopCategories.length > 0) {
+        answerParts.push(
+          [
+            `Top categories for ${monthLabel}:`,
+            ...monthTopCategories.map(
+              ([category, amount], index) => `${index + 1}. ${category} ($${amount.toFixed(2)})`,
+            ),
+          ].join('\n'),
+        );
+        processedTopCategories = true;
+      }
+    }
+
+    if (!processedTopCategories) {
+      answerParts.push(`No expense transactions were found for ${queryYears.length > 0 ? queryYears[0] : new Date().getFullYear()}.`);
+      processedTopCategories = true;
+    }
+  }
+
+  if (!processedTopCategories && asksTopCategoriesThisMonth) {
+    const { topCategories, monthLabel } = resolveTopCategoriesForMonth();
     if (topCategories.length === 0) {
       answerParts.push(`No expense transactions were found for ${monthLabel}.`);
     } else {
@@ -931,7 +967,7 @@ function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]
           ...topCategories.map(
             ([category, amount], index) => `${index + 1}. ${category} ($${amount.toFixed(2)})`,
           ),
-        ].join("\n"),
+        ].join('\n'),
       );
     }
   }

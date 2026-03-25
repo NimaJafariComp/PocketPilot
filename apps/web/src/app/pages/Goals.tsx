@@ -19,14 +19,23 @@ import {
 } from 'recharts';
 
 const CHART_COLORS = [
-  'oklch(0.6 0.118 184.704)',
-  'oklch(0.769 0.188 70.08)',
-  'oklch(0.398 0.07 227.392)',
-  'oklch(0.646 0.222 41.116)',
-  'oklch(0.828 0.189 84.429)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--chart-1)',
+  'var(--chart-5)',
 ];
 
-const COMPLETE_COLOR = 'oklch(0.55 0.12 150)';
+const COMPLETE_COLOR = 'var(--success)';
+
+const TOOLTIP_STYLE = {
+  backgroundColor: 'var(--popover)',
+  color: 'var(--popover-foreground)',
+  border: '1px solid var(--border)',
+  borderRadius: '0.75rem',
+  fontSize: '0.75rem',
+  boxShadow: '0 18px 40px rgba(2, 6, 23, 0.24)',
+};
 
 export function Goals() {
   const { goals, addGoal, updateGoal } = useData();
@@ -225,7 +234,7 @@ export function Goals() {
                       <Badge
                         variant={isComplete ? 'default' : 'secondary'}
                         className="shrink-0 text-xs"
-                        style={isComplete ? { background: color, color: '#fff' } : {}}
+                        style={isComplete ? { background: color, color: 'var(--success-foreground)' } : {}}
                       >
                         {isComplete ? 'Complete' : `${Math.round(pct)}%`}
                       </Badge>
@@ -270,12 +279,7 @@ export function Goals() {
                           <LineChart data={chartData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
                             <Tooltip
                               formatter={(v) => [`${v}`, 'Saved']}
-                              contentStyle={{
-                                border: '1px solid rgba(0,0,0,0.1)',
-                                borderRadius: '0.5rem',
-                                fontSize: '0.75rem',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                              }}
+                              contentStyle={TOOLTIP_STYLE}
                             />
                             <Line
                               type="monotone"
@@ -305,7 +309,7 @@ export function Goals() {
                                   <span className="text-muted-foreground">
                                     {format(parseISO(c.date), 'MMM d, yyyy')}
                                   </span>
-                                  <span className="font-medium text-emerald-700">
+                                  <span className="font-medium text-success">
                                     +${c.amount.toFixed(2)}
                                   </span>
                                 </div>

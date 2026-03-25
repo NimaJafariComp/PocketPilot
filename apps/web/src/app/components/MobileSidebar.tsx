@@ -21,13 +21,16 @@ export function MobileSidebar() {
   const location = useLocation();
 
   return (
-    <div className="flex flex-col h-full bg-white">
-      <div className="p-6 border-b">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+    <div className="flex h-full flex-col bg-sidebar">
+      <div className="border-b border-sidebar-border p-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-info to-primary text-primary-foreground shadow-lg shadow-primary/20">
             <Wallet className="w-5 h-5 text-white" />
           </div>
-          <span className="font-semibold text-lg">PocketPilot</span>
+          <div>
+            <span className="block text-lg font-semibold tracking-tight">PocketPilot</span>
+            <span className="text-xs text-muted-foreground">Finance cockpit</span>
+          </div>
         </div>
       </div>
       <nav className="flex-1 p-4">
@@ -39,10 +42,10 @@ export function MobileSidebar() {
               <li key={item.path}>
                 <Link
                   to={item.path}
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors ${
+                  className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
                     isActive
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'text-gray-700 hover:bg-gray-50'
+                      ? 'border-primary/20 bg-primary/12 text-primary shadow-sm shadow-primary/10'
+                      : 'border-transparent text-muted-foreground hover:border-border/70 hover:bg-accent/70 hover:text-foreground'
                   }`}
                 >
                   <Icon className="w-5 h-5" />

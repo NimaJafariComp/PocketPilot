@@ -176,20 +176,22 @@ export function ImportCSV() {
             return (
               <div key={label} className="flex-1 flex items-center">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  isActive ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400'
+                  isActive
+                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                    : 'border border-border bg-muted text-muted-foreground'
                 }`}>
                   {idx < currentIdx ? <CheckCircle2 className="w-5 h-5" /> : idx + 1}
                 </div>
-                <div className={`flex-1 h-1 ${idx < 3 ? (isActive ? 'bg-blue-600' : 'bg-gray-200') : ''}`} />
+                <div className={`flex-1 h-1 ${idx < 3 ? (isActive ? 'bg-primary' : 'bg-border') : ''}`} />
               </div>
             );
           })}
         </div>
-        <div className="flex justify-between text-sm">
-          <span>Upload</span>
-          <span>Map Columns</span>
-          <span>Preview</span>
-          <span>Complete</span>
+        <div className="flex justify-between text-sm text-muted-foreground">
+          <span className={step === 'upload' ? 'text-foreground' : ''}>Upload</span>
+          <span className={step === 'mapping' ? 'text-foreground' : ''}>Map Columns</span>
+          <span className={step === 'preview' ? 'text-foreground' : ''}>Preview</span>
+          <span className={step === 'success' ? 'text-foreground' : ''}>Complete</span>
         </div>
       </div>
 
@@ -211,14 +213,14 @@ export function ImportCSV() {
         <Card>
           <CardContent className="pt-6">
             <div
-              className="border-2 border-dashed rounded-lg p-12 text-center hover:border-blue-400 transition-colors cursor-pointer"
+              className="cursor-pointer rounded-lg border-2 border-dashed border-border bg-muted/20 p-12 text-center transition-colors hover:border-primary/40 hover:bg-primary/5"
               onDragOver={handleDragOver}
               onDrop={handleDrop}
               onClick={handleChooseFile}
             >
-              <FileSpreadsheet className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+              <FileSpreadsheet className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
               <h3 className="text-lg font-semibold mb-2">Upload CSV File</h3>
-              <p className="text-gray-500 mb-4">
+              <p className="mb-4 text-muted-foreground">
                 Drag and drop your CSV file here, or click to browse
               </p>
               <Button type="button">
@@ -236,7 +238,7 @@ export function ImportCSV() {
           <CardContent className="pt-6 space-y-6">
             <div>
               <h3 className="text-lg font-semibold mb-4">Map CSV Columns</h3>
-              <p className="text-gray-500 mb-6">
+              <p className="mb-6 text-muted-foreground">
                 Match your CSV columns to the required fields
               </p>
             </div>
@@ -339,7 +341,7 @@ export function ImportCSV() {
           <CardContent className="pt-6">
             <div className="mb-6">
               <h3 className="text-lg font-semibold mb-2">Preview Import</h3>
-              <p className="text-gray-500">
+              <p className="text-muted-foreground">
                 Review the first 20 rows before importing
               </p>
             </div>
@@ -365,7 +367,7 @@ export function ImportCSV() {
                         })()}
                       </TableCell>
                       <TableCell>{row[mapping.merchant]}</TableCell>
-                      <TableCell className={parseFloat(row[mapping.amount]) < 0 ? 'text-red-600' : 'text-green-600'}>
+                      <TableCell className={parseFloat(row[mapping.amount]) < 0 ? 'text-destructive' : 'text-success'}>
                         ${Math.abs(parseFloat(row[mapping.amount])).toFixed(2)}
                       </TableCell>
                       <TableCell>
@@ -403,11 +405,11 @@ export function ImportCSV() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-8">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="w-8 h-8 text-green-600" />
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-success/12">
+                <CheckCircle2 className="h-8 w-8 text-success" />
               </div>
               <h3 className="text-2xl font-semibold mb-2">Import Successful!</h3>
-              <p className="text-gray-500 mb-6">
+              <p className="mb-6 text-muted-foreground">
                 Successfully imported {importedCount} transactions
               </p>
               <div className="flex gap-3 justify-center">

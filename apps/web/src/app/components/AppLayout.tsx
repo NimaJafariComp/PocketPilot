@@ -4,9 +4,9 @@ import { AppHeader } from './AppHeader';
 
 export function AppLayout() {
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-transparent">
       <AppSidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <AppHeader />
         <main className="flex-1 overflow-y-auto">
           <Outlet />

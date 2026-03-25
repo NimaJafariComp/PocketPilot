@@ -34,12 +34,21 @@ import {
 import { toast } from 'sonner';
 
 const CHART_COLORS = [
-  'oklch(0.646 0.222 41.116)',
-  'oklch(0.6 0.118 184.704)',
-  'oklch(0.398 0.07 227.392)',
-  'oklch(0.828 0.189 84.429)',
-  'oklch(0.769 0.188 70.08)',
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--chart-5)',
 ];
+
+const TOOLTIP_STYLE = {
+  backgroundColor: 'var(--popover)',
+  color: 'var(--popover-foreground)',
+  border: '1px solid var(--border)',
+  borderRadius: '0.75rem',
+  fontSize: '0.8rem',
+  boxShadow: '0 18px 40px rgba(2, 6, 23, 0.24)',
+};
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -154,7 +163,10 @@ export function Dashboard() {
               { title: 'Goal Milestones', desc: 'Track savings goals with visual progress. Emergency fund, vacation, home; all in one place.' },
               { title: 'AI Insights', desc: 'Weekly summaries and actionable tips based on your spending habits.' },
             ].map((f) => (
-              <div key={f.title} className="bg-card border border-border rounded-xl p-5 hover:shadow-md transition-shadow">
+              <div
+                key={f.title}
+                className="rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/25 hover:shadow-lg hover:shadow-primary/10"
+              >
                 <h3 className="font-semibold text-sm mb-1.5">{f.title}</h3>
                 <p className="text-muted-foreground text-xs leading-relaxed">{f.desc}</p>
               </div>
@@ -222,7 +234,7 @@ export function Dashboard() {
             </div>
           )}
           {showWarning && (
-            <div className="flex items-center gap-3 px-4 py-3 rounded-lg border text-sm bg-amber-50 border-amber-200 text-amber-800">
+            <div className="flex items-center gap-3 rounded-lg border border-warning/25 bg-warning/12 px-4 py-3 text-sm text-warning-foreground">
               <Info className="w-4 h-4 shrink-0" />
               <span className="flex-1">
                 You've used <strong>{Math.round(budgetPct)}%</strong> of your monthly budget — only{' '}
@@ -298,7 +310,7 @@ export function Dashboard() {
                       showOverBudget
                         ? '[&>div]:bg-destructive'
                         : showWarning
-                        ? '[&>div]:bg-amber-500'
+                        ? '[&>div]:bg-warning'
                         : ''
                     }`}
                   />
@@ -312,7 +324,7 @@ export function Dashboard() {
                       <TrendingUp className="w-3 h-3" />
                       Income
                     </p>
-                    <p className="text-2xl font-bold tracking-tight text-emerald-700">
+                    <p className="text-2xl font-bold tracking-tight text-success">
                       ${Math.round(monthlyData.totalIncome).toLocaleString()}
                     </p>
                   </div>
@@ -356,31 +368,26 @@ export function Dashboard() {
                   margin={{ top: 4, right: 4, left: -20, bottom: 48 }}
                   barCategoryGap="35%"
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                   <XAxis
                     dataKey="name"
                     angle={-35}
                     textAnchor="end"
                     interval={0}
-                    tick={{ fontSize: 11, fill: '#717182' }}
+                    tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis
-                    tick={{ fontSize: 11, fill: '#717182' }}
+                    tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
                     axisLine={false}
                     tickLine={false}
                     tickFormatter={(v) => `${v}`}
                   />
                   <Tooltip
                     formatter={(value) => [`${value}`, 'Spent']}
-                    contentStyle={{
-                      border: '1px solid rgba(0,0,0,0.1)',
-                      borderRadius: '0.5rem',
-                      fontSize: '0.8rem',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                    }}
-                    cursor={{ fill: 'rgba(0,0,0,0.03)' }}
+                    contentStyle={TOOLTIP_STYLE}
+                    cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }}
                   />
                   <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                     {monthlyData.topCategories.map((_, i) => (
@@ -478,7 +485,7 @@ export function Dashboard() {
                     </div>
                     <span
                       className={`font-semibold text-sm ml-4 shrink-0 ${
-                        transaction.amount < 0 ? 'text-destructive' : 'text-emerald-700'
+                        transaction.amount < 0 ? 'text-destructive' : 'text-success'
                       }`}
                     >
                       {transaction.amount < 0 ? '−' : '+'}${Math.abs(transaction.amount).toFixed(2)}

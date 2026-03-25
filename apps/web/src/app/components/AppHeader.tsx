@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { MobileSidebar } from './MobileSidebar';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
+import { ThemeToggle } from './ThemeToggle';
 
 export function AppHeader() {
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ export function AppHeader() {
   };
 
   return (
-    <header className="border-b bg-white px-4 lg:px-6 h-16 flex items-center justify-between">
+    <header className="flex h-16 items-center justify-between border-b border-border/70 bg-background/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/70 lg:px-6">
       <div className="flex items-center gap-4 flex-1">
         <Sheet>
           <SheetTrigger asChild>
@@ -42,11 +43,12 @@ export function AppHeader() {
       </div>
 
       <div className="flex items-center gap-2">
+        <ThemeToggle />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                <User className="w-4 h-4 text-blue-600" />
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-primary/20 bg-primary/12 text-primary">
+                <User className="w-4 h-4" />
               </div>
             </Button>
           </DropdownMenuTrigger>

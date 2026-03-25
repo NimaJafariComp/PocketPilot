@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Wallet } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Alert, AlertDescription } from '../components/ui/alert';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 export function SignUp() {
   const navigate = useNavigate();
@@ -33,11 +34,15 @@ export function SignUp() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-gray-50">
-      <Card className="w-full max-w-md">
+    <div className="relative flex min-h-screen items-center justify-center bg-background p-6">
+      <div className="absolute right-6 top-6">
+        <ThemeToggle />
+      </div>
+
+      <Card className="w-full max-w-md border-border/70 bg-background/85 backdrop-blur">
         <CardHeader className="space-y-1">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary via-info to-primary text-primary-foreground">
               <Wallet className="w-5 h-5 text-white" />
             </div>
             <span className="font-semibold text-lg">PocketPilot</span>
@@ -91,7 +96,7 @@ export function SignUp() {
           </form>
           <div className="mt-4 text-center text-sm">
             Already have an account?{' '}
-            <Link to="/signin" className="text-blue-600 hover:underline">
+            <Link to="/signin" className="text-primary hover:underline">
               Sign in
             </Link>
           </div>

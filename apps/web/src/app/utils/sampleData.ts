@@ -38,7 +38,7 @@ function randomAmount(min: number, max: number): number {
 }
 
 function randomDate(daysAgo: number): string {
-  return subDays(new Date(), Math.floor(Math.random() * daysAgo)).toISOString();
+  return format(subDays(new Date(), Math.floor(Math.random() * daysAgo)), 'yyyy-MM-dd');
 }
 
 export function generateSampleTransactions(count: number = 50): Omit<Transaction, 'id'>[] {

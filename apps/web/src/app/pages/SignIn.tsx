@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Wallet, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Alert, AlertDescription } from '../components/ui/alert';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 export function SignIn() {
   const navigate = useNavigate();
@@ -32,8 +33,22 @@ export function SignIn() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
-      <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-blue-600 to-blue-800 p-12 flex-col justify-between text-white">
+    <div className="relative min-h-screen overflow-hidden bg-background">
+      <div className="absolute right-6 top-6 z-10">
+        <ThemeToggle />
+      </div>
+
+      <div className="flex min-h-screen flex-col lg:flex-row">
+        <div
+          className="relative hidden flex-1 overflow-hidden border-r border-white/10 p-12 text-white lg:flex lg:flex-col lg:justify-between"
+          style={{
+            backgroundColor: 'var(--auth-panel-end)',
+            backgroundImage:
+              'radial-gradient(circle at top left, var(--auth-panel-glow), transparent 34%), linear-gradient(145deg, var(--auth-panel-start), var(--auth-panel-end))',
+          }}
+        >
+          <div className="absolute inset-x-0 top-0 h-px bg-white/20" />
+
         <div className="flex items-center gap-2">
           <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
             <Wallet className="w-6 h-6" />
@@ -50,7 +65,7 @@ export function SignIn() {
               </div>
               <div>
                 <p className="font-medium">Import & categorize transactions</p>
-                <p className="text-blue-100 text-sm">Upload CSV files and automatically organize your spending</p>
+                <p className="text-sm text-white/72">Upload CSV files and automatically organize your spending</p>
               </div>
             </li>
             <li className="flex items-start gap-3">
@@ -59,7 +74,7 @@ export function SignIn() {
               </div>
               <div>
                 <p className="font-medium">Set budgets & track goals</p>
-                <p className="text-blue-100 text-sm">Create monthly budgets and savings goals with progress tracking</p>
+                <p className="text-sm text-white/72">Create monthly budgets and savings goals with progress tracking</p>
               </div>
             </li>
             <li className="flex items-start gap-3">
@@ -68,68 +83,69 @@ export function SignIn() {
               </div>
               <div>
                 <p className="font-medium">AI-powered insights</p>
-                <p className="text-blue-100 text-sm">Get personalized spending insights and trend analysis</p>
+                <p className="text-sm text-white/72">Get personalized spending insights and trend analysis</p>
               </div>
             </li>
           </ul>
         </div>
 
-        <p className="text-blue-100 text-sm">© 2026 PocketPilot. All rights reserved.</p>
-      </div>
+          <p className="text-sm text-white/72">© 2026 PocketPilot. All rights reserved.</p>
+        </div>
 
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
-        <Card className="w-full max-w-md border-0 shadow-none lg:border lg:shadow-sm">
-          <CardHeader className="space-y-1">
-            <div className="lg:hidden flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-white" />
+        <div className="flex flex-1 items-center justify-center p-6 lg:p-12">
+          <Card className="w-full max-w-md border-border/70 bg-background/80 shadow-none backdrop-blur lg:shadow-xl lg:shadow-black/5">
+            <CardHeader className="space-y-1">
+              <div className="mb-4 flex items-center gap-2 lg:hidden">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary via-info to-primary text-primary-foreground">
+                  <Wallet className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-lg font-semibold">PocketPilot</span>
               </div>
-              <span className="font-semibold text-lg">PocketPilot</span>
-            </div>
-            <CardTitle className="text-2xl">Welcome back</CardTitle>
-            <CardDescription>Sign in to your account to continue</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {error && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+              <CardTitle className="text-2xl">Welcome back</CardTitle>
+              <CardDescription>Sign in to your account to continue</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {error && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting ? 'Signing In...' : 'Sign In'}
+                </Button>
+              </form>
+              <div className="mt-4 text-center text-sm">
+                Don't have an account?{' '}
+                <Link to="/signup" className="text-primary hover:underline">
+                  Sign up
+                </Link>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Signing In...' : 'Sign In'}
-              </Button>
-            </form>
-            <div className="mt-4 text-center text-sm">
-              Don't have an account?{' '}
-              <Link to="/signup" className="text-blue-600 hover:underline">
-                Sign up
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

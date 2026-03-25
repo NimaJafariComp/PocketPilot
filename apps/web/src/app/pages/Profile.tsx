@@ -27,24 +27,26 @@ export function Profile() {
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Profile</h1>
-        <p className="text-gray-500 mt-1">Your account identity and personal workspace overview</p>
+        <p className="mt-1 text-muted-foreground">Your account identity and personal workspace overview</p>
       </div>
 
-      <Card className="border-0 shadow-md bg-gradient-to-br from-white to-blue-50">
+      <Card className="border-primary/15 bg-gradient-to-br from-card via-card to-primary/10 shadow-[0_22px_50px_-36px_rgba(43,103,246,0.45)]">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-            <div className="w-16 h-16 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl font-semibold">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-info text-xl font-semibold text-primary-foreground">
               {initialsFromName(user?.displayName, user?.email)}
             </div>
             <div className="space-y-1">
               <h2 className="text-2xl font-semibold">{fullName}</h2>
-              <div className="flex items-center gap-2 text-gray-600">
+              <div className="flex items-center gap-2 text-muted-foreground">
                 <Mail className="w-4 h-4" />
                 <span>{email}</span>
               </div>
             </div>
             <div className="sm:ml-auto">
-              <Badge className="bg-green-600 hover:bg-green-600">Authenticated</Badge>
+              <Badge variant="outline" className="border-success/20 bg-success text-success-foreground hover:bg-success">
+                Authenticated
+              </Badge>
             </div>
           </div>
         </CardContent>
@@ -74,28 +76,28 @@ export function Profile() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-blue-600" />
+            <ShieldCheck className="w-5 h-5 text-primary" />
             <CardTitle>Account & Security</CardTitle>
           </div>
           <CardDescription>
             This profile is derived from Firebase Authentication and your user-scoped PocketPilot data.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm text-gray-700">
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
           <div className="flex items-start gap-2">
-            <User className="w-4 h-4 mt-0.5 text-gray-500" />
+            <User className="mt-0.5 w-4 h-4 text-muted-foreground" />
             <p>
               Full name is sourced from <span className="font-medium">Firebase display name</span> set at sign-up.
             </p>
           </div>
           <div className="flex items-start gap-2">
-            <Mail className="w-4 h-4 mt-0.5 text-gray-500" />
+            <Mail className="mt-0.5 w-4 h-4 text-muted-foreground" />
             <p>
               Email is sourced from your authenticated account and used for sign-in.
             </p>
           </div>
           <div className="flex items-start gap-2">
-            <Sparkles className="w-4 h-4 mt-0.5 text-gray-500" />
+            <Sparkles className="mt-0.5 w-4 h-4 text-muted-foreground" />
             <p>
               Insights and AI responses are scoped to your authenticated user data only.
             </p>

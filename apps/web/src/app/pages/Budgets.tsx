@@ -152,7 +152,14 @@ export function Budgets() {
 
   // ── Badge helpers ──
   const statusBadgeVariant = (status: BudgetStatus) =>
-    status === 'over' ? 'destructive' : status === 'warning' ? 'secondary' : 'outline';
+    status === 'over' ? 'destructive' : 'outline';
+
+  const statusBadgeClass = (status: BudgetStatus) =>
+    status === 'warning'
+      ? 'border-warning/25 bg-warning/12 text-warning-foreground'
+      : status === 'good'
+      ? 'border-success/25 bg-success/10 text-success'
+      : '';
 
   const statusLabel = (status: BudgetStatus) =>
     status === 'over' ? 'Over limit' : status === 'warning' ? 'Warning' : 'On track';
@@ -161,7 +168,7 @@ export function Budgets() {
     status === 'over'
       ? '[&>div]:bg-destructive'
       : status === 'warning'
-      ? '[&>div]:bg-amber-500'
+      ? '[&>div]:bg-warning'
       : '';
 
   // ── Dollar helpers for dialog sliders ──
@@ -352,7 +359,7 @@ export function Budgets() {
               className={`flex items-center gap-3 px-4 py-3 rounded-lg border text-sm ${
                 budget.status === 'over'
                   ? 'bg-destructive/5 border-destructive/20 text-destructive'
-                  : 'bg-amber-50 border-amber-200 text-amber-800'
+                  : 'border-warning/25 bg-warning/12 text-warning-foreground'
               }`}
             >
               {budget.status === 'over'
@@ -417,7 +424,10 @@ export function Budgets() {
                           }}
                         />
                         <span className="font-medium text-sm">{budget.category}</span>
-                        <Badge variant={statusBadgeVariant(budget.status)} className="text-xs py-0">
+                        <Badge
+                          variant={statusBadgeVariant(budget.status)}
+                          className={`py-0 text-xs ${statusBadgeClass(budget.status)}`}
+                        >
                           {statusLabel(budget.status)}
                         </Badge>
                       </div>
@@ -451,7 +461,12 @@ export function Budgets() {
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenDialog(budget)}>
                           <Edit2 className="w-3.5 h-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(budget.id)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => handleDelete(budget.id)}
+                        >
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </div>
