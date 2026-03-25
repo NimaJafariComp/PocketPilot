@@ -75,6 +75,12 @@ interface RelativeDateWindow {
   toMs: number;
 }
 
+interface RelativeYearReference {
+  year: number;
+  label: string;
+  mode: "ytd" | "calendar";
+}
+
 const MERCHANT_NOISE_TOKENS = new Set([
   "ach",
   "auth",
@@ -512,7 +518,7 @@ function inferRelativeDateWindow(query: string): RelativeDateWindow | null {
 
   if (/\bthis year\b/.test(q)) {
     const start = new Date(now.getFullYear(), 0, 1);
-    const end = new Date(now.getFullYear() + 1, 0, 1);
+    const end = new Date(now.getTime() + 1);
     return { fromMs: start.getTime(), toMs: end.getTime() };
   }
 
@@ -526,6 +532,54 @@ function inferRelativeDateWindow(query: string): RelativeDateWindow | null {
     const start = new Date(now.getFullYear() - 1, 0, 1);
     const end = new Date(now.getFullYear(), 0, 1);
     return { fromMs: start.getTime(), toMs: end.getTime() };
+  }
+
+  const yearsAgoMatch = q.match(/\b(\d+)\s+years?\s+ago\b/);
+  if (yearsAgoMatch) {
+    const yearsAgo = Number(yearsAgoMatch[1]);
+    if (!Number.isNaN(yearsAgo) && yearsAgo > 0) {
+      const targetYear = now.getFullYear() - yearsAgo;
+      const start = new Date(targetYear, 0, 1);
+      const end = new Date(targetYear + 1, 0, 1);
+      return { fromMs: start.getTime(), toMs: end.getTime() };
+    }
+  }
+
+  return null;
+}
+
+function inferRelativeYearReference(query: string): RelativeYearReference | null {
+  const q = query.toLowerCase();
+  const now = new Date();
+
+  if (/\b(this year|year to date|year-to-date|ytd|this calendar year|current year|of the year)\b/.test(q)) {
+    return {
+      year: now.getFullYear(),
+      label: `${now.getFullYear()} year to date`,
+      mode: "ytd",
+    };
+  }
+
+  if (/\blast year\b/.test(q)) {
+    const targetYear = now.getFullYear() - 1;
+    return {
+      year: targetYear,
+      label: String(targetYear),
+      mode: "calendar",
+    };
+  }
+
+  const yearsAgoMatch = q.match(/\b(\d+)\s+years?\s+ago\b/);
+  if (yearsAgoMatch) {
+    const yearsAgo = Number(yearsAgoMatch[1]);
+    if (!Number.isNaN(yearsAgo) && yearsAgo > 0) {
+      const targetYear = now.getFullYear() - yearsAgo;
+      return {
+        year: targetYear,
+        label: String(targetYear),
+        mode: "calendar",
+      };
+    }
   }
 
   return null;
@@ -854,16 +908,22 @@ function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]
   }
 
   const queryYears = extractQueryYears(q);
+  const queryMonths = extractQueryMonths(q);
+  const relativeYearRef = inferRelativeYearReference(q);
   const asksTopCategories = /\btop\s*[1-9]?\s*(categories|category)\b/.test(q);
   const asksTopCategoriesYtd =
     asksTopCategories &&
-    /\b(this year|year to date|ytd|this calendar year|current year|of the year)\b/.test(q);
+    !!relativeYearRef && relativeYearRef.mode === "ytd";
   const asksTopCategoriesThisYear =
     asksTopCategories &&
-    (asksTopCategoriesYtd || queryYears.length > 0);
+    (asksTopCategoriesYtd || queryYears.length > 0 || !!relativeYearRef);
   const asksTopCategoriesThisMonth =
     asksTopCategories &&
     /\bthis month\b/.test(q);
+  const asksTopCategoriesForExplicitMonth =
+    asksTopCategories &&
+    queryMonths.length === 1 &&
+    (queryYears.length === 1 || !asksTopCategoriesThisMonth);
   const ambiguousYearAndMonth = asksTopCategoriesThisYear && asksTopCategoriesThisMonth;
 
   const resolveTopCategoriesForYear = (year: number) => {
@@ -922,12 +982,64 @@ function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]
     return { topCategories, monthLabel, monthlyExpensesCount: monthlyExpenses.length };
   };
 
+  const resolveTopCategoriesForExplicitMonth = (year: number, monthIndex: number) => {
+    const monthStart = new Date(year, monthIndex, 1);
+    const nextMonthStart = new Date(year, monthIndex + 1, 1);
+    const inMonth = (iso: string): boolean => {
+      const ms = new Date(iso).getTime();
+      return !Number.isNaN(ms) && ms >= monthStart.getTime() && ms < nextMonthStart.getTime();
+    };
+
+    const monthlyExpenses = transactions.filter(
+      (transaction) => transaction.amount < 0 && inMonth(transaction.date),
+    );
+    const categoryTotals = monthlyExpenses.reduce(
+      (acc, transaction) => {
+        acc[transaction.category] = (acc[transaction.category] || 0) + Math.abs(transaction.amount);
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+    const topCategories = Object.entries(categoryTotals)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+    const monthLabel = monthStart.toLocaleString("en-US", { month: "long", year: "numeric" });
+
+    return { topCategories, monthLabel, monthlyExpensesCount: monthlyExpenses.length };
+  };
+
   let processedTopCategories = false;
 
-  if (asksTopCategories && (queryYears.length > 0 || asksTopCategoriesThisYear)) {
-    const targetYear = queryYears.length > 0 ? queryYears[0] : new Date().getFullYear();
+  if (asksTopCategoriesForExplicitMonth) {
+    const targetYear = queryYears[0] || new Date().getFullYear();
+    const targetMonthIndex = queryMonths[0];
+    const { topCategories, monthLabel } = resolveTopCategoriesForExplicitMonth(targetYear, targetMonthIndex);
+
+    if (topCategories.length === 0) {
+      answerParts.push(`No expense transactions were found for ${monthLabel}.`);
+    } else {
+      answerParts.push(
+        [
+          `Top categories for ${monthLabel}:`,
+          ...topCategories.map(
+            ([category, amount], index) => `${index + 1}. ${category} ($${amount.toFixed(2)})`,
+          ),
+        ].join("\n"),
+      );
+    }
+    processedTopCategories = true;
+  }
+
+  if (!processedTopCategories && asksTopCategories && (queryYears.length > 0 || asksTopCategoriesThisYear)) {
+    const targetYear = queryYears.length > 0 ? queryYears[0] : relativeYearRef?.year || new Date().getFullYear();
     const isExplicitYearQuery = queryYears.length > 0;
-    const ytdExpenses = transactions.filter((transaction) => transaction.amount < 0);
+    const ytdExpenses = transactions.filter((transaction) => {
+      if (transaction.amount >= 0) return false;
+      const ms = new Date(transaction.date).getTime();
+      if (Number.isNaN(ms)) return false;
+      const now = Date.now();
+      return ms >= new Date(targetYear, 0, 1).getTime() && ms < now + 1;
+    });
     const ytdCategoryTotals = ytdExpenses.reduce(
       (acc, transaction) => {
         acc[transaction.category] = (acc[transaction.category] || 0) + Math.abs(transaction.amount);
@@ -939,11 +1051,11 @@ function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3);
 
-    const { topCategories, yearLabel, yearlyExpensesCount } = isExplicitYearQuery
+    const { topCategories, yearLabel, yearlyExpensesCount } = isExplicitYearQuery || relativeYearRef?.mode === "calendar"
       ? resolveTopCategoriesForYear(targetYear)
       : {
           topCategories: ytdTopCategories,
-          yearLabel: `${targetYear} year to date`,
+          yearLabel: relativeYearRef?.label || `${targetYear} year to date`,
           yearlyExpensesCount: ytdExpenses.length,
         };
 
@@ -981,12 +1093,16 @@ function tryDeterministicAnswer(query: string, transactions: ParsedTransaction[]
           day: "numeric",
         });
 
-        if (allCurrentYearExpenses > 0) {
+        if (relativeYearRef?.mode === "ytd" && allCurrentYearExpenses > 0) {
           answerParts.push(
             `No expense transactions were found from January 1, ${targetYear} through ${todayLabel}, although there are transactions elsewhere in ${targetYear}.`,
           );
         } else {
-          answerParts.push(`No expense transactions were found so far in ${targetYear}.`);
+          answerParts.push(
+            relativeYearRef?.mode === "ytd"
+              ? `No expense transactions were found so far in ${targetYear}.`
+              : `No expense transactions were found for ${relativeYearRef?.label || targetYear}.`,
+          );
         }
       } else {
         answerParts.push(`No expense transactions were found for ${queryYears[0]}.`);
