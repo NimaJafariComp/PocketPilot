@@ -651,6 +651,7 @@ function classifyConversationalShortcut(query: string): ConversationalShortcut |
 
 function classifyFinanceIntent(query: string): RagIntent {
   const q = query.toLowerCase();
+  const hasRelativeDateWindow = inferRelativeDateWindow(query) !== null;
 
   const exploratorySignals =
     /\b(why|pattern|patterns|trend|trends|anomaly|anomalies|insight|insights|recommend|suggest|improve|optimi[sz]e|advice|forecast|predict|recurring|subscription|subscriptions|compare|comparison|summarize|summary|overall)\b/.test(
@@ -664,10 +665,11 @@ function classifyFinanceIntent(query: string): RagIntent {
 
   const strongStructuredSignals =
     hasPrecisionSignals(query) ||
+    hasRelativeDateWindow ||
     /\b(show|list|find|how much|how many|count|total|latest|last|recent|first|oldest|earliest|largest|highest|biggest|lowest|smallest)\b/.test(
       q,
     ) ||
-    /\b(transaction|transactions|merchant|category|grocer(y|ies)|income|expense|expenses|spent|spending|deposit|deposits)\b/.test(
+    /\b(top|transaction|transactions|merchant|category|categories|grocer(y|ies)|income|expense|expenses|spent|spending|deposit|deposits)\b/.test(
       q,
     );
 
@@ -704,8 +706,9 @@ function needsStructuredTransactions(query: string): boolean {
   const q = query.toLowerCase();
   return (
     shouldAttachWideTransactionContext(query) ||
+    inferRelativeDateWindow(query) !== null ||
     hasPrecisionSignals(query) ||
-    /\b(last month|this month|grocer(y|ies)|income|expense|expenses|spent|spending|largest expense|most expensive|highest expense|oldest expense|earliest expense|first expense)\b/.test(
+    /\b(last month|this month|this year|last year|\d+\s+years?\s+ago|top|category|categories|grocer(y|ies)|income|expense|expenses|spent|spending|largest expense|most expensive|highest expense|oldest expense|earliest expense|first expense)\b/.test(
       q,
     ) ||
     /\b20\d{2}\b/.test(q)
