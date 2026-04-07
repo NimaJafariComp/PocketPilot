@@ -45,13 +45,14 @@ export default function NewGoalScreen() {
 
     try {
       setIsSaving(true);
-      await addGoal({
+      const nextGoal = {
         name: draft.name.trim(),
         targetAmount,
         currentAmount: 0,
-        deadline: draft.deadline ? new Date(draft.deadline).toISOString() : undefined,
         contributions: [],
-      });
+        ...(draft.deadline ? { deadline: new Date(draft.deadline).toISOString() } : {}),
+      };
+      await addGoal(nextGoal);
       router.replace('/goals');
     } catch (error) {
       await mobileServices.dialog.alert(
