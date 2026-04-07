@@ -6,6 +6,7 @@ import {
   Receipt,
   Target,
 } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '@/providers/theme-provider';
 
 function TabIcon({
@@ -35,6 +36,7 @@ function TabIcon({
 
 export default function TabsLayout() {
   const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -46,8 +48,12 @@ export default function TabsLayout() {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
           height: 74,
+          paddingHorizontal: Math.max(12, insets.left + 6, insets.right + 6),
           paddingBottom: 8,
           paddingTop: 8,
+        },
+        tabBarItemStyle: {
+          paddingHorizontal: 2,
         },
         tabBarLabelStyle: {
           fontSize: 11,
