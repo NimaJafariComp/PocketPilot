@@ -20,5 +20,14 @@
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
     "docker:ps": "docker compose ps"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.10",
+    "@types/react-dom": "~19.1.11",
+    "metro": "^0.82.5",
+    "metro-config": "^0.82.5",
+    "metro-resolver": "^0.82.5",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
   }
 }

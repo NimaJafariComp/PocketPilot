@@ -39,10 +39,31 @@ Useful:
 Or from root:
 - `npm run web:dev`
 
-## Mobile app (scaffold) Not implemented yet (optional)
-1. `cd apps/mobile`
-2. `npm install`
-3. `npm run start`
+## Mobile app
+Run the Expo React Native app against the local backend/emulator stack.
+
+1. Start the local backend first:
+   - `npm run docker:up`
+2. Install mobile dependencies:
+   - `cd apps/mobile`
+   - `npm install`
+3. Create a local Expo env file:
+   - `cp apps/mobile/.env.example apps/mobile/.env`
+4. Start Expo:
+   - From `apps/mobile`: `npm run start`
+   - Or from repo root: `npm run mobile:start`
+5. Open the app:
+   - Press `i` for the iOS simulator
+   - Press `a` for the Android emulator
+   - Or scan the QR code with Expo Go on a physical device
+
+Native run commands are also available:
+- `cd apps/mobile && npm run ios`
+- `cd apps/mobile && npm run android`
+
+Notes:
+- If you run on a physical device, replace `127.0.0.1` in `apps/mobile/.env` with your Mac's LAN IP address.
+- The mobile app reads these values from `apps/mobile/app.config.ts`.
 
 ## Backend (local)
 See `backend/README.md`.

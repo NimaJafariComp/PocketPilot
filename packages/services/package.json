@@ -3,9 +3,16 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "main": "src/factory/web.ts",
+  "main": "src/index.ts",
   "dependencies": {
+    "@react-native-async-storage/async-storage": "2.1.2",
     "@pocketpilot/core": "file:../core",
+    "expo-document-picker": "~13.1.6",
+    "expo-file-system": "~18.1.11",
+    "expo-sharing": "~13.1.5",
     "firebase": "^11.1.0"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1 || ^19.0.0"
   }
 }

@@ -8,6 +8,7 @@ import { exportWeb } from '../web/export.web';
 import { dialogWeb } from '../web/dialog.web';
 import { createRagHttpWeb } from '../web/rag.http.web';
 import { createCategorizationHttpWeb } from '../web/categorization.http.web';
+import type { PocketPilotServices } from '../types';
 
 export interface WebServicesConfig {
   firebaseConfig: FirebaseOptions;
@@ -18,7 +19,7 @@ export interface WebServicesConfig {
   functionsBaseUrl: string;
 }
 
-export function createWebServices(config: WebServicesConfig) {
+export function createWebServices(config: WebServicesConfig): PocketPilotServices {
   const app = getApps().length ? getApps()[0] : initializeApp(config.firebaseConfig);
   const authSdk = getAuth(app);
   const dbSdk = getFirestore(app);
