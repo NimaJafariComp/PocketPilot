@@ -6,6 +6,8 @@ This backend is split from the frontend and runs fully local.
 - Firebase Authentication (Emulator)
 - Firebase Firestore (Emulator)
 - Firebase Cloud Functions (Node 20, TypeScript)
+- Rust categorization service
+- Rust RAG service
 - Qdrant (Docker, local vector DB)
 
 ## Data model in Firestore
@@ -45,7 +47,26 @@ Emulator ports:
 - Firestore: `127.0.0.1:8080`
 - Functions: `127.0.0.1:5001`
 
-## Functions
+## Rust services
+- `categorization-service`:
+  - `POST /categorizeTransactions`
+  - `POST /learnMerchantCategory`
+- `rag-service`:
+  - `GET /health`
+  - `POST /syncRagIndex`
+  - `POST /ragChat`
+  - `POST /upsertVector`
+  - `POST /queryVectors`
+
+Default local ports:
+- Categorization: `127.0.0.1:8088`
+- RAG: `127.0.0.1:8089`
+
+Outside the Firestore emulator, the Rust services expect `GOOGLE_APPLICATION_CREDENTIALS`
+to point at a Google service account JSON file so they can mint access tokens for the
+Firestore REST API.
+
+## Legacy Functions
 - `syncRagIndex` (requires Firebase ID token, syncs user-scoped RAG docs into Qdrant)
 - `health`
 - `upsertVector` (requires Firebase ID token)
@@ -55,7 +76,7 @@ Emulator ports:
 Deploying is intentionally omitted because you asked for local-only infrastructure.
 
 ## Dockerized full stack
-From repo root you can run web + Firebase emulators/functions + Qdrant + Ollama together:
+From repo root you can run web + Firebase emulators/functions + Rust AI services + Qdrant + Ollama together:
 
 1. `npm run docker:up`
 2. `npm run docker:ps`

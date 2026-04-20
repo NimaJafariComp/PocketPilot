@@ -19,7 +19,9 @@ export interface MobileServicesConfig {
   authEmulatorUrl?: string;
   firestoreEmulatorHost?: string;
   firestoreEmulatorPort?: number;
-  functionsBaseUrl: string;
+  functionsBaseUrl?: string;
+  categorizationServiceUrl?: string;
+  ragServiceUrl?: string;
 }
 
 const getReactNativePersistence =
@@ -52,6 +54,8 @@ export function createMobileServices(config: MobileServicesConfig): PocketPilotS
   }
 
   const auth = createAuthFirebaseMobile(authSdk);
+  const categorizationBaseUrl = config.categorizationServiceUrl || config.functionsBaseUrl || '';
+  const ragBaseUrl = config.ragServiceUrl || config.functionsBaseUrl || '';
 
   return {
     auth,
@@ -59,7 +63,7 @@ export function createMobileServices(config: MobileServicesConfig): PocketPilotS
     fileImport: fileImportMobile,
     dataExport: exportMobile,
     dialog: dialogMobile,
-    categorization: createCategorizationHttpMobile(auth, config.functionsBaseUrl),
-    rag: createRagHttpMobile(auth, config.functionsBaseUrl),
+    categorization: createCategorizationHttpMobile(auth, categorizationBaseUrl),
+    rag: createRagHttpMobile(auth, ragBaseUrl),
   };
 }

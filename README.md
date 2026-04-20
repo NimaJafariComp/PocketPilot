@@ -20,6 +20,8 @@ First run:
 5. Open:
    - Web app: `http://127.0.0.1:5173`
    - Firebase Emulator UI: `http://127.0.0.1:4000`
+   - Categorization service: `http://127.0.0.1:8088/health`
+   - RAG service: `http://127.0.0.1:8089/health`
 
 Useful:
 - Stream logs: `npm run docker:logs`
@@ -68,13 +70,14 @@ Notes:
 - Do not run `npm install` inside `apps/mobile`; mobile startup assumes the repo was installed from the root workspace.
 - If you run on a physical device, replace `127.0.0.1` in `apps/mobile/.env` with your Mac's LAN IP address.
 - The mobile app reads these values from `apps/mobile/app.config.ts`.
+- The mobile app can now target Rust AI services directly with `EXPO_PUBLIC_CATEGORIZATION_SERVICE_URL` and `EXPO_PUBLIC_RAG_SERVICE_URL`.
 - If `npm run start` fails with a NativeWind/Tailwind version error, rerun `npm install` from the repo root so the mobile workspace gets its intended local `tailwindcss@3`.
 
 ## Backend (local)
 See `backend/README.md`.
 
 ## Docker (full stack)
-Run everything (web + Firebase emulators/functions + Qdrant + Ollama):
+Run everything (web + Firebase emulators/functions + Rust AI services + Qdrant + Ollama):
 
 1. `npm run docker:up`
 2. `npm run docker:ps`
@@ -89,4 +92,7 @@ Useful commands:
 Notes:
 - The stack uses a local demo Firebase project ID: `demo-pocketpilot`.
 - Chat uses `qwen2.5:1.5b` locally and embeddings use `nomic-embed-text:v1.5`.
+- The web app now calls Rust categorization and RAG services by default in local Docker mode.
+- For non-emulator Rust service deployments, set `GOOGLE_APPLICATION_CREDENTIALS` so the
+  services can authenticate to Firestore.
 - `ollama-init` pulls `qwen2.5:1.5b` and `nomic-embed-text:v1.5` on first boot; first startup can take longer.

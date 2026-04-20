@@ -16,7 +16,9 @@ export interface WebServicesConfig {
   authEmulatorUrl?: string;
   firestoreEmulatorHost?: string;
   firestoreEmulatorPort?: number;
-  functionsBaseUrl: string;
+  functionsBaseUrl?: string;
+  categorizationServiceUrl?: string;
+  ragServiceUrl?: string;
 }
 
 export function createWebServices(config: WebServicesConfig): PocketPilotServices {
@@ -36,6 +38,8 @@ export function createWebServices(config: WebServicesConfig): PocketPilotService
   }
 
   const auth = createAuthFirebaseWeb(authSdk);
+  const categorizationBaseUrl = config.categorizationServiceUrl || config.functionsBaseUrl || '';
+  const ragBaseUrl = config.ragServiceUrl || config.functionsBaseUrl || '';
 
   return {
     auth,
@@ -43,7 +47,7 @@ export function createWebServices(config: WebServicesConfig): PocketPilotService
     fileImport: fileImportWeb,
     dataExport: exportWeb,
     dialog: dialogWeb,
-    categorization: createCategorizationHttpWeb(auth, config.functionsBaseUrl),
-    rag: createRagHttpWeb(auth, config.functionsBaseUrl),
+    categorization: createCategorizationHttpWeb(auth, categorizationBaseUrl),
+    rag: createRagHttpWeb(auth, ragBaseUrl),
   };
 }

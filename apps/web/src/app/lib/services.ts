@@ -31,6 +31,12 @@ const emulatorHost = import.meta.env.VITE_FIREBASE_EMULATOR_HOST || '127.0.0.1';
 const functionsBaseUrl =
   import.meta.env.VITE_FUNCTIONS_BASE_URL ||
   `http://${emulatorHost}:5001/demo-pocketpilot/us-central1`;
+const categorizationServiceUrl =
+  import.meta.env.VITE_CATEGORIZATION_SERVICE_URL ||
+  `http://${emulatorHost}:8088`;
+const ragServiceUrl =
+  import.meta.env.VITE_RAG_SERVICE_URL ||
+  `http://${emulatorHost}:8089`;
 
 export const services = createWebServices({
   firebaseConfig,
@@ -39,4 +45,6 @@ export const services = createWebServices({
   firestoreEmulatorHost: emulatorHost,
   firestoreEmulatorPort: 8080,
   functionsBaseUrl,
+  categorizationServiceUrl,
+  ragServiceUrl,
 });

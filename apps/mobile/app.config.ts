@@ -20,6 +20,8 @@ const config: ExpoConfig = {
     firebaseProjectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
     firebaseAppId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
     functionsBaseUrl: process.env.EXPO_PUBLIC_FUNCTIONS_BASE_URL,
+    categorizationServiceUrl: process.env.EXPO_PUBLIC_CATEGORIZATION_SERVICE_URL,
+    ragServiceUrl: process.env.EXPO_PUBLIC_RAG_SERVICE_URL,
     useFirebaseEmulators: process.env.EXPO_PUBLIC_USE_FIREBASE_EMULATORS,
     firebaseEmulatorHost: process.env.EXPO_PUBLIC_FIREBASE_EMULATOR_HOST,
   },

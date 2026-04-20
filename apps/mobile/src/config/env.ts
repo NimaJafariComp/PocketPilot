@@ -26,6 +26,22 @@ const functionsBaseUrl =
   rawFunctionsBaseUrl.includes('127.0.0.1') && derivedExpoHost
     ? rawFunctionsBaseUrl.replace('127.0.0.1', derivedExpoHost)
     : rawFunctionsBaseUrl;
+const rawCategorizationServiceUrl =
+  process.env.EXPO_PUBLIC_CATEGORIZATION_SERVICE_URL ??
+  (extra.categorizationServiceUrl as string | undefined) ??
+  'http://127.0.0.1:8088';
+const categorizationServiceUrl =
+  rawCategorizationServiceUrl.includes('127.0.0.1') && derivedExpoHost
+    ? rawCategorizationServiceUrl.replace('127.0.0.1', derivedExpoHost)
+    : rawCategorizationServiceUrl;
+const rawRagServiceUrl =
+  process.env.EXPO_PUBLIC_RAG_SERVICE_URL ??
+  (extra.ragServiceUrl as string | undefined) ??
+  'http://127.0.0.1:8089';
+const ragServiceUrl =
+  rawRagServiceUrl.includes('127.0.0.1') && derivedExpoHost
+    ? rawRagServiceUrl.replace('127.0.0.1', derivedExpoHost)
+    : rawRagServiceUrl;
 
 export const env = {
   appName: Constants.expoConfig?.name ?? 'PocketPilot',
@@ -45,4 +61,6 @@ export const env = {
     'false',
   firebaseEmulatorHost,
   functionsBaseUrl,
+  categorizationServiceUrl,
+  ragServiceUrl,
 };

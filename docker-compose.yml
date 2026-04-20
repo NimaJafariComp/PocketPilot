@@ -53,6 +53,53 @@ services:
       - "9099:9099"
     restart: unless-stopped
 
+  categorization-service:
+    build:
+      context: .
+      dockerfile: docker/rust-service.Dockerfile
+      args:
+        SERVICE_BIN: categorization-service
+    container_name: pocketpilot-categorization
+    environment:
+      PORT: "8088"
+      POCKETPILOT_PROJECT_ID: "demo-pocketpilot"
+      FIREBASE_AUTH_EMULATOR_HOST: "firebase-emulators:9099"
+      FIRESTORE_EMULATOR_HOST: "firebase-emulators:8080"
+      OLLAMA_BASE_URL: "http://ollama:11434"
+      OLLAMA_CHAT_MODEL: "qwen2.5:1.5b"
+      OLLAMA_EMBED_MODEL: "nomic-embed-text:v1.5"
+    depends_on:
+      - firebase-emulators
+      - ollama
+    ports:
+      - "8088:8088"
+    restart: unless-stopped
+
+  rag-service:
+    build:
+      context: .
+      dockerfile: docker/rust-service.Dockerfile
+      args:
+        SERVICE_BIN: rag-service
+    container_name: pocketpilot-rag
+    environment:
+      PORT: "8089"
+      POCKETPILOT_PROJECT_ID: "demo-pocketpilot"
+      FIREBASE_AUTH_EMULATOR_HOST: "firebase-emulators:9099"
+      FIRESTORE_EMULATOR_HOST: "firebase-emulators:8080"
+      OLLAMA_BASE_URL: "http://ollama:11434"
+      OLLAMA_CHAT_MODEL: "qwen2.5:1.5b"
+      OLLAMA_EMBED_MODEL: "nomic-embed-text:v1.5"
+      QDRANT_URL: "http://qdrant:6333"
+      QDRANT_COLLECTION: "pocketpilot_vectors_v2"
+    depends_on:
+      - firebase-emulators
+      - qdrant
+      - ollama
+    ports:
+      - "8089:8089"
+    restart: unless-stopped
+
   web:
     build:
       context: .
@@ -65,8 +112,12 @@ services:
       VITE_FIREBASE_APP_ID: "1:000000000000:web:local"
       VITE_USE_FIREBASE_EMULATORS: "true"
       VITE_FUNCTIONS_BASE_URL: "http://127.0.0.1:5001/demo-pocketpilot/us-central1"
+      VITE_CATEGORIZATION_SERVICE_URL: "http://127.0.0.1:8088"
+      VITE_RAG_SERVICE_URL: "http://127.0.0.1:8089"
     depends_on:
       - firebase-emulators
+      - categorization-service
+      - rag-service
     ports:
       - "5173:5173"
     restart: unless-stopped

@@ -70,23 +70,90 @@ const RULES: Rule[] = [
   },
   {
     category: "Entertainment",
-    patterns: [/netflix/, /spotify/, /hulu/, /disney/, /amc/, /steam/, /playstation/, /xbox/],
-    reason: "Matched entertainment merchant keywords",
+    patterns: [
+      /netflix/,
+      /spotify/,
+      /hulu/,
+      /disney/,
+      /amc/,
+      /steam/,
+      /playstation/,
+      /xbox/,
+      /movie/,
+      /theater/,
+      /concert/,
+      /ticketmaster/,
+      /patreon/,
+      /audible/,
+      /kindle unlimited/,
+      /youtube premium/,
+    ],
+    reason: "Matched entertainment or digital media subscription keywords",
   },
   {
     category: "Shopping",
-    patterns: [/amazon/, /target/, /walmart/, /best buy/, /apple/, /home depot/, /ikea/, /etsy/],
-    reason: "Matched shopping merchant keywords",
+    patterns: [/amazon/, /target/, /walmart/, /best buy/, /apple store/, /home depot/, /ikea/, /etsy/],
+    reason: "Matched retail shopping merchant keywords",
   },
   {
     category: "Bills",
-    patterns: [/utility/, /electric/, /water bill/, /internet/, /phone bill/, /insurance/, /rent/, /mortgage/],
-    reason: "Matched household bill keywords",
+    patterns: [
+      /utility/,
+      /electric/,
+      /water bill/,
+      /internet/,
+      /phone bill/,
+      /insurance/,
+      /rent/,
+      /mortgage/,
+      /membership fee/,
+      /annual fee/,
+      /monthly fee/,
+    ],
+    reason: "Matched recurring bill or fee keywords",
   },
   {
     category: "Health",
-    patterns: [/cvs/, /walgreens/, /pharmacy/, /hospital/, /clinic/, /dental/, /medical/, /urgent care/],
-    reason: "Matched health merchant keywords",
+    patterns: [
+      /cvs/,
+      /walgreens/,
+      /pharmacy/,
+      /hospital/,
+      /clinic/,
+      /dental/,
+      /medical/,
+      /urgent care/,
+      /gym/,
+      /fitness/,
+      /wellness/,
+      /yoga/,
+      /pilates/,
+      /cycle/,
+      /spin/,
+      /barre/,
+      /crossfit/,
+      /therapy/,
+      /therapist/,
+      /counseling/,
+      /massage/,
+      /spa/,
+      /chiropr/,
+      /physical therapy/,
+      /med spa/,
+      /meditation/,
+      /sauna/,
+      /membership/,
+      /monthly membership/,
+      /planet fitness/,
+      /equinox/,
+      /orange theory/,
+      /orangetheory/,
+      /soulcycle/,
+      /corepower/,
+      /24 hour fitness/,
+      /la fitness/,
+    ],
+    reason: "Matched health, wellness, or fitness membership keywords",
   },
 ];
 
@@ -151,6 +218,86 @@ function buildResult(
     normalizedMerchant,
     reason,
   };
+}
+
+function refineAiResult(
+  input: CategorizationRequestItem,
+  normalizedMerchant: string,
+  result: CategorizationResult,
+  categories: string[],
+): CategorizationResult {
+  const searchText = buildSearchText(input, normalizedMerchant);
+  const healthSignals = [
+    /gym/,
+    /fitness/,
+    /wellness/,
+    /yoga/,
+    /pilates/,
+    /cycle/,
+    /spin/,
+    /barre/,
+    /crossfit/,
+    /therapy/,
+    /therapist/,
+    /massage/,
+    /spa/,
+    /chiropr/,
+    /physical therapy/,
+    /meditation/,
+    /workout/,
+    /class pass/,
+    /classpass/,
+    /membership/,
+    /soulcycle/,
+    /orangetheory/,
+    /planet fitness/,
+    /equinox/,
+  ];
+  const entertainmentSignals = [
+    /subscription/,
+    /streaming/,
+    /premium/,
+    /music/,
+    /video/,
+    /podcast/,
+    /audible/,
+    /patreon/,
+    /netflix/,
+    /spotify/,
+    /hulu/,
+    /disney/,
+    /youtube premium/,
+  ];
+
+  if (
+    result.category === "Shopping" &&
+    categories.includes("Health") &&
+    healthSignals.some((pattern) => pattern.test(searchText))
+  ) {
+    return buildResult(
+      normalizedMerchant,
+      "Health",
+      "auto-ai",
+      Math.max(result.categoryConfidence, 0.84),
+      "Adjusted AI result toward Health based on fitness or wellness signals",
+    );
+  }
+
+  if (
+    (result.category === "Shopping" || result.category === "Bills") &&
+    categories.includes("Entertainment") &&
+    entertainmentSignals.some((pattern) => pattern.test(searchText))
+  ) {
+    return buildResult(
+      normalizedMerchant,
+      "Entertainment",
+      "auto-ai",
+      Math.max(result.categoryConfidence, 0.82),
+      "Adjusted AI result toward Entertainment based on subscription or media signals",
+    );
+  }
+
+  return result;
 }
 
 function applyRule(
@@ -242,7 +389,7 @@ async function askAiForCategory(params: {
         {
           role: "system",
           content:
-            "You categorize personal finance transactions. Return only JSON with keys category, confidence, reason. Category must be one of the provided categories. Confidence must be between 0 and 1. If uncertain, return Uncategorized with low confidence.",
+            "You categorize personal finance transactions. Return only JSON with keys category, confidence, reason. Category must be one of the provided categories. Confidence must be between 0 and 1. Prefer Health for gyms, fitness studios, yoga, pilates, therapy, massage, wellness services, pharmacies, clinics, and health memberships. Prefer Entertainment for streaming, digital media, gaming, concerts, movie tickets, creator memberships, and media subscriptions. Prefer Bills for utilities, rent, insurance, phone, internet, and recurring household service fees. Prefer Shopping only for clear retail goods or general merchandise purchases. If uncertain, return Uncategorized with low confidence.",
         },
         {
           role: "user",
@@ -276,12 +423,17 @@ async function askAiForCategory(params: {
     return null;
   }
 
-  return buildResult(
+  return refineAiResult(
+    params.input,
     params.normalizedMerchant,
-    category,
-    "auto-ai",
-    clampConfidence(confidenceRaw || 0.65),
-    reason,
+    buildResult(
+      params.normalizedMerchant,
+      category,
+      "auto-ai",
+      clampConfidence(confidenceRaw || 0.65),
+      reason,
+    ),
+    params.categories,
   );
 }
 
