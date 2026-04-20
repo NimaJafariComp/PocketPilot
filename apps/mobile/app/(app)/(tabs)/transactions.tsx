@@ -1,7 +1,6 @@
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   buildTransactionsViewModel,
   DEFAULT_TRANSACTION_FILTERS,
@@ -12,7 +11,7 @@ import {
 import { CirclePlus, Filter, Search, Upload } from 'lucide-react-native';
 import { useData } from '@pocketpilot/services/src/react';
 import { Screen } from '@/components/screen';
-import { AvatarButton } from '@/components/navigation/avatar-button';
+import { HeaderActions } from '@/components/navigation/header-actions';
 import { AlertBanner } from '@/components/data/alert-banner';
 import { EmptyStateCard } from '@/components/data/empty-state-card';
 import { FilterChip } from '@/components/data/filter-chip';
@@ -32,7 +31,6 @@ function getStringParam(value: string | string[] | undefined) {
 
 export default function TransactionsScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const { transactions, loading } = useData();
   const { colors } = useAppTheme();
@@ -99,12 +97,12 @@ export default function TransactionsScreen() {
 
   return (
     <Screen atmospheric atmosphericIntensity="medium">
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingTop: insets.top + 8, paddingBottom: 19 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingTop: 8, paddingBottom: 19 }}>
         <ScreenHeader
           eyebrow="Transactions"
           title="Transactions"
           subtitle={`${viewModel.filteredTransactions.length} of ${transactions.length} transactions${viewModel.hasActiveFilters ? ' filtered' : ''}`}
-          rightSlot={<AvatarButton />}
+          rightSlot={<HeaderActions />}
         />
         <View className="flex-row gap-3">
           <Pressable
@@ -159,6 +157,8 @@ export default function TransactionsScreen() {
         ) : null}
 
         <SummaryStrip
+          eyebrow="Transactions"
+          tone="transactions"
           items={[
             {
               label: 'Total Spent',
@@ -178,6 +178,9 @@ export default function TransactionsScreen() {
         <SectionCard
           title="Search and review"
           subtitle="Use quick filters here and open the native filter sheet for category, amount, and date controls."
+          eyebrow="Workbench"
+          tone="transactions"
+          badge="Filters"
         >
           <View className="gap-4">
             <View

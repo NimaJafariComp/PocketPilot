@@ -5,17 +5,19 @@ Recommended path is Docker-first.
 
 Prerequisites:
 - Docker Desktop
-- Node.js 20+ and npm (only for running convenience scripts like `npm run docker:up`)
+- Node.js 20+ and npm
 
 First run:
 1. Clone and enter repo:
    - `git clone <your-repo-url>`
    - `cd PocketPilot`
-2. Start full stack:
+2. Install workspace dependencies once from the repo root:
+   - `npm install`
+3. Start full stack:
    - `npm run docker:up`
-3. Verify services:
+4. Verify services:
    - `npm run docker:ps`
-4. Open:
+5. Open:
    - Web app: `http://127.0.0.1:5173`
    - Firebase Emulator UI: `http://127.0.0.1:4000`
 
@@ -32,20 +34,21 @@ Useful:
 - `packages/services` platform-agnostic service interfaces and platform implementations
 
 ## Web app
-1. `cd apps/web`
-2. `npm install`
-3. `npm run dev`
+Install dependencies from the repo root first:
+- `npm install`
 
-Or from root:
+Then either:
+- `cd apps/web && npm run dev`
 - `npm run web:dev`
+
+Avoid running `npm install` inside `apps/web`; this repo uses the root npm workspace lockfile as the source of truth.
 
 ## Mobile app
 Run the Expo React Native app against the local backend/emulator stack.
 
 1. Start the local backend first:
    - `npm run docker:up`
-2. Install mobile dependencies:
-   - `cd apps/mobile`
+2. Install workspace dependencies from the repo root:
    - `npm install`
 3. Create a local Expo env file:
    - `cp apps/mobile/.env.example apps/mobile/.env`
@@ -62,8 +65,10 @@ Native run commands are also available:
 - `cd apps/mobile && npm run android`
 
 Notes:
+- Do not run `npm install` inside `apps/mobile`; mobile startup assumes the repo was installed from the root workspace.
 - If you run on a physical device, replace `127.0.0.1` in `apps/mobile/.env` with your Mac's LAN IP address.
 - The mobile app reads these values from `apps/mobile/app.config.ts`.
+- If `npm run start` fails with a NativeWind/Tailwind version error, rerun `npm install` from the repo root so the mobile workspace gets its intended local `tailwindcss@3`.
 
 ## Backend (local)
 See `backend/README.md`.

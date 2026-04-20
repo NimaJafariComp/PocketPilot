@@ -112,11 +112,18 @@ export function Budgets() {
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
+    const parsedAmount = parseFloat(formData.amount);
+
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      toast.error('Enter a budget amount greater than 0');
+      return;
+    }
+
     try {
       if (editingBudget) {
         await updateBudget(editingBudget.id, {
           category: formData.category,
-          amount: parseFloat(formData.amount),
+          amount: parsedAmount,
           month: formData.month,
           warningThreshold: formData.warningThreshold,
           limitThreshold: formData.limitThreshold,
@@ -125,7 +132,7 @@ export function Budgets() {
       } else {
         await addBudget({
           category: formData.category,
-          amount: parseFloat(formData.amount),
+          amount: parsedAmount,
           month: formData.month,
           warningThreshold: formData.warningThreshold,
           limitThreshold: formData.limitThreshold,
@@ -172,7 +179,10 @@ export function Budgets() {
       : '';
 
   // ── Dollar helpers for dialog sliders ──
-  const budgetAmount = parseFloat(formData.amount) || 0;
+  const parsedBudgetAmount = parseFloat(formData.amount);
+  const isBudgetAmountValid = Number.isFinite(parsedBudgetAmount) && parsedBudgetAmount > 0;
+  const isBudgetFormValid = Boolean(formData.category) && Boolean(formData.month) && isBudgetAmountValid;
+  const budgetAmount = isBudgetAmountValid ? parsedBudgetAmount : 0;
   const warnDollars  = budgetAmount > 0 ? Math.round(budgetAmount * formData.warningThreshold / 100) : null;
   const limitDollars = budgetAmount > 0 ? Math.round(budgetAmount * formData.limitThreshold / 100) : null;
 
@@ -224,6 +234,7 @@ export function Budgets() {
                 <Label>Budget Amount</Label>
                 <Input
                   type="number"
+                  min="0.01"
                   step="0.01"
                   placeholder="500.00"
                   value={formData.amount}
@@ -278,7 +289,7 @@ export function Budgets() {
                 />
               </div>
 
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full" disabled={!isBudgetFormValid}>
                 {editingBudget ? 'Update Budget' : 'Create Budget'}
               </Button>
             </form>

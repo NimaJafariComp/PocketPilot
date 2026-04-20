@@ -14,9 +14,25 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-const shouldUseEmulators =
-  import.meta.env.VITE_USE_FIREBASE_EMULATORS !== "false" &&
-  ["localhost", "127.0.0.1"].includes(window.location.hostname);
+function isLocalHostname(hostname: string) {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
+function shouldUseFirebaseEmulators() {
+  const emulatorSetting = import.meta.env.VITE_USE_FIREBASE_EMULATORS;
+
+  if (emulatorSetting === "true") {
+    return true;
+  }
+
+  if (emulatorSetting === "false") {
+    return false;
+  }
+
+  return isLocalHostname(window.location.hostname);
+}
+
+const shouldUseEmulators = shouldUseFirebaseEmulators();
 
 if (shouldUseEmulators) {
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });

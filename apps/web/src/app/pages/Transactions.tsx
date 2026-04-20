@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { Transaction } from '../types';
 import { services } from '../lib/services';
+import { getTodayLocalDate, parseDateOnly } from '@pocketpilot/core';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -88,7 +89,7 @@ export function Transactions() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isCreatingTransaction, setIsCreatingTransaction] = useState(false);
   const [newTransaction, setNewTransaction] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: getTodayLocalDate(),
     merchant: '',
     amount: '',
     type: 'expense' as 'expense' | 'income',
@@ -171,7 +172,7 @@ export function Transactions() {
 
   const resetNewTransaction = () => {
     setNewTransaction({
-      date: new Date().toISOString().split('T')[0],
+      date: getTodayLocalDate(),
       merchant: '',
       amount: '',
       type: 'expense',
@@ -201,7 +202,7 @@ export function Transactions() {
     try {
       setIsCreatingTransaction(true);
       await addTransaction({
-        date: new Date(newTransaction.date).toISOString(),
+        date: newTransaction.date,
         merchant,
         amount: newTransaction.type === 'expense' ? -parsedAmount : parsedAmount,
         category: newTransaction.category,
@@ -413,7 +414,7 @@ export function Transactions() {
         </div>
 
         {/* Summary stats */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="bg-card border border-border rounded-xl px-4 py-3 flex items-center gap-3">
             <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-destructive/10">
               <TrendingDown className="w-4 h-4 text-destructive" />
@@ -661,10 +662,10 @@ export function Transactions() {
                           <Label className="text-xs text-muted-foreground">Date</Label>
                           <Input
                               type="date"
-                              value={editedTransaction.date.includes('T') ? editedTransaction.date.split('T')[0] : editedTransaction.date}
+                              value={parseDateOnly(editedTransaction.date) || ''}
                               onChange={(e) => setEditedTransaction({
                                 ...editedTransaction,
-                                date: new Date(e.target.value).toISOString(),
+                                date: e.target.value,
                               })}
                               className="h-10"
                           />

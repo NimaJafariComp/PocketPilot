@@ -17,7 +17,7 @@ const navItems = [
   { icon: Settings, label: 'Settings', path: '/settings' },
 ];
 
-export function MobileSidebar() {
+export function MobileSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
 
   return (
@@ -42,6 +42,7 @@ export function MobileSidebar() {
               <li key={item.path}>
                 <Link
                   to={item.path}
+                  onClick={onNavigate}
                   className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
                     isActive
                       ? 'border-primary/20 bg-primary/12 text-primary shadow-sm shadow-primary/10'

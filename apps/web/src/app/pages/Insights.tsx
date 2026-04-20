@@ -206,8 +206,8 @@ export function Insights() {
         <div className="space-y-5">
 
           {/* Overview strip */}
-          <div className="grid grid-cols-3 divide-x divide-border border border-border rounded-lg overflow-hidden">
-            <div className="px-6 py-5 relative">
+          <div className="grid grid-cols-1 overflow-hidden rounded-xl border border-border bg-card shadow-[0_8px_24px_rgba(25,38,59,0.08)] sm:grid-cols-3 sm:divide-x sm:divide-border">
+            <div className="relative px-6 py-5">
               <div className="absolute left-0 top-[20%] bottom-[20%] w-0.5 bg-foreground rounded-r" />
               <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">This Month</p>
               <p className="text-2xl font-semibold tracking-tight">${Math.round(insights.thisMonthSpent).toLocaleString()}</p>
@@ -218,12 +218,12 @@ export function Insights() {
                 {insights.changePercent > 0 ? '+' : ''}{Math.round(insights.changePercent)}% vs last month
               </p>
             </div>
-            <div className="px-6 py-5">
+            <div className="border-t border-border/90 px-6 py-5 sm:border-t-0">
               <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">Last Month</p>
               <p className="text-2xl font-semibold tracking-tight">${Math.round(insights.lastMonthSpent).toLocaleString()}</p>
               <p className="text-xs text-muted-foreground mt-1">{format(subMonths(new Date(), 1), 'MMMM yyyy')}</p>
             </div>
-            <div className="px-6 py-5">
+            <div className="border-t border-border/90 px-6 py-5 sm:border-t-0">
               <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">Transactions</p>
               <p className="text-2xl font-semibold tracking-tight">{insights.thisMonthCount}</p>
               <p className="text-xs text-muted-foreground mt-1">this month</p>
@@ -232,7 +232,7 @@ export function Insights() {
 
           {/* Charts */}
           <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Spending Breakdown</p>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 
             {/* Donut */}
             <div className="border border-border rounded-lg bg-card overflow-hidden">

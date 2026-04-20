@@ -5,6 +5,7 @@ const config: ExpoConfig = {
   slug: 'pocketpilot-mobile',
   scheme: 'pocketpilot',
   version: '0.1.0',
+  icon: './assets/icon.png',
   orientation: 'portrait',
   userInterfaceStyle: 'automatic',
   newArchEnabled: true,
@@ -25,10 +26,13 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'com.pocketpilot.mobile',
+    icon: './assets/icon.png',
   },
   android: {
     package: 'com.pocketpilot.mobile',
     adaptiveIcon: {
+      foregroundImage: './assets/adaptive-icon-foreground.png',
+      monochromeImage: './assets/adaptive-icon-monochrome.png',
       backgroundColor: '#0B1730',
     },
   },

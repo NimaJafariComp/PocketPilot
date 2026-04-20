@@ -10,13 +10,13 @@ interface ShellCardProps extends PropsWithChildren {
 }
 
 export function ShellCard({ eyebrow, title, description, children }: ShellCardProps) {
-  const { colors, resolvedTheme } = useAppTheme();
+  const { colors } = useAppTheme();
 
   return (
     <View
       className="rounded-[30px] border px-5 py-5"
       style={{
-        backgroundColor: colors.card,
+        backgroundColor: colors.panel,
         borderColor: colors.border,
       }}
     >
@@ -44,7 +44,7 @@ export function ShellCard({ eyebrow, title, description, children }: ShellCardPr
       <View
         className="mt-5 rounded-[24px] px-4 py-4"
         style={{
-          backgroundColor: resolvedTheme === 'dark' ? '#102035' : '#EDF2FB',
+          backgroundColor: colors.panelMuted,
         }}
       >
         {children}

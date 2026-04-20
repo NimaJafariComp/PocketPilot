@@ -6,6 +6,7 @@ COPY package*.json ./
 COPY packages ./packages
 COPY apps/web ./apps/web
 
+RUN npm install --prefix packages/core
 RUN npm install --prefix packages/services
 RUN npm install --prefix apps/web
 

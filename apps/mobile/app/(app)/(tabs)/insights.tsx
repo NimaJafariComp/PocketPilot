@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Activity,
   ArrowDownRight,
@@ -14,7 +13,7 @@ import {
 import { buildInsightsViewModel } from '@pocketpilot/core';
 import { useAuth, useData } from '@pocketpilot/services/src/react';
 import { AlertBanner } from '@/components/data/alert-banner';
-import { AvatarButton } from '@/components/navigation/avatar-button';
+import { HeaderActions } from '@/components/navigation/header-actions';
 import { DonutChart } from '@/components/charts/donut-chart';
 import { EmptyStateCard } from '@/components/data/empty-state-card';
 import { HorizontalBarChart } from '@/components/charts/horizontal-bar-chart';
@@ -31,8 +30,6 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
-
-const CHART_COLORS = ['#2B67F6', '#1F9D72', '#DC4960', '#D59B2F', '#8B5CF6', '#14B8A6'];
 
 function InitialsAvatar({ name }: { name: string }) {
   const { colors } = useAppTheme();
@@ -60,7 +57,6 @@ function InitialsAvatar({ name }: { name: string }) {
 
 export default function InsightsScreen() {
   const { transactions, ragSync } = useData();
-  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { colors } = useAppTheme();
   const [tab, setTab] = useState<'summary' | 'assistant'>('summary');
@@ -114,12 +110,12 @@ export default function InsightsScreen() {
 
   return (
     <Screen atmospheric atmosphericIntensity="medium">
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingTop: insets.top + 8, paddingBottom: 19 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingTop: 8, paddingBottom: 19 }}>
         <ScreenHeader
           eyebrow="Insights"
           title="Insights"
           subtitle="Analyze your spending and get AI-powered answers."
-          rightSlot={<AvatarButton />}
+          rightSlot={<HeaderActions />}
         />
         <View className="flex-row gap-2">
           {([
@@ -151,6 +147,8 @@ export default function InsightsScreen() {
         {tab === 'summary' ? (
           <>
             <SummaryStrip
+              eyebrow="Insights"
+              tone="insights"
               items={[
                 {
                   label: 'This Month',
@@ -171,13 +169,19 @@ export default function InsightsScreen() {
               ]}
             />
 
-            <SectionCard title="By Category" subtitle={insights.currentMonthLabel}>
+            <SectionCard
+              title="By Category"
+              subtitle={insights.currentMonthLabel}
+              eyebrow="Insights"
+              tone="insights"
+              badge="Category mix"
+            >
               {insights.categoryData.length > 0 ? (
                 <DonutChart
                   data={insights.categoryData.map((item, index) => ({
                     label: item.name,
                     value: item.value,
-                    color: CHART_COLORS[index % CHART_COLORS.length],
+                    color: colors.chartPalette[index % colors.chartPalette.length],
                   }))}
                   centerValue={formatCurrency(insights.thisMonthSpent)}
                   centerLabel="total"
@@ -187,13 +191,19 @@ export default function InsightsScreen() {
               )}
             </SectionCard>
 
-            <SectionCard title="Top Categories" subtitle={insights.currentMonthLabel}>
+            <SectionCard
+              title="Top Categories"
+              subtitle={insights.currentMonthLabel}
+              eyebrow="Insights"
+              tone="insights"
+              badge="Leaders"
+            >
               {insights.categoryData.length > 0 ? (
                 <HorizontalBarChart
                   data={insights.categoryData.map((item, index) => ({
                     name: item.name,
                     value: item.value,
-                    color: CHART_COLORS[index % CHART_COLORS.length],
+                    color: colors.chartPalette[index % colors.chartPalette.length],
                   }))}
                   maxValue={insights.maxCategoryValue}
                 />
@@ -203,7 +213,13 @@ export default function InsightsScreen() {
             </SectionCard>
 
             {insights.changes.length > 0 ? (
-              <SectionCard title="Notable Changes" subtitle="The biggest category swings versus last month.">
+              <SectionCard
+                title="Notable Changes"
+                subtitle="The biggest category swings versus last month."
+                eyebrow="Signals"
+                tone="insights"
+                badge="Month over month"
+              >
                 <View className="gap-3">
                   {insights.changes.map((item) => {
                     const isUp = item.change > 0;

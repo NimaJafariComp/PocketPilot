@@ -1,5 +1,4 @@
 import { ScrollView, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { PropsWithChildren, ReactNode } from 'react';
 
 interface StackScreenScrollProps extends PropsWithChildren {
@@ -12,14 +11,12 @@ export function StackScreenScroll({
   header,
   bottomInset = 19,
 }: StackScreenScrollProps) {
-  const insets = useSafeAreaInsets();
-
   return (
     <ScrollView
       className="flex-1"
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: bottomInset }}
+      contentContainerStyle={{ paddingTop: 8, paddingBottom: bottomInset }}
     >
       <View className="gap-4">
         {header}

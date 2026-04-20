@@ -1,11 +1,10 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useMemo } from 'react';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { buildBudgetsViewModel } from '@pocketpilot/core';
 import { useData } from '@pocketpilot/services/src/react';
 import { AlertBanner } from '@/components/data/alert-banner';
-import { AvatarButton } from '@/components/navigation/avatar-button';
+import { HeaderActions } from '@/components/navigation/header-actions';
 import { EmptyStateCard } from '@/components/data/empty-state-card';
 import { ProgressSummaryRow } from '@/components/data/progress-summary-row';
 import { Screen } from '@/components/screen';
@@ -22,19 +21,18 @@ function statusLabel(status: 'over' | 'warning' | 'good') {
 
 export default function BudgetsScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { budgets, transactions } = useData();
   const { colors, resolvedTheme } = useAppTheme();
   const model = useMemo(() => buildBudgetsViewModel(budgets, transactions), [budgets, transactions]);
 
   return (
     <Screen atmospheric atmosphericIntensity="medium">
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingTop: insets.top + 8, paddingBottom: 19 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingTop: 8, paddingBottom: 19 }}>
         <ScreenHeader
           eyebrow="Budgets"
           title="Budgets"
           subtitle={model.month}
-          rightSlot={<AvatarButton />}
+          rightSlot={<HeaderActions />}
         />
         <Pressable
           className="flex-row items-center justify-center gap-2 rounded-[22px] px-4 py-4"
@@ -53,19 +51,19 @@ export default function BudgetsScreen() {
           <View
             className="overflow-hidden rounded-[34px] border px-5 pb-6 pt-5"
             style={{
-              backgroundColor: resolvedTheme === 'dark' ? '#0E1A2D' : '#F7FAFF',
+              backgroundColor: colors.hero,
               borderColor: colors.border,
+              shadowColor: colors.sectionAccents.budgets.shadow,
+              shadowOpacity: 1,
+              shadowRadius: 18,
+              shadowOffset: { width: 0, height: 10 },
+              elevation: 2,
             }}
           >
-            <View
-              className="absolute -right-8 -top-12 h-36 w-36 rounded-full"
-              style={{
-                backgroundColor: resolvedTheme === 'dark' ? 'rgba(122, 182, 255, 0.16)' : 'rgba(43, 103, 246, 0.14)',
-              }}
-            />
+            <View className="absolute inset-x-0 top-0 h-1.5" style={{ backgroundColor: colors.sectionAccents.budgets.line }} />
             <Text
               className="text-[11px] uppercase tracking-[1.8px]"
-              style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.medium }}
+              style={{ color: colors.sectionAccents.budgets.chipColor, fontFamily: fontFamilies.sans.medium }}
             >
               Total spent this month
             </Text>
@@ -113,6 +111,8 @@ export default function BudgetsScreen() {
 
         {model.budgetRows.length > 0 ? (
           <SummaryStrip
+            eyebrow="Budgets"
+            tone="budgets"
             items={[
               { label: 'Over limit', value: String(model.overCount), valueColor: model.overCount > 0 ? colors.danger : colors.foreground },
               { label: 'Warning', value: String(model.warningCount) },
@@ -135,7 +135,13 @@ export default function BudgetsScreen() {
           />
         ))}
 
-        <SectionCard title="All Categories" subtitle="Every monthly budget, sorted by the same status rules as web.">
+        <SectionCard
+          title="All Categories"
+          subtitle="Every monthly budget, sorted by the same status rules as web."
+          eyebrow="Budgets"
+          tone="budgets"
+          badge={`${model.budgetRows.length} categories`}
+        >
           <View className="gap-3">
             {model.budgetRows.length > 0 ? (
               model.budgetRows.map((budget) => (

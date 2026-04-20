@@ -1,15 +1,17 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router';
+import { parseDateOnly } from '@pocketpilot/core';
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
+import { Checkbox } from '../components/ui/checkbox';
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { useData } from '../context/DataContext';
 import Papa from 'papaparse';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { services } from '../lib/services';
 
 type ImportStep = 'upload' | 'mapping' | 'preview' | 'success';
@@ -34,6 +36,7 @@ export function ImportCSV() {
   });
   const [errors, setErrors] = useState<string[]>([]);
   const [importedCount, setImportedCount] = useState(0);
+  const [invertAmounts, setInvertAmounts] = useState(false);
 
   const parseCsvFile = useCallback((file: File) => {
     Papa.parse(file, {
@@ -108,12 +111,13 @@ export function ImportCSV() {
     setStep('preview');
   };
 
-  const parseDateToIso = (rawDate: string): string | null => {
-    const date = new Date(rawDate);
-    if (Number.isNaN(date.getTime())) {
+  const parseMappedAmount = (rawAmount: string) => {
+    const parsedAmount = parseFloat((rawAmount || '').replace(/[^0-9.-]/g, ''));
+    if (Number.isNaN(parsedAmount)) {
       return null;
     }
-    return date.toISOString();
+
+    return invertAmounts ? -parsedAmount : parsedAmount;
   };
 
   const handleImport = async () => {
@@ -121,32 +125,25 @@ export function ImportCSV() {
 
     const transactions = parsedData.map((row, index) => {
       const merchant = (row[mapping.merchant] || '').trim();
-      const rawAmount = (row[mapping.amount] || '').replace(/[^0-9.-]/g, '');
-      let amount = parseFloat(rawAmount);
-      const parsedDate = parseDateToIso(row[mapping.date] || '');
+      const parsedAmount = parseMappedAmount(row[mapping.amount] || '');
+      const parsedDate = parseDateOnly(row[mapping.date] || '');
 
       if (!merchant) {
         importErrors.push(`Row ${index + 1}: Merchant is missing`);
       }
 
-      if (Number.isNaN(amount)) {
+      if (parsedAmount === null) {
         importErrors.push(`Row ${index + 1}: Amount is invalid`);
-        amount = 0;
       }
 
       if (!parsedDate) {
         importErrors.push(`Row ${index + 1}: Date is invalid`);
       }
 
-      // If amount is positive but should be negative (expense), make it negative.
-      if (amount > 0 && !merchant.toLowerCase().includes('payment')) {
-        amount = -amount;
-      }
-
       return {
-        date: parsedDate || new Date(0).toISOString(),
+        date: parsedDate || '1970-01-01',
         merchant,
-        amount,
+        amount: parsedAmount ?? 0,
         category: mapping.category && row[mapping.category] ? row[mapping.category] : 'Uncategorized',
         notes: mapping.notes && row[mapping.notes] ? String(row[mapping.notes]).trim() : '',
       };
@@ -323,6 +320,25 @@ export function ImportCSV() {
               </div>
             </div>
 
+            <div className="rounded-lg border border-border bg-muted/30 p-4">
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="invert-amounts"
+                  checked={invertAmounts}
+                  onCheckedChange={(checked) => setInvertAmounts(checked === true)}
+                  className="mt-0.5"
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="invert-amounts" className="font-medium">
+                    Invert amounts during import
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Leave this off to preserve the CSV&apos;s original signs. Turn it on only if your bank exports expenses as positive values and credits as negative values.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="flex gap-3 pt-4">
               <Button variant="outline" onClick={() => setStep('upload')}>
                 Back
@@ -362,13 +378,24 @@ export function ImportCSV() {
                     <TableRow key={idx}>
                       <TableCell>
                         {(() => {
-                          const parsedDate = parseDateToIso(row[mapping.date] || '');
-                          return parsedDate ? format(new Date(parsedDate), 'MMM dd, yyyy') : 'Invalid date';
+                          const parsedDate = parseDateOnly(row[mapping.date] || '');
+                          return parsedDate ? format(parseISO(parsedDate), 'MMM dd, yyyy') : 'Invalid date';
                         })()}
                       </TableCell>
                       <TableCell>{row[mapping.merchant]}</TableCell>
-                      <TableCell className={parseFloat(row[mapping.amount]) < 0 ? 'text-destructive' : 'text-success'}>
-                        ${Math.abs(parseFloat(row[mapping.amount])).toFixed(2)}
+                      <TableCell
+                        className={
+                          (parseMappedAmount(row[mapping.amount] || '') ?? 0) < 0 ? 'text-destructive' : 'text-success'
+                        }
+                      >
+                        {(() => {
+                          const parsedAmount = parseMappedAmount(row[mapping.amount] || '');
+                          if (parsedAmount === null) {
+                            return 'Invalid amount';
+                          }
+
+                          return `${parsedAmount < 0 ? '-' : '+'}$${Math.abs(parsedAmount).toFixed(2)}`;
+                        })()}
                       </TableCell>
                       <TableCell>
                         {mapping.category && row[mapping.category] ? row[mapping.category] : 'Uncategorized'}
@@ -384,7 +411,7 @@ export function ImportCSV() {
 
             <Alert className="mb-6">
               <AlertDescription>
-                Ready to import {parsedData.length} transactions
+                Ready to import {parsedData.length} transactions with {invertAmounts ? 'inverted' : 'preserved'} amount signs
               </AlertDescription>
             </Alert>
 

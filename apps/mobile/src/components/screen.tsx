@@ -21,19 +21,24 @@ export function Screen({
   const { colors } = useAppTheme();
 
   return (
-    <SafeAreaView
+    <View
       className="flex-1"
-      edges={['left', 'right']}
       style={{ backgroundColor: colors.background }}
     >
+      {atmospheric ? <PageBackdrop intensity={atmosphericIntensity} /> : null}
+      <SafeAreaView
+        className="flex-1"
+        edges={['top', 'left', 'right']}
+        style={{ backgroundColor: 'transparent' }}
+      >
       <View
         className={padded ? 'flex-1 px-5 pb-0 pt-2' : 'flex-1'}
         style={[{ position: 'relative' }, style]}
         {...props}
       >
-        {atmospheric ? <PageBackdrop intensity={atmosphericIntensity} /> : null}
         {children}
       </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }

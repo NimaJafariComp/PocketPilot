@@ -15,15 +15,14 @@ interface VerticalBarChartProps {
   emptyLabel?: string;
 }
 
-const DEFAULT_COLORS = ['#2B67F6', '#1F9D72', '#D59B2F', '#DC4960', '#8B5CF6', '#14B8A6'];
-
 export function VerticalBarChart({
   data,
   height = 220,
-  colors: chartColors = DEFAULT_COLORS,
+  colors: chartColors,
   emptyLabel = 'No data',
 }: VerticalBarChartProps) {
   const { colors } = useAppTheme();
+  const palette = chartColors || colors.chartPalette;
 
   if (data.length === 0) {
     return (
@@ -49,7 +48,7 @@ export function VerticalBarChart({
         const barHeight = maxValue > 0 ? (item.value / maxValue) * (innerHeight - 16) : 0;
         const x = slotWidth * index + (slotWidth - barWidth) / 2;
         const y = innerHeight - barHeight;
-        const color = chartColors[index % chartColors.length];
+        const color = palette[index % palette.length];
 
         return (
           <G key={item.name}>

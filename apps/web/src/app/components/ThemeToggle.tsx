@@ -20,7 +20,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       variant="outline"
       size="icon"
       className={cn(
-        'relative rounded-full border-border/70 bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/60',
+        'relative rounded-full border-border/70 bg-background/72 shadow-[var(--surface-shadow)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/60',
         className,
       )}
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}

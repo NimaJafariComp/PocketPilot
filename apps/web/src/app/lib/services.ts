@@ -7,7 +7,25 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:000000000000:web:local',
 };
 
-const useEmulators = import.meta.env.VITE_USE_FIREBASE_EMULATORS !== 'false';
+function isLocalHostname(hostname: string) {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+}
+
+function shouldUseFirebaseEmulators() {
+  const emulatorSetting = import.meta.env.VITE_USE_FIREBASE_EMULATORS;
+
+  if (emulatorSetting === 'true') {
+    return true;
+  }
+
+  if (emulatorSetting === 'false') {
+    return false;
+  }
+
+  return isLocalHostname(window.location.hostname);
+}
+
+const useEmulators = shouldUseFirebaseEmulators();
 const emulatorHost = import.meta.env.VITE_FIREBASE_EMULATOR_HOST || '127.0.0.1';
 
 const functionsBaseUrl =

@@ -48,21 +48,63 @@ export function AuthScreenShell({
               <View
                 className="absolute inset-0"
                 style={{
-                  backgroundColor: resolvedTheme === 'dark' ? '#09172B' : '#EAF2FF',
+                  backgroundColor: colors.hero,
                 }}
               />
               <View
-                className="absolute -right-14 -top-14 h-40 w-40 rounded-full"
+                className="absolute -right-16 -top-18 h-52 w-52 rounded-full"
                 style={{
-                  backgroundColor: resolvedTheme === 'dark' ? 'rgba(122, 182, 255, 0.18)' : 'rgba(43, 103, 246, 0.16)',
+                  backgroundColor: resolvedTheme === 'dark' ? 'rgba(121, 208, 194, 0.18)' : 'rgba(36, 95, 113, 0.12)',
                 }}
               />
               <View
-                className="absolute -left-10 bottom-12 h-28 w-28 rounded-full"
+                className="absolute left-[18%] top-[18%] h-44 w-44 rounded-full"
                 style={{
-                  backgroundColor: resolvedTheme === 'dark' ? 'rgba(51, 209, 161, 0.12)' : 'rgba(24, 49, 83, 0.08)',
+                  backgroundColor: resolvedTheme === 'dark' ? 'rgba(110, 167, 200, 0.12)' : 'rgba(255, 249, 241, 0.22)',
                 }}
               />
+              <View
+                className="absolute -left-12 bottom-8 h-36 w-36 rounded-full"
+                style={{
+                  backgroundColor: resolvedTheme === 'dark' ? 'rgba(216, 162, 103, 0.1)' : 'rgba(187, 124, 69, 0.12)',
+                }}
+              />
+              <View
+                className="absolute -left-[10%] top-[16%] h-24 w-[88%] rounded-full"
+                style={{
+                  backgroundColor: resolvedTheme === 'dark' ? 'rgba(146, 223, 211, 0.08)' : 'rgba(255, 255, 255, 0.18)',
+                  transform: [{ rotate: '-14deg' }],
+                }}
+              />
+              <View
+                className="absolute right-[-20%] top-[54%] h-20 w-[76%] rounded-full"
+                style={{
+                  backgroundColor: resolvedTheme === 'dark' ? 'rgba(216, 162, 103, 0.08)' : 'rgba(83, 147, 132, 0.1)',
+                  transform: [{ rotate: '16deg' }],
+                }}
+              />
+              <View
+                className="absolute left-[8%] top-[42%] h-14 w-[52%] rounded-full"
+                style={{
+                  backgroundColor: resolvedTheme === 'dark' ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.16)',
+                  transform: [{ rotate: '-10deg' }],
+                }}
+              />
+              <View
+                className="absolute inset-x-0 bottom-0 h-24"
+                style={{
+                  backgroundColor: resolvedTheme === 'dark' ? 'rgba(6, 13, 20, 0.22)' : 'rgba(255, 250, 243, 0.24)',
+                }}
+              />
+              <View
+                className="absolute inset-x-0 bottom-0 h-32"
+                style={{
+                  backgroundColor: resolvedTheme === 'dark' ? 'rgba(6, 13, 20, 0.2)' : 'rgba(107, 82, 54, 0.04)',
+                }}
+              />
+              <View className="absolute left-[14%] top-[16%] h-1.5 w-1.5 rounded-full" style={{ backgroundColor: resolvedTheme === 'dark' ? 'rgba(232, 245, 241, 0.03)' : 'rgba(107, 82, 54, 0.04)' }} />
+              <View className="absolute right-[20%] top-[34%] h-1 w-1 rounded-full" style={{ backgroundColor: resolvedTheme === 'dark' ? 'rgba(232, 245, 241, 0.03)' : 'rgba(107, 82, 54, 0.04)' }} />
+              <View className="absolute left-[24%] top-[74%] h-1 w-1 rounded-full" style={{ backgroundColor: resolvedTheme === 'dark' ? 'rgba(232, 245, 241, 0.025)' : 'rgba(107, 82, 54, 0.035)' }} />
 
               <View className="px-6 pb-7 pt-6">
                 <View className="mb-10 flex-row items-start justify-between">
@@ -110,8 +152,13 @@ export function AuthScreenShell({
             <View
               className="mt-5 rounded-[32px] border px-5 pb-6 pt-6"
               style={{
-                backgroundColor: colors.card,
+                backgroundColor: colors.glass,
                 borderColor: colors.border,
+                shadowColor: resolvedTheme === 'dark' ? 'rgba(3, 8, 14, 0.55)' : 'rgba(88, 67, 44, 0.08)',
+                shadowOpacity: 1,
+                shadowRadius: 18,
+                shadowOffset: { width: 0, height: 10 },
+                elevation: 2,
               }}
             >
               {children}

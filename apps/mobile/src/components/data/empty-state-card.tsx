@@ -9,13 +9,14 @@ interface EmptyStateCardProps extends PropsWithChildren {
 }
 
 export function EmptyStateCard({ title, description, children }: EmptyStateCardProps) {
-  const { colors, resolvedTheme } = useAppTheme();
+  const { colors } = useAppTheme();
 
   return (
     <View
-      className="rounded-[24px] px-4 py-4"
+      className="rounded-[24px] border px-4 py-4"
       style={{
-        backgroundColor: resolvedTheme === 'dark' ? '#102035' : '#EDF2FB',
+        borderColor: colors.border,
+        backgroundColor: colors.panelMuted,
       }}
     >
       <Text className="text-sm" style={{ color: colors.foreground, fontFamily: fontFamilies.sans.semibold }}>

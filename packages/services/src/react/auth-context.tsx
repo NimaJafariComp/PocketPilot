@@ -19,24 +19,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     let isMounted = true;
-    let hasResolvedInitialState = false;
 
     const unsubscribe = services.auth.onAuthStateChanged((nextUser) => {
       if (!isMounted) {
         return;
       }
 
-      hasResolvedInitialState = true;
       setUser(nextUser);
-      setLoading(false);
-    });
-
-    void services.auth.getCurrentUser().then((currentUser) => {
-      if (!isMounted || hasResolvedInitialState) {
-        return;
-      }
-
-      setUser(currentUser);
       setLoading(false);
     });
 

@@ -7,6 +7,7 @@
     "packages/*"
   ],
   "scripts": {
+    "setup": "npm install",
     "dev": "npm --prefix apps/web run dev",
     "build": "npm --prefix apps/web run build",
     "web:dev": "npm --prefix apps/web run dev",

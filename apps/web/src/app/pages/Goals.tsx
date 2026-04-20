@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { parseDateOnly } from '@pocketpilot/core';
 import { useData } from '../context/DataContext';
 import { Goal, Contribution } from '../types';
 import { Card, CardContent } from '../components/ui/card';
@@ -44,15 +45,24 @@ export function Goals() {
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
   const [formData, setFormData] = useState({ name: '', targetAmount: '', deadline: '' });
   const [contributionAmount, setContributionAmount] = useState('');
+  const parsedTargetAmount = parseFloat(formData.targetAmount);
+  const isGoalTargetValid = Number.isFinite(parsedTargetAmount) && parsedTargetAmount > 0;
+  const isGoalFormValid = formData.name.trim().length > 0 && isGoalTargetValid;
+  const parsedContributionAmount = parseFloat(contributionAmount);
+  const isContributionAmountValid = Number.isFinite(parsedContributionAmount) && parsedContributionAmount > 0;
 
   const handleCreateGoal = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isGoalFormValid) {
+      toast.error('Enter a target amount greater than 0');
+      return;
+    }
     try {
       await addGoal({
         name: formData.name,
-        targetAmount: parseFloat(formData.targetAmount),
+        targetAmount: parsedTargetAmount,
         currentAmount: 0,
-        deadline: formData.deadline ? new Date(formData.deadline).toISOString() : undefined,
+        deadline: formData.deadline ? parseDateOnly(formData.deadline) || undefined : undefined,
         contributions: [],
       });
       setIsCreateDialogOpen(false);
@@ -66,7 +76,12 @@ export function Goals() {
   const handleAddContribution = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedGoal) return;
-    const amount = parseFloat(contributionAmount);
+    if (!isContributionAmountValid) {
+      toast.error('Enter a contribution amount greater than 0');
+      return;
+    }
+
+    const amount = parsedContributionAmount;
     const newContribution: Contribution = {
       id: Date.now().toString(),
       amount,
@@ -143,6 +158,7 @@ export function Goals() {
                 <Label>Target Amount</Label>
                 <Input
                   type="number"
+                  min="0.01"
                   step="0.01"
                   placeholder="5000.00"
                   value={formData.targetAmount}
@@ -170,7 +186,7 @@ export function Goals() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" className="flex-[2]">Create Goal</Button>
+                <Button type="submit" className="flex-[2]" disabled={!isGoalFormValid}>Create Goal</Button>
               </div>
             </form>
           </DialogContent>
@@ -179,19 +195,19 @@ export function Goals() {
 
       {/* ── Summary strip ── */}
       {goals.length > 0 && (
-        <div className="grid grid-cols-3 divide-x divide-border border border-border rounded-lg overflow-hidden">
-          <div className="px-6 py-5 relative">
+        <div className="grid grid-cols-1 overflow-hidden rounded-xl border border-border bg-card shadow-[0_8px_24px_rgba(25,38,59,0.08)] sm:grid-cols-3 sm:divide-x sm:divide-border">
+          <div className="relative px-6 py-5">
             <div className="absolute left-0 top-[20%] bottom-[20%] w-0.5 bg-primary rounded-r" />
             <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-1.5">Total Saved</p>
             <p className="text-2xl font-bold tracking-tight">${totalSaved.toLocaleString()}</p>
             <p className="text-xs text-muted-foreground mt-0.5">across {goals.length} goal{goals.length !== 1 ? 's' : ''}</p>
           </div>
-          <div className="px-6 py-5">
+          <div className="border-t border-border/90 px-6 py-5 sm:border-t-0">
             <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-1.5">Still Needed</p>
             <p className="text-2xl font-bold tracking-tight">${totalNeeded.toLocaleString()}</p>
             <p className="text-xs text-muted-foreground mt-0.5">to reach all targets</p>
           </div>
-          <div className="px-6 py-5">
+          <div className="border-t border-border/90 px-6 py-5 sm:border-t-0">
             <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-1.5">Completed</p>
             <p className="text-2xl font-bold tracking-tight">{completedCount}</p>
             <p className="text-xs text-muted-foreground mt-0.5">of {goals.length} goal{goals.length !== 1 ? 's' : ''}</p>
@@ -373,6 +389,7 @@ export function Goals() {
                   <Label>Amount</Label>
                   <Input
                     type="number"
+                    min="0.01"
                     step="0.01"
                     placeholder="100.00"
                     value={contributionAmount}
@@ -391,7 +408,7 @@ export function Goals() {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" className="flex-[2]">
+                  <Button type="submit" className="flex-[2]" disabled={!isContributionAmountValid}>
                     Add {contributionAmount ? `$${contributionAmount}` : ''}
                   </Button>
                 </div>

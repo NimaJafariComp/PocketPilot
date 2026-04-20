@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native';
 import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies } from '@/theme/tokens';
+import { fontFamilies, type SectionTone } from '@/theme/tokens';
 import { FittedValueText } from '@/components/data/fitted-value-text';
 
 export interface SummaryStripItem {
@@ -12,16 +12,43 @@ export interface SummaryStripItem {
 
 interface SummaryStripProps {
   items: SummaryStripItem[];
+  eyebrow?: string;
+  tone?: SectionTone;
 }
 
-export function SummaryStrip({ items }: SummaryStripProps) {
+export function SummaryStrip({ items, eyebrow, tone = 'neutral' }: SummaryStripProps) {
   const { colors } = useAppTheme();
+  const accent = colors.sectionAccents[tone];
 
   return (
     <View
       className="overflow-hidden rounded-[28px] border"
-      style={{ backgroundColor: colors.card, borderColor: colors.border }}
+      style={{
+        backgroundColor: colors.panel,
+        borderColor: colors.border,
+        shadowColor: accent.shadow,
+        shadowOpacity: 1,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 10 },
+        elevation: 2,
+      }}
     >
+      <View className="h-1.5" style={{ backgroundColor: accent.line }} />
+      {eyebrow ? (
+        <View className="px-5 pt-4">
+          <View
+            className="self-start rounded-full px-3 py-1.5"
+            style={{ backgroundColor: accent.chipBackground }}
+          >
+            <Text
+              className="text-[11px] uppercase tracking-[1.8px]"
+              style={{ color: accent.chipColor, fontFamily: fontFamilies.sans.semibold }}
+            >
+              {eyebrow}
+            </Text>
+          </View>
+        </View>
+      ) : null}
       <View className="flex-row flex-wrap">
         {items.map((item, index) => (
           <View
@@ -29,6 +56,7 @@ export function SummaryStrip({ items }: SummaryStripProps) {
             className="min-w-[33%] flex-1 px-5 py-5"
             style={{
               borderLeftWidth: index === 0 ? 0 : 1,
+              borderTopWidth: eyebrow ? 0 : 0,
               borderColor: colors.border,
             }}
           >

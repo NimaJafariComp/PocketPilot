@@ -1,7 +1,6 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowRight,
   DatabaseZap,
@@ -20,7 +19,7 @@ import {
 } from '@pocketpilot/core';
 import { useData } from '@pocketpilot/services/src/react';
 import { AlertBanner } from '@/components/data/alert-banner';
-import { AvatarButton } from '@/components/navigation/avatar-button';
+import { HeaderActions } from '@/components/navigation/header-actions';
 import { EmptyStateCard } from '@/components/data/empty-state-card';
 import { ProgressSummaryRow } from '@/components/data/progress-summary-row';
 import { Screen } from '@/components/screen';
@@ -36,7 +35,6 @@ import { FittedValueText } from '@/components/data/fitted-value-text';
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { transactions, budgets, goals, loading, importTransactions, addBudget, addGoal } = useData();
   const { colors, resolvedTheme } = useAppTheme();
   const [isLoadingSampleData, setIsLoadingSampleData] = useState(false);
@@ -73,12 +71,12 @@ export default function DashboardScreen() {
 
   return (
     <Screen atmospheric atmosphericIntensity="medium">
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingTop: insets.top + 8, paddingBottom: 19 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingTop: 8, paddingBottom: 19 }}>
         <ScreenHeader
           eyebrow="Dashboard"
           title="Dashboard"
           subtitle={formatMonthLabel()}
-          rightSlot={<AvatarButton />}
+          rightSlot={<HeaderActions />}
         />
         {loading ? (
           <EmptyStateCard
@@ -90,30 +88,24 @@ export default function DashboardScreen() {
             <View
               className="overflow-hidden rounded-[34px] border px-5 pb-6 pt-5"
               style={{
-                backgroundColor: resolvedTheme === 'dark' ? '#0E1A2D' : '#F7FAFF',
+                backgroundColor: colors.hero,
                 borderColor: colors.border,
+                shadowColor: colors.sectionAccents.dashboard.shadow,
+                shadowOpacity: 1,
+                shadowRadius: 18,
+                shadowOffset: { width: 0, height: 10 },
+                elevation: 2,
               }}
             >
-              <View
-                className="absolute -right-10 -top-8 h-32 w-32 rounded-full"
-                style={{
-                  backgroundColor: resolvedTheme === 'dark' ? 'rgba(122, 182, 255, 0.18)' : 'rgba(43, 103, 246, 0.14)',
-                }}
-              />
-              <View
-                className="absolute -left-8 bottom-10 h-24 w-24 rounded-full"
-                style={{
-                  backgroundColor: resolvedTheme === 'dark' ? 'rgba(51, 209, 161, 0.18)' : 'rgba(31, 157, 114, 0.12)',
-                }}
-              />
+              <View className="absolute inset-x-0 top-0 h-1.5" style={{ backgroundColor: colors.sectionAccents.dashboard.line }} />
 
               <View
                 className="self-start rounded-full px-3 py-1.5"
-                style={{ backgroundColor: colors.secondary }}
+                style={{ backgroundColor: colors.sectionAccents.dashboard.chipBackground }}
               >
                 <Text
                   className="text-[11px] uppercase tracking-[1.8px]"
-                  style={{ color: colors.secondaryForeground, fontFamily: fontFamilies.sans.semibold }}
+                  style={{ color: colors.sectionAccents.dashboard.chipColor, fontFamily: fontFamilies.sans.semibold }}
                 >
                   AI-powered financial clarity
                 </Text>
@@ -173,7 +165,7 @@ export default function DashboardScreen() {
                   <View
                     key={format}
                     className="rounded-full border px-2.5 py-1"
-                    style={{ backgroundColor: colors.card, borderColor: colors.border }}
+                    style={{ backgroundColor: colors.glass, borderColor: colors.border }}
                   >
                     <Text
                       className="text-[11px]"
@@ -186,7 +178,13 @@ export default function DashboardScreen() {
               </View>
             </View>
 
-            <SectionCard title="Everything you need" subtitle="Built for real financial life.">
+            <SectionCard
+              title="Everything you need"
+              subtitle="Built for real financial life."
+              eyebrow="Dashboard"
+              tone="dashboard"
+              badge="Overview"
+            >
               <View className="gap-3">
                 {[
                   {
@@ -228,7 +226,13 @@ export default function DashboardScreen() {
               </View>
             </SectionCard>
 
-            <SectionCard title="Up and running in 3 steps" subtitle="The same onboarding story from web, adapted for mobile.">
+            <SectionCard
+              title="Up and running in 3 steps"
+              subtitle="The same onboarding story from web, adapted for mobile."
+              eyebrow="Start here"
+              tone="dashboard"
+              badge="Guide"
+            >
               <View className="gap-3">
                 {[
                   { step: '1', title: 'Import', description: 'Upload a CSV or load a sample workspace.' },
@@ -309,19 +313,19 @@ export default function DashboardScreen() {
               <View
                 className="overflow-hidden rounded-[34px] border px-5 pb-6 pt-5"
                 style={{
-                  backgroundColor: resolvedTheme === 'dark' ? '#0E1A2D' : '#F7FAFF',
+                  backgroundColor: colors.hero,
                   borderColor: colors.border,
+                  shadowColor: colors.sectionAccents.dashboard.shadow,
+                  shadowOpacity: 1,
+                  shadowRadius: 18,
+                  shadowOffset: { width: 0, height: 10 },
+                  elevation: 2,
                 }}
               >
-                <View
-                  className="absolute -right-8 -top-12 h-36 w-36 rounded-full"
-                  style={{
-                    backgroundColor: resolvedTheme === 'dark' ? 'rgba(122, 182, 255, 0.16)' : 'rgba(43, 103, 246, 0.14)',
-                  }}
-                />
+                <View className="absolute inset-x-0 top-0 h-1.5" style={{ backgroundColor: colors.sectionAccents.dashboard.line }} />
                 <Text
                   className="text-[11px] uppercase tracking-[1.8px]"
-                  style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.medium }}
+                  style={{ color: colors.sectionAccents.dashboard.chipColor, fontFamily: fontFamilies.sans.medium }}
                 >
                   Total spent this month
                 </Text>
@@ -376,7 +380,7 @@ export default function DashboardScreen() {
                 </View>
 
                 <View className="mt-5 flex-row gap-3">
-                  <View className="flex-1 rounded-[22px] px-4 py-4" style={{ backgroundColor: colors.card }}>
+                  <View className="flex-1 rounded-[22px] px-4 py-4" style={{ backgroundColor: colors.glass }}>
                     <Text
                       className="text-[11px] uppercase tracking-[1.5px]"
                       style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.medium }}
@@ -390,7 +394,7 @@ export default function DashboardScreen() {
                       {formatCurrency(model.totalIncome)}
                     </FittedValueText>
                   </View>
-                  <View className="flex-1 rounded-[22px] px-4 py-4" style={{ backgroundColor: colors.card }}>
+                  <View className="flex-1 rounded-[22px] px-4 py-4" style={{ backgroundColor: colors.glass }}>
                     <Text
                       className="text-[11px] uppercase tracking-[1.5px]"
                       style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.medium }}
@@ -411,11 +415,23 @@ export default function DashboardScreen() {
               </View>
             ) : null}
 
-            <SectionCard title="Top Spending Categories" subtitle="Your biggest expense categories for the current month.">
+            <SectionCard
+              title="Top Spending Categories"
+              subtitle="Your biggest expense categories for the current month."
+              eyebrow="Dashboard"
+              tone="dashboard"
+              badge="Spend mix"
+            >
               <VerticalBarChart data={model.topCategories} emptyLabel="No spending data yet" />
             </SectionCard>
 
-            <SectionCard title="Goals" subtitle="A quick look at your current savings momentum.">
+            <SectionCard
+              title="Goals"
+              subtitle="A quick look at your current savings momentum."
+              eyebrow="Goals"
+              tone="goals"
+              badge="Momentum"
+            >
               <View className="gap-4">
                 {model.goalProgress.length > 0 ? (
                   <>
@@ -471,6 +487,9 @@ export default function DashboardScreen() {
                   ? `${model.uncategorizedCount} uncategorized transaction${model.uncategorizedCount === 1 ? '' : 's'}`
                   : 'Your latest activity from the shared transaction feed.'
               }
+              eyebrow="Transactions"
+              tone="transactions"
+              badge="Latest"
             >
               <View className="gap-3">
                 {model.recentTransactions.length > 0 ? (

@@ -48,16 +48,17 @@ export default function TabsLayout() {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
           height: 74,
-          paddingHorizontal: Math.max(12, insets.left + 6, insets.right + 6),
+          paddingHorizontal: Math.max(8, insets.left + 4, insets.right + 4),
           paddingBottom: 8,
           paddingTop: 8,
         },
         tabBarItemStyle: {
-          paddingHorizontal: 2,
+          paddingHorizontal: 0,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 9,
           fontWeight: '600',
+          letterSpacing: -0.1,
         },
         tabBarIcon: ({ color, size }) => (
           <TabIcon color={color} size={size} name={route.name as Parameters<typeof TabIcon>[0]['name']} />
