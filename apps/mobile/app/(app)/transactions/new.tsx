@@ -83,7 +83,7 @@ export default function NewTransactionScreen() {
         <ScreenHeader
           eyebrow="Transactions"
           title="New Transaction"
-          subtitle="Capture a manual transaction with the same shared data model the web app uses."
+          subtitle="Capture a transaction quickly."
           backLabel="Back"
         />
       }

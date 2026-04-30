@@ -220,11 +220,11 @@ export default function TransactionDetailScreen() {
       }
     >
       <View
-        className="rounded-[28px] border px-5 py-5"
+        className="rounded-[22px] border px-4 py-4"
         style={{ backgroundColor: colors.card, borderColor: colors.border }}
       >
         <Text
-          className="text-3xl tracking-tight"
+          className="text-[28px] tracking-tight"
           style={{
             color: transaction.amount < 0 ? colors.foreground : colors.success,
             fontFamily: fontFamilies.sans.semibold,
@@ -234,12 +234,12 @@ export default function TransactionDetailScreen() {
           {formatCurrencyPrecise(Math.abs(transaction.amount))}
         </Text>
         <Text
-          className="mt-2 text-sm leading-6"
+          className="mt-1.5 text-xs leading-5"
           style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
         >
           {draft.date}
         </Text>
-        <View className="mt-4 flex-row flex-wrap items-center gap-2">
+        <View className="mt-3 flex-row flex-wrap items-center gap-2">
           <CategoryBadge category={transaction.category} />
           <CategorizationStatusBadge transaction={transaction} />
         </View>

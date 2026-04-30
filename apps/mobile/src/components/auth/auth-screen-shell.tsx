@@ -51,7 +51,6 @@ export function AuthScreenShell({
           style={StyleSheet.absoluteFillObject}
           contentFit="cover"
           nativeControls={false}
-          allowsFullscreen={false}
           allowsPictureInPicture={false}
           pointerEvents="none"
         />

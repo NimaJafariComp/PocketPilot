@@ -33,8 +33,8 @@ export function TransactionEditorFields({
   } as const;
 
   return (
-    <>
-      <View className="flex-row gap-3">
+    <View className="gap-3">
+      <View className="flex-row gap-2.5">
         <View className="flex-1">
           <FormField label="Date" hint="Use YYYY-MM-DD.">
             <TextInput
@@ -43,7 +43,7 @@ export function TransactionEditorFields({
               placeholder="2026-04-07"
               placeholderTextColor={colors.mutedForeground}
               autoCapitalize="none"
-              className="rounded-[20px] border px-4 py-4 text-base"
+              className="rounded-[16px] border px-3.5 py-3 text-sm"
               style={inputStyle}
             />
           </FormField>
@@ -56,7 +56,7 @@ export function TransactionEditorFields({
               placeholder="0.00"
               placeholderTextColor={colors.mutedForeground}
               keyboardType="decimal-pad"
-              className="rounded-[20px] border px-4 py-4 text-base"
+              className="rounded-[16px] border px-3.5 py-3 text-sm"
               style={inputStyle}
             />
           </FormField>
@@ -70,12 +70,12 @@ export function TransactionEditorFields({
             return (
               <Pressable
                 key={value}
-                className="flex-1 rounded-full px-4 py-3"
+                className="flex-1 rounded-full px-4 py-2.5"
                 style={{ backgroundColor: active ? colors.primary : colors.secondary }}
                 onPress={() => setDraft((current) => ({ ...current, type: value }))}
               >
                 <Text
-                  className="text-center text-sm"
+                  className="text-center text-xs"
                   style={{
                     color: active ? colors.primaryForeground : colors.secondaryForeground,
                     fontFamily: fontFamilies.sans.semibold,
@@ -95,19 +95,19 @@ export function TransactionEditorFields({
           onChangeText={(value) => setDraft((current) => ({ ...current, merchant: value }))}
           placeholder="Whole Foods"
           placeholderTextColor={colors.mutedForeground}
-          className="rounded-[20px] border px-4 py-4 text-base"
+          className="rounded-[16px] border px-3.5 py-3 text-sm"
           style={inputStyle}
         />
       </FormField>
 
       <FormField label="Category">
-        <View className="flex-row flex-wrap gap-2">
+        <View className="flex-row flex-wrap gap-1.5">
           {categories.map((category) => {
             const active = draft.category === category.name;
             return (
               <Pressable
                 key={category.id}
-                className="rounded-full px-3 py-2"
+                className="rounded-full px-2.5 py-1.5"
                 style={{ backgroundColor: active ? colors.primary : colors.secondary }}
                 onPress={() => setDraft((current) => ({ ...current, category: category.name }))}
               >
@@ -134,10 +134,10 @@ export function TransactionEditorFields({
           placeholderTextColor={colors.mutedForeground}
           multiline
           textAlignVertical="top"
-          className="min-h-[124px] rounded-[24px] border px-4 py-4 text-base"
+          className="min-h-[88px] rounded-[18px] border px-3.5 py-3 text-sm"
           style={inputStyle}
         />
       </FormField>
-    </>
+    </View>
   );
 }
