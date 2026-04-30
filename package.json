@@ -17,7 +17,7 @@
     "backend:emulators": "cd backend/firebase && npx firebase-tools emulators:start --config firebase.json",
     "backend:qdrant:up": "docker compose -f backend/infra/docker-compose.yml up -d",
     "backend:qdrant:down": "docker compose -f backend/infra/docker-compose.yml down",
-    "docker:up": "docker compose up -d --build",
+    "docker:up": "npm install && docker compose up -d --build",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
     "docker:ps": "docker compose ps",

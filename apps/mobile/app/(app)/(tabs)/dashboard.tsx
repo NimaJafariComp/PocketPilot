@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowRight,
   DatabaseZap,
@@ -37,6 +38,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { transactions, budgets, goals, loading, importTransactions, addBudget, addGoal } = useData();
   const { colors, resolvedTheme } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const [isLoadingSampleData, setIsLoadingSampleData] = useState(false);
 
   const model = useMemo(
@@ -71,7 +73,10 @@ export default function DashboardScreen() {
 
   return (
     <Screen atmospheric atmosphericIntensity="medium">
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingTop: 8, paddingBottom: 19 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ gap: 16, paddingTop: 8, paddingBottom: Math.max(160, insets.bottom + 32) }}
+      >
         <ScreenHeader
           eyebrow="Dashboard"
           title="Dashboard"
@@ -177,54 +182,6 @@ export default function DashboardScreen() {
                 ))}
               </View>
             </View>
-
-            <SectionCard
-              title="Everything you need"
-              subtitle="Built for real financial life."
-              eyebrow="Dashboard"
-              tone="dashboard"
-              badge="Overview"
-            >
-              <View className="gap-3">
-                {[
-                  {
-                    title: 'Smart Categorization',
-                    description: 'Transactions are automatically sorted so cleanup takes less time.',
-                  },
-                  {
-                    title: 'Budget Tracking',
-                    description: 'Set monthly budgets per category and spot risk before you overspend.',
-                  },
-                  {
-                    title: 'Goal Milestones',
-                    description: 'Track savings goals with progress, contributions, and clear completion states.',
-                  },
-                  {
-                    title: 'AI Insights',
-                    description: 'Ask questions about your spending and get context from your own synced data.',
-                  },
-                ].map((item) => (
-                  <View
-                    key={item.title}
-                    className="rounded-[22px] border px-4 py-4"
-                    style={{ backgroundColor: colors.card, borderColor: colors.border }}
-                  >
-                    <Text
-                      className="text-sm"
-                      style={{ color: colors.foreground, fontFamily: fontFamilies.sans.semibold }}
-                    >
-                      {item.title}
-                    </Text>
-                    <Text
-                      className="mt-1 text-sm leading-6"
-                      style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
-                    >
-                      {item.description}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </SectionCard>
 
             <SectionCard
               title="Up and running in 3 steps"

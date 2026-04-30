@@ -6,6 +6,7 @@ import { AuthErrorBanner } from '@/components/auth/auth-error-banner';
 import { AuthField } from '@/components/auth/auth-field';
 import { AuthScreenShell } from '@/components/auth/auth-screen-shell';
 import { useAppTheme } from '@/providers/theme-provider';
+import { fontFamilies } from '@/theme/tokens';
 
 export default function SignInScreen() {
   const { colors } = useAppTheme();
@@ -52,17 +53,19 @@ export default function SignInScreen() {
 
   return (
     <AuthScreenShell
-      eyebrow="Welcome Back"
-      title="Sign in and pick up where your money left off."
-      description="Track spending, review smart categories, and get back to your financial dashboard with a calm native flow."
+      title="Own your financial control. Own your data."
       footerPrompt="Need an account?"
       footerLinkLabel="Create one"
       footerLinkHref="/(auth)/signup"
-      highlights={[
-        'Import and organize transactions without leaving your phone.',
-        'Review budgets, goals, and AI insights in one secure place.',
-        'Stay synced with your shared PocketPilot data and services.',
-      ]}
+      brandFontFamily={fontFamilies.serif.semibold}
+      titleFontFamily={fontFamilies.serif.semibold}
+      panelStyle={{
+        backgroundColor: 'rgba(255, 255, 255, 0.14)',
+        borderColor: 'rgba(203, 233, 255, 0.38)',
+        shadowColor: 'rgba(120, 200, 230, 0.35)',
+        shadowRadius: 24,
+        shadowOffset: { width: 0, height: 12 },
+      }}
     >
       {error ? <AuthErrorBanner message={error} /> : null}
 
@@ -113,9 +116,6 @@ export default function SignInScreen() {
         </Text>
       </Pressable>
 
-      <Text className="mt-4 text-center text-xs leading-5" style={{ color: colors.mutedForeground }}>
-        Your auth state is handled by the shared PocketPilot services layer.
-      </Text>
     </AuthScreenShell>
   );
 }

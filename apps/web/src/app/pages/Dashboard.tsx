@@ -150,29 +150,6 @@ export function Dashboard() {
         </div>
 
         <div className="max-w-4xl mx-auto px-6 pb-16">
-          <p className="text-center text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-3">
-            Everything you need
-          </p>
-          <h2 className="text-center text-2xl font-semibold tracking-tight mb-10">
-            Built for real financial life
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-16">
-            {[
-              { title: 'Smart Categorization', desc: 'Transactions are automatically sorted.' },
-              { title: 'Budget Tracking', desc: 'Set monthly budgets per category.' },
-              { title: 'Goal Milestones', desc: 'Track savings goals with visual progress. Emergency fund, vacation, home; all in one place.' },
-              { title: 'AI Insights', desc: 'Weekly summaries and actionable tips based on your spending habits.' },
-            ].map((f) => (
-              <div
-                key={f.title}
-                className="rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/25 hover:shadow-lg hover:shadow-primary/10"
-              >
-                <h3 className="font-semibold text-sm mb-1.5">{f.title}</h3>
-                <p className="text-muted-foreground text-xs leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-
           <p className="text-center text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-3">How it works</p>
           <h2 className="text-center text-2xl font-semibold tracking-tight mb-10">Up and running in 3 steps</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-2xl mx-auto">

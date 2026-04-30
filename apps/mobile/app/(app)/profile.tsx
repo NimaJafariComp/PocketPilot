@@ -53,7 +53,6 @@ export default function ProfileScreen() {
   return (
     <Screen>
       <StackScreenScroll
-        bottomInset={50}
         header={
           <ScreenHeader
             eyebrow="Profile"

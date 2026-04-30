@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useMemo } from 'react';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { buildBudgetsViewModel } from '@pocketpilot/core';
 import { useData } from '@pocketpilot/services/src/react';
 import { AlertBanner } from '@/components/data/alert-banner';
@@ -23,11 +24,15 @@ export default function BudgetsScreen() {
   const router = useRouter();
   const { budgets, transactions } = useData();
   const { colors, resolvedTheme } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const model = useMemo(() => buildBudgetsViewModel(budgets, transactions), [budgets, transactions]);
 
   return (
     <Screen atmospheric atmosphericIntensity="medium">
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingTop: 8, paddingBottom: 19 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ gap: 16, paddingTop: 8, paddingBottom: Math.max(160, insets.bottom + 32) }}
+      >
         <ScreenHeader
           eyebrow="Budgets"
           title="Budgets"

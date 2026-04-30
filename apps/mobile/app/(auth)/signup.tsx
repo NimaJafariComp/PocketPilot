@@ -61,17 +61,10 @@ export default function SignUpScreen() {
 
   return (
     <AuthScreenShell
-      eyebrow="Create Account"
-      title="Build a fresh financial workspace in a minute."
-      description="Start with a clean, secure PocketPilot account and bring your budgets, goals, and imports into one native experience."
+      title="Create your PocketPilot account."
       footerPrompt="Already have an account?"
       footerLinkLabel="Sign in"
       footerLinkHref="/(auth)/signin"
-      highlights={[
-        'Create a profile once and use the same shared backend across web and mobile.',
-        'Get category suggestions and insights as your data syncs in.',
-        'Keep the experience lightweight while all business logic stays shared.',
-      ]}
     >
       {error ? <AuthErrorBanner message={error} /> : null}
 
@@ -134,9 +127,6 @@ export default function SignUpScreen() {
         </Text>
       </Pressable>
 
-      <Text className="mt-4 text-center text-xs leading-5" style={{ color: colors.mutedForeground }}>
-        Account creation uses the shared PocketPilot auth stack with no mobile-only business logic.
-      </Text>
     </AuthScreenShell>
   );
 }

@@ -8,6 +8,23 @@ import { PlayfairDisplay_400Regular, PlayfairDisplay_600SemiBold } from '@expo-g
 import { AppProviders } from '@/providers/app-providers';
 import { useAppTheme } from '@/providers/theme-provider';
 import { BootScreen } from '@/components/boot-screen';
+import { Text, type StyleProp, type TextStyle } from 'react-native';
+
+const UI_SCALE = 0.9;
+const TEXT_SCALE = 1 / UI_SCALE;
+type TextWithDefaultProps = typeof Text & {
+  defaultProps?: {
+    style?: StyleProp<TextStyle>;
+  };
+};
+const TextComponent = Text as TextWithDefaultProps;
+
+if (!TextComponent.defaultProps) {
+  TextComponent.defaultProps = {};
+}
+
+const defaultTextStyle = TextComponent.defaultProps.style;
+TextComponent.defaultProps.style = [defaultTextStyle, { transform: [{ scale: TEXT_SCALE }] }];
 
 function RootNavigator() {
   const { colors, resolvedTheme } = useAppTheme();

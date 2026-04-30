@@ -1,4 +1,5 @@
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -23,7 +24,8 @@ import { useAppTheme } from '@/providers/theme-provider';
 import { formatCurrencyPrecise } from '@/lib/format';
 import { fontFamilies } from '@/theme/tokens';
 
-const ITEMS_PER_PAGE = 20;
+const INITIAL_VISIBLE = 2;
+const LOAD_MORE_STEP = 20;
 
 function getStringParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] || '' : value || '';
@@ -34,8 +36,9 @@ export default function TransactionsScreen() {
   const params = useLocalSearchParams();
   const { transactions, loading } = useData();
   const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const [filters, setFilters] = useState<TransactionsFilterState>(DEFAULT_TRANSACTION_FILTERS);
-  const [page, setPage] = useState(1);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
 
   useEffect(() => {
     setFilters({
@@ -63,7 +66,7 @@ export default function TransactionsScreen() {
   ]);
 
   useEffect(() => {
-    setPage(1);
+    setVisibleCount(INITIAL_VISIBLE);
   }, [
     filters.amountFilter,
     filters.categoryFilter,
@@ -75,16 +78,17 @@ export default function TransactionsScreen() {
     filters.toDate,
   ]);
 
-  const viewModel = useMemo(
-    () => buildTransactionsViewModel(transactions, filters, ITEMS_PER_PAGE),
-    [filters, transactions],
-  );
+  const viewModel = useMemo(() => buildTransactionsViewModel(transactions, filters, LOAD_MORE_STEP), [
+    filters,
+    transactions,
+  ]);
 
   const visibleTransactions = useMemo(
-    () => viewModel.filteredTransactions.slice(0, page * ITEMS_PER_PAGE),
-    [page, viewModel.filteredTransactions],
+    () => viewModel.filteredTransactions.slice(0, visibleCount),
+    [visibleCount, viewModel.filteredTransactions],
   );
-  const hasMore = visibleTransactions.length < viewModel.filteredTransactions.length;
+
+  const hasMore = visibleCount < viewModel.filteredTransactions.length;
 
   function updateFilters(next: Partial<TransactionsFilterState>) {
     setFilters((current) => ({ ...current, ...next }));
@@ -97,7 +101,10 @@ export default function TransactionsScreen() {
 
   return (
     <Screen atmospheric atmosphericIntensity="medium">
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingTop: 8, paddingBottom: 19 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ gap: 16, paddingTop: 8, paddingBottom: Math.max(160, insets.bottom + 32) }}
+      >
         <ScreenHeader
           eyebrow="Transactions"
           title="Transactions"
@@ -263,7 +270,7 @@ export default function TransactionsScreen() {
                   <Pressable
                     className="rounded-[20px] px-4 py-4"
                     style={{ backgroundColor: colors.secondary }}
-                    onPress={() => setPage((current) => current + 1)}
+                    onPress={() => setVisibleCount((c) => Math.min(viewModel.filteredTransactions.length, c + LOAD_MORE_STEP))}
                   >
                     <Text
                       className="text-center text-sm"

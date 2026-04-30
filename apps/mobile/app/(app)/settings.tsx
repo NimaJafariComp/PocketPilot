@@ -93,7 +93,6 @@ export default function SettingsScreen() {
   return (
     <Screen>
       <StackScreenScroll
-        bottomInset={50}
         header={
           <ScreenHeader
             eyebrow="Settings"

@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useMemo } from 'react';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { buildGoalsViewModel } from '@pocketpilot/core';
 import { useData } from '@pocketpilot/services/src/react';
 import { HeaderActions } from '@/components/navigation/header-actions';
@@ -19,12 +20,16 @@ export default function GoalsScreen() {
   const router = useRouter();
   const { goals } = useData();
   const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const { goalPalette } = colors;
   const model = useMemo(() => buildGoalsViewModel(goals), [goals]);
 
   return (
     <Screen atmospheric atmosphericIntensity="medium">
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingTop: 8, paddingBottom: 19 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ gap: 16, paddingTop: 8, paddingBottom: Math.max(160, insets.bottom + 32) }}
+      >
         <ScreenHeader
           eyebrow="Goals"
           title="Savings Goals"

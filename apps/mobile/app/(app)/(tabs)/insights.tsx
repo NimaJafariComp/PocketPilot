@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Activity,
   ArrowDownRight,
@@ -59,6 +60,7 @@ export default function InsightsScreen() {
   const { transactions, ragSync } = useData();
   const { user } = useAuth();
   const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<'summary' | 'assistant'>('summary');
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -110,7 +112,10 @@ export default function InsightsScreen() {
 
   return (
     <Screen atmospheric atmosphericIntensity="medium">
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingTop: 8, paddingBottom: 19 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ gap: 16, paddingTop: 8, paddingBottom: Math.max(160, insets.bottom + 32) }}
+      >
         <ScreenHeader
           eyebrow="Insights"
           title="Insights"

@@ -131,7 +131,7 @@ services:
       EXPO_DEVTOOLS_LISTEN_ADDRESS: "0.0.0.0"
       EXPO_PACKAGER_HOSTNAME: "0.0.0.0"
       EXPO_NO_USE_RANDOM_PORTS: "true"
-    command: ["npm", "--prefix", "apps/mobile", "run", "start", "--", "--host", "0.0.0.0"]
+    command: ["npm", "--prefix", "apps/mobile", "run", "start", "--", "--host", "lan"]
     depends_on:
       - firebase-emulators
       - categorization-service
@@ -142,9 +142,13 @@ services:
       - "19002:19002"
     volumes:
       - .:/workspace:cached
+      - mobile_node_modules:/workspace/node_modules
+      - mobile_app_node_modules:/workspace/apps/mobile/node_modules
     restart: unless-stopped
 
 volumes:
   qdrant_data:
   ollama_data:
   firebase_emulator_data:
+  mobile_node_modules:
+  mobile_app_node_modules:
