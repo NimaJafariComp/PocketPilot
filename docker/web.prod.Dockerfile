@@ -6,6 +6,7 @@ WORKDIR /workspace
 COPY package*.json ./
 COPY apps/web/package.json apps/web/package.json
 COPY apps/mobile/package.json apps/mobile/package.json
+COPY apps/mobile/scripts ./apps/mobile/scripts
 COPY packages/core/package.json packages/core/package.json
 COPY packages/services/package.json packages/services/package.json
 COPY packages/core ./packages/core

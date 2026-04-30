@@ -6,6 +6,7 @@ ARG SERVICE_BIN
 WORKDIR /workspace/backend/rust
 
 COPY backend/rust/Cargo.toml ./
+COPY backend/rust/Cargo.lock ./
 COPY backend/rust/crates/common/Cargo.toml ./crates/common/Cargo.toml
 COPY backend/rust/crates/categorization-service/Cargo.toml ./crates/categorization-service/Cargo.toml
 COPY backend/rust/crates/rag-service/Cargo.toml ./crates/rag-service/Cargo.toml
@@ -13,7 +14,6 @@ COPY backend/rust/crates ./crates
 
 RUN --mount=type=cache,target=/root/.cargo/registry \
     --mount=type=cache,target=/root/.cargo/git \
-    --mount=type=cache,target=/workspace/backend/rust/target \
     cargo build --release --package ${SERVICE_BIN}
 
 FROM debian:bookworm-slim
