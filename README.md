@@ -13,12 +13,13 @@ First run:
    - `cd PocketPilot`
 2. Install workspace dependencies once from the repo root:
    - `npm install`
-3. Start full stack:
+3. Start full stack (web + mobile):
    - `npm run docker:up`
 4. Verify services:
    - `npm run docker:ps`
 5. Open:
    - Web app: `http://127.0.0.1:5173`
+   - Expo dev tools: `http://127.0.0.1:19002`
    - Firebase Emulator UI: `http://127.0.0.1:4000`
    - Categorization service: `http://127.0.0.1:8088/health`
    - RAG service: `http://127.0.0.1:8089/health`
@@ -57,6 +58,7 @@ Run the Expo React Native app against the local backend/emulator stack.
 4. Start Expo:
    - From `apps/mobile`: `npm run start`
    - Or from repo root: `npm run mobile:start`
+   - Or use `npm run docker:up` to start the entire stack including mobile in Docker
 5. Open the app:
    - Press `i` for the iOS simulator
    - Press `a` for the Android emulator

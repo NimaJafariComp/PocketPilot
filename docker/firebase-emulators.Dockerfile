@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 FROM eclipse-temurin:21-jre-jammy
 
 RUN apt-get update \
@@ -13,12 +14,12 @@ RUN mkdir -p /etc/apt/keyrings \
   && apt-get install -y --no-install-recommends nodejs \
   && rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g firebase-tools@15.7.0
+RUN --mount=type=cache,target=/root/.npm npm install -g firebase-tools@15.7.0
 
 WORKDIR /workspace
 
 COPY backend/functions/package*.json ./backend/functions/
-RUN npm install --prefix backend/functions
+RUN --mount=type=cache,target=/root/.npm npm install --prefix backend/functions
 
 COPY backend ./backend
 

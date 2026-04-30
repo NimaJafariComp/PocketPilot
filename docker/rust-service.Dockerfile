@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 FROM rust:1.89-bookworm AS builder
 
 ARG SERVICE_BIN
@@ -10,7 +11,10 @@ COPY backend/rust/crates/categorization-service/Cargo.toml ./crates/categorizati
 COPY backend/rust/crates/rag-service/Cargo.toml ./crates/rag-service/Cargo.toml
 COPY backend/rust/crates ./crates
 
-RUN cargo build --release --package ${SERVICE_BIN}
+RUN --mount=type=cache,target=/root/.cargo/registry \
+    --mount=type=cache,target=/root/.cargo/git \
+    --mount=type=cache,target=/workspace/backend/rust/target \
+    cargo build --release --package ${SERVICE_BIN}
 
 FROM debian:bookworm-slim
 

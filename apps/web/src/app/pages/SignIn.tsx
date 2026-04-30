@@ -34,11 +34,21 @@ export function SignIn() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
+      <video
+        className="absolute inset-0 h-full w-full object-cover"
+        src="/login-bg.mp4"
+        autoPlay
+        muted
+        loop
+        playsInline
+      />
+      <div className="absolute inset-0 bg-slate-950/60" />
+
       <div className="absolute right-6 top-6 z-10">
         <ThemeToggle />
       </div>
 
-      <div className="flex min-h-screen flex-col lg:flex-row">
+      <div className="relative flex min-h-screen flex-col lg:flex-row">
         <div
           className="relative hidden flex-1 overflow-hidden border-r border-white/10 p-12 text-white lg:flex lg:flex-col lg:justify-between"
           style={{
@@ -57,7 +67,7 @@ export function SignIn() {
         </div>
 
         <div>
-          <h1 className="text-4xl font-bold mb-6">Take control of your finances</h1>
+          <h1 className="text-4xl font-bold mb-6">Own your financial control. Own your data.</h1>
           <ul className="space-y-4">
             <li className="flex items-start gap-3">
               <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 mt-0.5">

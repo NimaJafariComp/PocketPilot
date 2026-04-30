@@ -20,7 +20,9 @@
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
-    "docker:ps": "docker compose ps"
+    "docker:ps": "docker compose ps",
+    "docker:web:prod": "DOCKER_BUILDKIT=1 docker build -f docker/web.prod.Dockerfile -t pocketpilot-web-prod .",
+    "docker:mobile:dev": "DOCKER_BUILDKIT=1 docker build -f docker/mobile.Dockerfile -t pocketpilot-mobile-dev ."
   },
   "devDependencies": {
     "@types/react": "~19.1.10",

@@ -4,15 +4,16 @@ FROM node:20-bookworm-slim
 WORKDIR /workspace
 
 COPY package*.json ./
-COPY apps/web/package.json apps/web/package.json
+COPY apps/mobile/package.json apps/mobile/package.json
 COPY packages/core/package.json packages/core/package.json
 COPY packages/services/package.json packages/services/package.json
+COPY packages/core ./packages/core
+COPY packages/services ./packages/services
 
 RUN --mount=type=cache,target=/root/.npm npm ci
 
-COPY packages ./packages
-COPY apps/web ./apps/web
+COPY . .
 
-EXPOSE 5173
+EXPOSE 19000 19001 19002
 
-CMD ["npm", "--prefix", "apps/web", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+CMD ["npm", "--prefix", "apps/mobile", "run", "start"]
