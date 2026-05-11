@@ -1,6 +1,11 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router';
-import { parseDateOnly } from '@pocketpilot/core';
+import {
+  detectCsvTransactionColumns,
+  parseCsvTransactionRow,
+  parseDateOnly,
+  resolveCsvAmount,
+} from '@pocketpilot/core';
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
@@ -31,6 +36,8 @@ export function ImportCSV() {
     date: '',
     merchant: '',
     amount: '',
+    debit: '',
+    credit: '',
     category: '',
     notes: '',
   });
@@ -43,6 +50,11 @@ export function ImportCSV() {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
+        if (results.errors.length > 0) {
+          setErrors(results.errors.slice(0, 10).map((error) => `Row ${error.row ?? '?'}: ${error.message}`));
+          return;
+        }
+
         if (results.data.length === 0) {
           setErrors(['The CSV file is empty']);
           return;
@@ -56,18 +68,16 @@ export function ImportCSV() {
         setStep('mapping');
         setErrors([]);
 
-        // Auto-detect common column names
-        const dateCol = cols.find(c => /date/i.test(c)) || '';
-        const merchantCol = cols.find(c => /(merchant|description|name|payee)/i.test(c)) || '';
-        const amountCol = cols.find(c => /amount/i.test(c)) || '';
-        const notesCol = cols.find(c => /(note|memo|details|location|time)/i.test(c)) || '';
+        const detectedMapping = detectCsvTransactionColumns(cols);
         
         setMapping({
-          date: dateCol,
-          merchant: merchantCol,
-          amount: amountCol,
-          category: '',
-          notes: notesCol,
+          date: detectedMapping.date,
+          merchant: detectedMapping.merchant,
+          amount: detectedMapping.amount || '',
+          debit: detectedMapping.debit || '',
+          credit: detectedMapping.credit || '',
+          category: detectedMapping.category || '',
+          notes: detectedMapping.notes || '',
         });
       },
       error: (error) => {
@@ -100,7 +110,9 @@ export function ImportCSV() {
     const newErrors: string[] = [];
     if (!mapping.date) newErrors.push('Date column is required');
     if (!mapping.merchant) newErrors.push('Merchant column is required');
-    if (!mapping.amount) newErrors.push('Amount column is required');
+    if (!mapping.amount && !mapping.debit && !mapping.credit) {
+      newErrors.push('Amount column or debit/credit columns are required');
+    }
     
     setErrors(newErrors);
     return newErrors.length === 0;
@@ -111,42 +123,17 @@ export function ImportCSV() {
     setStep('preview');
   };
 
-  const parseMappedAmount = (rawAmount: string) => {
-    const parsedAmount = parseFloat((rawAmount || '').replace(/[^0-9.-]/g, ''));
-    if (Number.isNaN(parsedAmount)) {
-      return null;
-    }
-
-    return invertAmounts ? -parsedAmount : parsedAmount;
+  const parseMappedAmount = (row: ParsedRow) => {
+    return resolveCsvAmount(row, mapping, { invertAmounts });
   };
 
   const handleImport = async () => {
     const importErrors: string[] = [];
 
     const transactions = parsedData.map((row, index) => {
-      const merchant = (row[mapping.merchant] || '').trim();
-      const parsedAmount = parseMappedAmount(row[mapping.amount] || '');
-      const parsedDate = parseDateOnly(row[mapping.date] || '');
-
-      if (!merchant) {
-        importErrors.push(`Row ${index + 1}: Merchant is missing`);
-      }
-
-      if (parsedAmount === null) {
-        importErrors.push(`Row ${index + 1}: Amount is invalid`);
-      }
-
-      if (!parsedDate) {
-        importErrors.push(`Row ${index + 1}: Date is invalid`);
-      }
-
-      return {
-        date: parsedDate || '1970-01-01',
-        merchant,
-        amount: parsedAmount ?? 0,
-        category: mapping.category && row[mapping.category] ? row[mapping.category] : 'Uncategorized',
-        notes: mapping.notes && row[mapping.notes] ? String(row[mapping.notes]).trim() : '',
-      };
+      const result = parseCsvTransactionRow(row, mapping, index + 1, { invertAmounts });
+      importErrors.push(...result.errors);
+      return result.transaction;
     });
 
     if (importErrors.length > 0) {
@@ -270,12 +257,48 @@ export function ImportCSV() {
               </div>
 
               <div className="space-y-2">
-                <Label>Amount Column *</Label>
+                <Label>Amount Column</Label>
                 <Select value={mapping.amount} onValueChange={(v) => setMapping({ ...mapping, amount: v })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select amount column" />
                   </SelectTrigger>
                   <SelectContent>
+                    {headers.map(h => (
+                      <SelectItem key={h} value={h}>{h}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Debit Column (Optional)</Label>
+                <Select
+                  value={mapping.debit || NO_CATEGORY_VALUE}
+                  onValueChange={(v) => setMapping({ ...mapping, debit: v === NO_CATEGORY_VALUE ? '' : v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select debit column" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_CATEGORY_VALUE}>None</SelectItem>
+                    {headers.map(h => (
+                      <SelectItem key={h} value={h}>{h}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Credit Column (Optional)</Label>
+                <Select
+                  value={mapping.credit || NO_CATEGORY_VALUE}
+                  onValueChange={(v) => setMapping({ ...mapping, credit: v === NO_CATEGORY_VALUE ? '' : v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select credit column" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_CATEGORY_VALUE}>None</SelectItem>
                     {headers.map(h => (
                       <SelectItem key={h} value={h}>{h}</SelectItem>
                     ))}
@@ -333,7 +356,7 @@ export function ImportCSV() {
                     Invert amounts during import
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Leave this off to preserve the CSV&apos;s original signs. Turn it on only if your bank exports expenses as positive values and credits as negative values.
+                    Leave this off to preserve normalized CSV signs. Turn it on only if your bank exports expenses as positive values and credits as negative values.
                   </p>
                 </div>
               </div>
@@ -385,11 +408,11 @@ export function ImportCSV() {
                       <TableCell>{row[mapping.merchant]}</TableCell>
                       <TableCell
                         className={
-                          (parseMappedAmount(row[mapping.amount] || '') ?? 0) < 0 ? 'text-destructive' : 'text-success'
+                          (parseMappedAmount(row) ?? 0) < 0 ? 'text-destructive' : 'text-success'
                         }
                       >
                         {(() => {
-                          const parsedAmount = parseMappedAmount(row[mapping.amount] || '');
+                          const parsedAmount = parseMappedAmount(row);
                           if (parsedAmount === null) {
                             return 'Invalid amount';
                           }

@@ -3,7 +3,13 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { DatabaseZap, FileSpreadsheet, FileUp, TriangleAlert, X } from 'lucide-react-native';
 import Papa from 'papaparse';
-import { generateSampleBudgets, generateSampleGoals, generateSampleTransactions } from '@pocketpilot/core';
+import {
+  detectCsvTransactionColumns,
+  generateSampleBudgets,
+  generateSampleGoals,
+  generateSampleTransactions,
+  parseCsvTransactionRow,
+} from '@pocketpilot/core';
 import { useData } from '@pocketpilot/services/src/react';
 import { Screen } from '@/components/screen';
 import { IconButton } from '@/components/navigation/icon-button';
@@ -45,6 +51,13 @@ export default function ImportScreen() {
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
+          if (results.errors.length > 0) {
+            setError(results.errors.slice(0, 3).map((nextError) => `Row ${nextError.row ?? '?'}: ${nextError.message}`).join('\n'));
+            setParsedRows([]);
+            setFileName('');
+            return;
+          }
+
           const nextRows = (results.data as ParsedRow[]).filter((row) =>
             Object.values(row).some((value) => String(value || '').trim() !== ''),
           );
@@ -74,14 +87,6 @@ export default function ImportScreen() {
     }
   }
 
-  function parseDateToIso(rawValue: string) {
-    const date = new Date(rawValue);
-    if (Number.isNaN(date.getTime())) {
-      return null;
-    }
-    return date.toISOString();
-  }
-
   async function handleImport() {
     if (parsedRows.length === 0 || isImporting) {
       return;
@@ -92,47 +97,22 @@ export default function ImportScreen() {
 
     try {
       const headers = Object.keys(parsedRows[0] || {});
-      const findHeader = (patterns: RegExp[]) => headers.find((header) => patterns.some((pattern) => pattern.test(header))) || '';
-      const dateHeader = findHeader([/date/i]);
-      const merchantHeader = findHeader([/merchant/i, /description/i, /payee/i, /name/i]);
-      const amountHeader = findHeader([/amount/i, /total/i, /value/i]);
-      const categoryHeader = findHeader([/category/i]);
-      const notesHeader = findHeader([/note/i, /memo/i, /detail/i]);
+      const mapping = detectCsvTransactionColumns(headers);
 
-      if (!dateHeader || !merchantHeader || !amountHeader) {
-        throw new Error('CSV must include recognizable date, merchant, and amount columns.');
+      if (!mapping.date || !mapping.merchant || (!mapping.amount && !mapping.debit && !mapping.credit)) {
+        throw new Error('CSV must include recognizable date, merchant, and amount or debit/credit columns.');
       }
 
+      const importErrors: string[] = [];
       const transactions = parsedRows.map((row, index) => {
-        const merchant = String(row[merchantHeader] || '').trim();
-        const rawAmount = String(row[amountHeader] || '').replace(/[^0-9.-]/g, '');
-        let amount = parseFloat(rawAmount);
-        const isoDate = parseDateToIso(String(row[dateHeader] || ''));
-
-        if (!merchant) {
-          throw new Error(`Row ${index + 1} is missing a merchant value.`);
-        }
-
-        if (Number.isNaN(amount)) {
-          throw new Error(`Row ${index + 1} has an invalid amount.`);
-        }
-
-        if (!isoDate) {
-          throw new Error(`Row ${index + 1} has an invalid date.`);
-        }
-
-        if (amount > 0 && !merchant.toLowerCase().includes('payment')) {
-          amount = -amount;
-        }
-
-        return {
-          date: isoDate,
-          merchant,
-          amount,
-          category: categoryHeader && row[categoryHeader] ? String(row[categoryHeader]).trim() : 'Uncategorized',
-          notes: notesHeader && row[notesHeader] ? String(row[notesHeader]).trim() : '',
-        };
+        const result = parseCsvTransactionRow(row, mapping, index + 1);
+        importErrors.push(...result.errors);
+        return result.transaction;
       });
+
+      if (importErrors.length > 0) {
+        throw new Error(importErrors.slice(0, 3).join('\n'));
+      }
 
       await importTransactions(transactions);
       await mobileServices.dialog.alert(`Imported ${transactions.length} transactions successfully.`, 'Import Complete');
