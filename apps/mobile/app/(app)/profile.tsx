@@ -10,7 +10,6 @@ import { MetricGrid } from '@/components/data/metric-grid';
 import { SectionCard } from '@/components/data/section-card';
 import { StatCard } from '@/components/data/stat-card';
 import { MenuRow } from '@/components/navigation/menu-row';
-import { ScreenHeader } from '@/components/navigation/screen-header';
 import { ShellCard } from '@/components/navigation/shell-card';
 import { StackScreenScroll } from '@/components/stack-screen-scroll';
 import { useAppTheme } from '@/providers/theme-provider';
@@ -52,16 +51,7 @@ export default function ProfileScreen() {
 
   return (
     <Screen>
-      <StackScreenScroll
-        header={
-          <ScreenHeader
-            eyebrow="Profile"
-            title="Account profile"
-            subtitle="Profile sits outside the tab bar so the core finance destinations stay focused."
-            backLabel="Go back"
-          />
-        }
-      >
+      <StackScreenScroll>
         <ShellCard
           eyebrow="Account"
           title={user?.displayName || 'PocketPilot user'}
@@ -97,7 +87,7 @@ export default function ProfileScreen() {
         >
           <View className="gap-3">
             <View
-              className="flex-row items-center gap-3 rounded-[22px] border px-4 py-4"
+              className="flex-row items-center gap-3 rounded-xl border px-4 py-4"
               style={{ backgroundColor: colors.card, borderColor: colors.border }}
             >
               <View
@@ -124,7 +114,7 @@ export default function ProfileScreen() {
         </SectionCard>
 
         <Pressable
-          className="flex-row items-center justify-center gap-2 rounded-[20px] px-4 py-4"
+          className="flex-row items-center justify-center gap-2 rounded-xl px-4 py-4"
           style={{ backgroundColor: colors.danger }}
           onPress={handleSignOut}
         >

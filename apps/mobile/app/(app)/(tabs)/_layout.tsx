@@ -1,4 +1,7 @@
 import { Tabs } from 'expo-router';
+import { Platform, StyleSheet, View } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import {
   ChartNoAxesCombined,
   ChartPie,
@@ -6,19 +9,21 @@ import {
   Receipt,
   Target,
 } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '@/providers/theme-provider';
+import { hapticSelect } from '@/lib/haptics';
 
-function TabIcon({
-  color,
-  size,
-  name,
-}: {
-  color: string;
-  size: number;
-  name: 'dashboard' | 'transactions' | 'budgets' | 'goals' | 'insights';
-}) {
-  const props = { color, size, strokeWidth: 2.2 };
+type TabName = 'dashboard' | 'transactions' | 'budgets' | 'goals' | 'insights';
+
+const SF_SYMBOLS: Record<TabName, SymbolViewProps['name']> = {
+  dashboard: 'house.fill',
+  transactions: 'list.bullet.rectangle.fill',
+  budgets: 'chart.pie.fill',
+  goals: 'target',
+  insights: 'chart.line.uptrend.xyaxis',
+};
+
+function LucideFallback({ name, color, size }: { name: TabName; color: string; size: number }) {
+  const props = { color, size, strokeWidth: 2 };
 
   switch (name) {
     case 'dashboard':
@@ -34,39 +39,60 @@ function TabIcon({
   }
 }
 
+function TabIcon({ color, size, name }: { color: string; size: number; name: TabName }) {
+  if (Platform.OS === 'ios') {
+    return (
+      <SymbolView
+        name={SF_SYMBOLS[name]}
+        tintColor={color}
+        style={{ width: size, height: size }}
+        fallback={<LucideFallback name={name} color={color} size={size} />}
+      />
+    );
+  }
+
+  return <LucideFallback name={name} color={color} size={size} />;
+}
+
 export default function TabsLayout() {
-  const { colors } = useAppTheme();
-  const insets = useSafeAreaInsets();
+  const { colors, resolvedTheme } = useAppTheme();
+  const isIOS = Platform.OS === 'ios';
 
   return (
     <Tabs
+      screenListeners={{
+        tabPress: () => hapticSelect(),
+      }}
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: colors.tint,
         tabBarInactiveTintColor: colors.mutedForeground,
-        tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopColor: colors.border,
-          height: 74,
-          paddingHorizontal: Math.max(8, insets.left + 4, insets.right + 4),
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
-        tabBarItemStyle: {
-          paddingHorizontal: 0,
-        },
-        tabBarLabelStyle: {
-          fontSize: 9,
-          fontWeight: '600',
-          letterSpacing: -0.1,
-        },
+        tabBarStyle: isIOS
+          ? {
+              position: 'absolute',
+              backgroundColor: 'transparent',
+              borderTopColor: colors.border,
+            }
+          : {
+              backgroundColor: colors.card,
+              borderTopColor: colors.border,
+            },
+        tabBarBackground: isIOS
+          ? () => (
+              <BlurView
+                tint={resolvedTheme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterial'}
+                intensity={100}
+                style={StyleSheet.absoluteFill}
+              />
+            )
+          : () => <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]} />,
         tabBarIcon: ({ color, size }) => (
-          <TabIcon color={color} size={size} name={route.name as Parameters<typeof TabIcon>[0]['name']} />
+          <TabIcon color={color} size={size} name={route.name as TabName} />
         ),
       })}
     >
-      <Tabs.Screen name="dashboard" options={{ title: 'Dashboard' }} />
-      <Tabs.Screen name="transactions" options={{ title: 'Transactions' }} />
+      <Tabs.Screen name="dashboard" options={{ title: 'Home' }} />
+      <Tabs.Screen name="transactions" options={{ title: 'Activity' }} />
       <Tabs.Screen name="budgets" options={{ title: 'Budgets' }} />
       <Tabs.Screen name="goals" options={{ title: 'Goals' }} />
       <Tabs.Screen name="insights" options={{ title: 'Insights' }} />

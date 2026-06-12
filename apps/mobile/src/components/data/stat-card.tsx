@@ -7,37 +7,30 @@ interface StatCardProps {
   label: string;
   value: string;
   detail?: string;
+  /** @deprecated unused in the native redesign */
   tone?: SectionTone;
 }
 
-export function StatCard({ label, value, detail, tone = 'neutral' }: StatCardProps) {
+export function StatCard({ label, value, detail }: StatCardProps) {
   const { colors } = useAppTheme();
-  const accent = colors.sectionAccents[tone];
 
   return (
-    <View
-      className="flex-1 overflow-hidden rounded-[24px] border px-4 py-4"
-      style={{
-        backgroundColor: colors.panel,
-        borderColor: colors.border,
-      }}
-    >
-      <View className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: accent.line }} />
+    <View className="flex-1 rounded-xl px-4 py-3" style={{ backgroundColor: colors.card }}>
       <Text
-        className="text-[11px] uppercase tracking-[2px]"
-        style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.medium }}
+        className="text-[13px]"
+        style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
       >
         {label}
       </Text>
       <FittedValueText
-        className="mt-3 text-2xl tracking-tight"
+        className="mt-1 text-[22px] tracking-tight"
         style={{ color: colors.foreground, fontFamily: fontFamilies.sans.semibold }}
       >
         {value}
       </FittedValueText>
       {detail ? (
         <Text
-          className="mt-2 text-xs leading-5"
+          className="mt-1 text-[12px] leading-4"
           style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
         >
           {detail}

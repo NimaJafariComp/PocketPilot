@@ -1,4 +1,4 @@
-import { buildRagDocuments, DEFAULT_CATEGORIES, type Budget, type Category, type Goal, type Transaction } from '@pocketpilot/core';
+import { buildRagDocuments, DEFAULT_CATEGORIES, partitionNewTransactions, type Budget, type Category, type Goal, type Transaction } from '@pocketpilot/core';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react';
 import type { RagDocument } from '../interfaces/rag';
 import { useAuth } from './auth-context';
@@ -20,7 +20,7 @@ export interface DataContextValue {
   updateGoal: (id: string, goal: Partial<Goal>) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
   addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
-  importTransactions: (transactions: Omit<Transaction, 'id'>[]) => Promise<void>;
+  importTransactions: (transactions: Omit<Transaction, 'id'>[]) => Promise<ImportTransactionsResult>;
   clearAllData: () => Promise<void>;
   ragSync: {
     status: 'idle' | 'scheduled' | 'syncing' | 'error';
@@ -29,6 +29,11 @@ export interface DataContextValue {
     isChatAvailable: boolean;
     lastError: string;
   };
+}
+
+export interface ImportTransactionsResult {
+  imported: number;
+  skippedDuplicates: number;
 }
 
 const DataContext = createContext<DataContextValue | undefined>(undefined);
@@ -557,9 +562,19 @@ export function DataProvider({ children }: PropsWithChildren) {
     await services.dataStore.deleteTransaction(user.id, id);
   }
 
-  async function importTransactions(newTransactions: Omit<Transaction, 'id'>[]) {
-    if (!user || newTransactions.length === 0) return;
-    const preparedTransactions = await categorizeManyIfNeeded(newTransactions);
+  async function importTransactions(newTransactions: Omit<Transaction, 'id'>[]): Promise<ImportTransactionsResult> {
+    if (!user || newTransactions.length === 0) {
+      return { imported: 0, skippedDuplicates: 0 };
+    }
+
+    // Statements from different banks (or re-imports of the same file) may
+    // overlap; only rows not already in the workspace are written.
+    const { unique, duplicateCount } = partitionNewTransactions(transactions, newTransactions);
+    if (unique.length === 0) {
+      return { imported: 0, skippedDuplicates: duplicateCount };
+    }
+
+    const preparedTransactions = await categorizeManyIfNeeded(unique);
     await Promise.all(preparedTransactions.map((tx) => services.dataStore.addTransaction(user.id, tx as never)));
 
     const rememberedPairs = Array.from(
@@ -583,6 +598,8 @@ export function DataProvider({ children }: PropsWithChildren) {
         }),
       ),
     );
+
+    return { imported: preparedTransactions.length, skippedDuplicates: duplicateCount };
   }
 
   async function addBudget(budget: Omit<Budget, 'id'>) {

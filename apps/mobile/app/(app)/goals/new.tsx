@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { useData } from '@pocketpilot/services/src/react';
 import { GoalEditorFields, type GoalDraft } from '@/components/goals/goal-editor-fields';
 import { FormScreen } from '@/components/forms/form-screen';
-import { ScreenHeader } from '@/components/navigation/screen-header';
 import { useAppTheme } from '@/providers/theme-provider';
 import { fontFamilies } from '@/theme/tokens';
 import { mobileServices } from '@/config/services';
@@ -66,18 +65,10 @@ export default function NewGoalScreen() {
 
   return (
     <FormScreen
-      header={
-        <ScreenHeader
-          eyebrow="Goals"
-          title="Create Goal"
-          subtitle="Track long-term progress with the same shared goal model used on web."
-          backLabel="Back"
-        />
-      }
       footer={
         <View className="flex-row gap-3">
           <Pressable
-            className="flex-1 rounded-[20px] px-4 py-4"
+            className="flex-1 rounded-xl px-4 py-4"
             style={{ backgroundColor: colors.secondary }}
             onPress={() => router.back()}
           >
@@ -89,7 +80,7 @@ export default function NewGoalScreen() {
             </Text>
           </Pressable>
           <Pressable
-            className="flex-1 rounded-[20px] px-4 py-4"
+            className="flex-1 rounded-xl px-4 py-4"
             style={{ backgroundColor: colors.primary, opacity: isSaving ? 0.65 : 1 }}
             onPress={handleSave}
             disabled={isSaving}

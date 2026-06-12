@@ -68,7 +68,7 @@ export function BudgetEditorFields({ categories, draft, setDraft }: BudgetEditor
           placeholder="500.00"
           placeholderTextColor={colors.mutedForeground}
           keyboardType="decimal-pad"
-          className="rounded-[20px] border px-4 py-4 text-base"
+          className="rounded-xl border px-4 py-4 text-base"
           style={inputStyle}
         />
       </FormField>
@@ -79,7 +79,7 @@ export function BudgetEditorFields({ categories, draft, setDraft }: BudgetEditor
           onChangeText={(value) => setDraft((current) => ({ ...current, month: value }))}
           placeholder="2026-04"
           placeholderTextColor={colors.mutedForeground}
-          className="rounded-[20px] border px-4 py-4 text-base"
+          className="rounded-xl border px-4 py-4 text-base"
           style={inputStyle}
         />
       </FormField>

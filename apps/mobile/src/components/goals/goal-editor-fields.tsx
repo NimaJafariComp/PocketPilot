@@ -31,7 +31,7 @@ export function GoalEditorFields({ draft, setDraft }: GoalEditorFieldsProps) {
           onChangeText={(value) => setDraft((current) => ({ ...current, name: value }))}
           placeholder="Emergency fund"
           placeholderTextColor={colors.mutedForeground}
-          className="rounded-[20px] border px-4 py-4 text-base"
+          className="rounded-xl border px-4 py-4 text-base"
           style={inputStyle}
         />
       </FormField>
@@ -43,7 +43,7 @@ export function GoalEditorFields({ draft, setDraft }: GoalEditorFieldsProps) {
           placeholder="5000.00"
           placeholderTextColor={colors.mutedForeground}
           keyboardType="decimal-pad"
-          className="rounded-[20px] border px-4 py-4 text-base"
+          className="rounded-xl border px-4 py-4 text-base"
           style={inputStyle}
         />
       </FormField>
@@ -54,7 +54,7 @@ export function GoalEditorFields({ draft, setDraft }: GoalEditorFieldsProps) {
           onChangeText={(value) => setDraft((current) => ({ ...current, deadline: value }))}
           placeholder="2026-12-31"
           placeholderTextColor={colors.mutedForeground}
-          className="rounded-[20px] border px-4 py-4 text-base"
+          className="rounded-xl border px-4 py-4 text-base"
           style={inputStyle}
         />
       </FormField>

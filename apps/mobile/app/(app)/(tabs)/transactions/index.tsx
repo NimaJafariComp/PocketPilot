@@ -1,31 +1,32 @@
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FlatList, Pressable, Text, View } from 'react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   buildTransactionsViewModel,
   DEFAULT_TRANSACTION_FILTERS,
+  type Transaction,
   type TransactionDateFilterType,
   type TransactionListFilter,
   type TransactionsFilterState,
 } from '@pocketpilot/core';
-import { CirclePlus, Filter, Search, Upload } from 'lucide-react-native';
+import { Plus, SlidersHorizontal } from 'lucide-react-native';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useData } from '@pocketpilot/services/src/react';
 import { Screen } from '@/components/screen';
-import { HeaderActions } from '@/components/navigation/header-actions';
+import { HeaderIconButton } from '@/components/navigation/header-icon-button';
+import { useTabScrollPadding } from '@/lib/tab-scroll';
 import { AlertBanner } from '@/components/data/alert-banner';
 import { EmptyStateCard } from '@/components/data/empty-state-card';
 import { FilterChip } from '@/components/data/filter-chip';
-import { ScreenHeader } from '@/components/navigation/screen-header';
-import { SectionCard } from '@/components/data/section-card';
 import { SummaryStrip } from '@/components/data/summary-strip';
 import { TransactionRow } from '@/components/transactions/transaction-row';
 import { useAppTheme } from '@/providers/theme-provider';
 import { formatCurrencyPrecise } from '@/lib/format';
 import { fontFamilies } from '@/theme/tokens';
+import { mobileServices } from '@/config/services';
+import { hapticSelect, hapticWarning } from '@/lib/haptics';
 
-const INITIAL_VISIBLE = 2;
-const LOAD_MORE_STEP = 20;
+const PAGE_SIZE = 30;
 
 function getStringParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] || '' : value || '';
@@ -34,11 +35,11 @@ function getStringParam(value: string | string[] | undefined) {
 export default function TransactionsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { transactions, loading } = useData();
+  const { transactions, loading, deleteTransaction } = useData();
   const { colors } = useAppTheme();
-  const insets = useSafeAreaInsets();
+  const tabScrollPadding = useTabScrollPadding();
   const [filters, setFilters] = useState<TransactionsFilterState>(DEFAULT_TRANSACTION_FILTERS);
-  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   useEffect(() => {
     setFilters({
@@ -66,7 +67,7 @@ export default function TransactionsScreen() {
   ]);
 
   useEffect(() => {
-    setVisibleCount(INITIAL_VISIBLE);
+    setVisibleCount(PAGE_SIZE);
   }, [
     filters.amountFilter,
     filters.categoryFilter,
@@ -78,7 +79,7 @@ export default function TransactionsScreen() {
     filters.toDate,
   ]);
 
-  const viewModel = useMemo(() => buildTransactionsViewModel(transactions, filters, LOAD_MORE_STEP), [
+  const viewModel = useMemo(() => buildTransactionsViewModel(transactions, filters, PAGE_SIZE), [
     filters,
     transactions,
   ]);
@@ -87,8 +88,6 @@ export default function TransactionsScreen() {
     () => viewModel.filteredTransactions.slice(0, visibleCount),
     [visibleCount, viewModel.filteredTransactions],
   );
-
-  const hasMore = visibleCount < viewModel.filteredTransactions.length;
 
   function updateFilters(next: Partial<TransactionsFilterState>) {
     setFilters((current) => ({ ...current, ...next }));
@@ -99,212 +98,222 @@ export default function TransactionsScreen() {
     router.replace('/transactions');
   }
 
-  return (
-    <Screen atmospheric atmosphericIntensity="medium">
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ gap: 16, paddingTop: 8, paddingBottom: Math.max(160, insets.bottom + 32) }}
-      >
-        <ScreenHeader
-          eyebrow="Transactions"
-          title="Transactions"
-          subtitle={`${viewModel.filteredTransactions.length} of ${transactions.length} transactions${viewModel.hasActiveFilters ? ' filtered' : ''}`}
-          rightSlot={<HeaderActions />}
+  async function handleDelete(transaction: Transaction) {
+    hapticWarning();
+    const confirmed = await mobileServices.dialog.confirm(
+      `Delete the ${transaction.merchant} transaction?`,
+      'Delete transaction',
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteTransaction(transaction.id);
+    } catch (error) {
+      await mobileServices.dialog.alert(
+        error instanceof Error ? error.message : 'Failed to delete the transaction.',
+        'Delete failed',
+      );
+    }
+  }
+
+  function openFilters() {
+    router.push({
+      pathname: '/transactions/filters' as never,
+      params: {
+        merchantFilter: filters.merchantFilter || undefined,
+        categoryFilter: filters.categoryFilter,
+        amountFilter: filters.amountFilter || undefined,
+        dateFilterType: filters.dateFilterType,
+        specificDate: filters.specificDate || undefined,
+        fromDate: filters.fromDate || undefined,
+        toDate: filters.toDate || undefined,
+      },
+    });
+  }
+
+  const listHeader = (
+    <View className="gap-4 pb-4 pt-4">
+      {viewModel.needsReviewCount > 0 ? (
+        <AlertBanner
+          tone="warning"
+          message={`${viewModel.needsReviewCount} transaction${viewModel.needsReviewCount === 1 ? '' : 's'} need review.`}
+          actionLabel="Review"
+          onActionPress={() => updateFilters({ listFilter: 'review' })}
         />
-        <View className="flex-row gap-3">
-          <Pressable
-            className="flex-1 flex-row items-center justify-center gap-2 rounded-[22px] px-4 py-4"
-            style={{ backgroundColor: colors.primary }}
-            onPress={() => router.push('/transactions/new' as never)}
+      ) : null}
+
+      <SummaryStrip
+        items={[
+          {
+            label: 'Spent',
+            value: formatCurrencyPrecise(viewModel.spent),
+            valueColor: colors.danger,
+          },
+          {
+            label: 'Income',
+            value: formatCurrencyPrecise(viewModel.income),
+            valueColor: colors.success,
+          },
+        ]}
+      />
+
+      <View className="flex-row flex-wrap items-center gap-2">
+        {([
+          ['all', 'All'],
+          ['review', 'Needs Review'],
+          ['expense', 'Expenses'],
+          ['income', 'Income'],
+        ] as const).map(([value, label]) => (
+          <FilterChip
+            key={value}
+            label={label}
+            active={filters.listFilter === value}
+            onPress={() => updateFilters({ listFilter: value })}
+          />
+        ))}
+      </View>
+
+      {viewModel.hasActiveFilters ? (
+        <View className="flex-row items-center justify-between gap-3">
+          <Text
+            className="flex-1 text-[13px] leading-4"
+            style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
           >
-            <CirclePlus size={18} color={colors.primaryForeground} strokeWidth={2.2} />
+            {viewModel.filteredTransactions.length} of {transactions.length} shown
+            {filters.categoryFilter !== 'all' ? ` • ${filters.categoryFilter}` : ''}
+            {filters.dateFilterType !== 'all' ? ` • ${filters.dateFilterType}` : ''}
+          </Text>
+          <Pressable onPress={clearAllFilters} hitSlop={8}>
             <Text
-              className="text-sm"
-              style={{ color: colors.primaryForeground, fontFamily: fontFamilies.sans.semibold }}
+              className="text-[14px]"
+              style={{ color: colors.tint, fontFamily: fontFamilies.sans.regular }}
             >
-              Add Transaction
+              Clear Filters
             </Text>
           </Pressable>
-          <Pressable
-            className="rounded-[22px] px-4 py-4"
-            style={{ backgroundColor: colors.secondary }}
-            onPress={() =>
-              router.push({
-                pathname: '/transactions/filters' as never,
-                params: {
-                  merchantFilter: filters.merchantFilter || undefined,
-                  categoryFilter: filters.categoryFilter,
-                  amountFilter: filters.amountFilter || undefined,
-                  dateFilterType: filters.dateFilterType,
-                  specificDate: filters.specificDate || undefined,
-                  fromDate: filters.fromDate || undefined,
-                  toDate: filters.toDate || undefined,
-                },
-              })
-            }
-          >
-            <Filter size={18} color={colors.secondaryForeground} strokeWidth={2.2} />
-          </Pressable>
-          <Pressable
-            className="rounded-[22px] px-4 py-4"
-            style={{ backgroundColor: colors.secondary }}
-            onPress={() => router.push('/(app)/import')}
-          >
-            <Upload size={18} color={colors.secondaryForeground} strokeWidth={2.2} />
-          </Pressable>
         </View>
+      ) : null}
+    </View>
+  );
 
-        {viewModel.needsReviewCount > 0 ? (
-          <AlertBanner
-            tone="warning"
-            message={`${viewModel.needsReviewCount} transaction${viewModel.needsReviewCount === 1 ? '' : 's'} need categorization or review.`}
-            actionLabel="Review"
-            onActionPress={() => updateFilters({ listFilter: 'review' })}
-          />
-        ) : null}
+  function renderRow({ item, index }: { item: Transaction; index: number }) {
+    const first = index === 0;
+    const last = index === visibleTransactions.length - 1;
 
-        <SummaryStrip
-          eyebrow="Transactions"
-          tone="transactions"
-          items={[
-            {
-              label: 'Total Spent',
-              value: formatCurrencyPrecise(viewModel.spent),
-              detail: 'Across the visible result set',
-              valueColor: colors.danger,
-            },
-            {
-              label: 'Total Income',
-              value: formatCurrencyPrecise(viewModel.income),
-              detail: `${viewModel.uncategorizedCount} uncategorized overall`,
-              valueColor: colors.success,
-            },
-          ]}
-        />
-
-        <SectionCard
-          title="Search and review"
-          subtitle="Use quick filters here and open the native filter sheet for category, amount, and date controls."
-          eyebrow="Workbench"
-          tone="transactions"
-          badge="Filters"
-        >
-          <View className="gap-4">
-            <View
-              className="flex-row items-center gap-3 rounded-[22px] border px-4 py-1"
-              style={{ backgroundColor: colors.muted, borderColor: colors.border }}
+    return (
+      <View
+        className="overflow-hidden"
+        style={{
+          backgroundColor: colors.danger,
+          borderTopLeftRadius: first ? 12 : 0,
+          borderTopRightRadius: first ? 12 : 0,
+          borderBottomLeftRadius: last ? 12 : 0,
+          borderBottomRightRadius: last ? 12 : 0,
+        }}
+      >
+        <ReanimatedSwipeable
+          friction={2}
+          rightThreshold={40}
+          overshootRight={false}
+          onSwipeableWillOpen={() => hapticSelect()}
+          renderRightActions={() => (
+            <Pressable
+              className="w-[88px] items-center justify-center"
+              style={{ backgroundColor: colors.danger }}
+              onPress={() => handleDelete(item)}
             >
-              <Search size={18} color={colors.mutedForeground} strokeWidth={2.2} />
-              <TextInput
-                value={filters.merchantFilter}
-                onChangeText={(value) => updateFilters({ merchantFilter: value })}
-                placeholder="Search merchant"
-                placeholderTextColor={colors.mutedForeground}
-                className="flex-1 py-4 text-base"
-                style={{
-                  color: colors.foreground,
-                  fontFamily: fontFamilies.sans.regular,
-                }}
+              <Text
+                className="text-[16px]"
+                style={{ color: '#FFFFFF', fontFamily: fontFamilies.sans.medium }}
+              >
+                Delete
+              </Text>
+            </Pressable>
+          )}
+        >
+          <View className="px-4" style={{ backgroundColor: colors.card }}>
+            <TransactionRow
+              transaction={item}
+              separator={!last}
+              onPress={() => router.push(`/transactions/${item.id}` as never)}
+            />
+          </View>
+        </ReanimatedSwipeable>
+      </View>
+    );
+  }
+
+  return (
+    <Screen padded={false}>
+      <Stack.Screen
+        options={{
+          headerSearchBarOptions: {
+            placeholder: 'Search merchants',
+            textColor: colors.foreground,
+            tintColor: colors.tint,
+            onChangeText: (event) => updateFilters({ merchantFilter: event.nativeEvent.text }),
+          },
+          headerRight: () => (
+            <View className="flex-row items-center gap-4">
+              <HeaderIconButton
+                label="Filters"
+                symbol="line.3.horizontal.decrease"
+                fallback={<SlidersHorizontal size={21} color={colors.tint} strokeWidth={2} />}
+                onPress={openFilters}
+              />
+              <HeaderIconButton
+                label="Add transaction"
+                symbol="plus"
+                fallback={<Plus size={22} color={colors.tint} strokeWidth={2} />}
+                onPress={() => router.push('/transactions/new' as never)}
               />
             </View>
-            <View className="flex-row flex-wrap gap-2">
-              {([
-                ['all', 'All'],
-                ['review', 'Needs Review'],
-                ['expense', 'Expenses'],
-                ['income', 'Income'],
-              ] as const).map(([value, label]) => {
-                return (
-                  <FilterChip
-                    key={value}
-                    label={label}
-                    active={filters.listFilter === value}
-                    onPress={() => updateFilters({ listFilter: value })}
-                  />
-                );
-              })}
-            </View>
-            {viewModel.hasActiveFilters ? (
-              <View className="flex-row items-center justify-between gap-3">
-                <Text
-                  className="flex-1 text-xs leading-5"
-                  style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
-                >
-                  Category: {filters.categoryFilter === 'all' ? 'All' : filters.categoryFilter}
-                  {'  '}•{'  '}
-                  Date: {filters.dateFilterType === 'all' ? 'All dates' : filters.dateFilterType}
-                </Text>
-                <Pressable onPress={clearAllFilters}>
+          ),
+        }}
+      />
+      <FlatList
+        data={visibleTransactions}
+        keyExtractor={(item) => item.id}
+        renderItem={renderRow}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: tabScrollPadding }}
+        ListHeaderComponent={listHeader}
+        onEndReachedThreshold={0.4}
+        onEndReached={() =>
+          setVisibleCount((count) =>
+            Math.min(viewModel.filteredTransactions.length, count + PAGE_SIZE),
+          )
+        }
+        ListEmptyComponent={
+          loading ? (
+            <EmptyStateCard
+              title="Loading transactions"
+              description="Pulling your latest activity."
+            />
+          ) : (
+            <EmptyStateCard
+              title="No matching transactions"
+              description="Try a different search or clear the active filters."
+            >
+              {viewModel.hasActiveFilters ? (
+                <Pressable onPress={clearAllFilters} hitSlop={6}>
                   <Text
-                    className="text-xs"
-                    style={{ color: colors.foreground, fontFamily: fontFamilies.sans.semibold }}
+                    className="text-[16px]"
+                    style={{ color: colors.tint, fontFamily: fontFamilies.sans.regular }}
                   >
-                    Clear all
+                    Clear Filters
                   </Text>
                 </Pressable>
-              </View>
-            ) : null}
-          </View>
-        </SectionCard>
-
-        <SectionCard
-          title="All transactions"
-          subtitle="Each row preserves the same merchant, category, status, and amount cues from the web experience."
-        >
-          <View className="gap-3">
-            {loading ? (
-              <EmptyStateCard
-                title="Loading transactions"
-                description="Pulling your latest activity from the shared data layer."
-              />
-            ) : visibleTransactions.length > 0 ? (
-              <>
-                {visibleTransactions.map((transaction) => (
-                  <TransactionRow
-                    key={transaction.id}
-                    transaction={transaction}
-                    onPress={() => router.push(`/transactions/${transaction.id}` as never)}
-                  />
-                ))}
-                {hasMore ? (
-                  <Pressable
-                    className="rounded-[20px] px-4 py-4"
-                    style={{ backgroundColor: colors.secondary }}
-                    onPress={() => setVisibleCount((c) => Math.min(viewModel.filteredTransactions.length, c + LOAD_MORE_STEP))}
-                  >
-                    <Text
-                      className="text-center text-sm"
-                      style={{ color: colors.secondaryForeground, fontFamily: fontFamilies.sans.semibold }}
-                    >
-                      Load more
-                    </Text>
-                  </Pressable>
-                ) : null}
-              </>
-            ) : (
-              <EmptyStateCard
-                title="No matching transactions"
-                description="Try a different merchant search or clear the active filters."
-              >
-                {viewModel.hasActiveFilters ? (
-                  <Pressable
-                    className="self-start rounded-full px-4 py-2"
-                    style={{ backgroundColor: colors.secondary }}
-                    onPress={clearAllFilters}
-                  >
-                    <Text
-                      className="text-sm"
-                      style={{ color: colors.secondaryForeground, fontFamily: fontFamilies.sans.semibold }}
-                    >
-                      Clear filters
-                    </Text>
-                  </Pressable>
-                ) : null}
-              </EmptyStateCard>
-            )}
-          </View>
-        </SectionCard>
-      </ScrollView>
+              ) : null}
+            </EmptyStateCard>
+          )
+        }
+        showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
+      />
     </Screen>
   );
 }

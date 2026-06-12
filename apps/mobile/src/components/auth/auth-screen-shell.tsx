@@ -37,6 +37,11 @@ export function AuthScreenShell({
   eyebrowFontFamily = fontFamilies.sans.semibold,
 }: AuthScreenShellProps) {
   const { colors } = useAppTheme();
+  const onVideo = {
+    foreground: '#FFFFFF',
+    muted: 'rgba(235, 235, 245, 0.72)',
+    link: '#9CC8FF',
+  };
   const player = useVideoPlayer(require('../../../assets/login-bg.mp4'), (videoPlayer) => {
     videoPlayer.loop = true;
     videoPlayer.muted = true;
@@ -71,33 +76,33 @@ export function AuthScreenShell({
             />
             <Text
               className="mt-4 text-lg font-semibold tracking-[0.8px]"
-              style={{ color: colors.foreground, fontFamily: brandFontFamily }}
+              style={{ color: onVideo.foreground, fontFamily: brandFontFamily }}
             >
               PocketPilot
             </Text>
             {eyebrow ? (
               <Text
                 className="mt-2 text-[11px] font-semibold uppercase tracking-[2px]"
-                style={{ color: colors.primary, fontFamily: eyebrowFontFamily }}
+                style={{ color: onVideo.link, fontFamily: eyebrowFontFamily }}
               >
                 {eyebrow}
               </Text>
             ) : null}
             <Text
               className="mt-4 text-center text-[28px] font-semibold leading-[36px]"
-              style={{ color: colors.foreground, fontFamily: titleFontFamily }}
+              style={{ color: onVideo.foreground, fontFamily: titleFontFamily }}
             >
               {title}
             </Text>
             {description ? (
-              <Text className="mt-3 text-center text-sm leading-6" style={{ color: colors.mutedForeground }}>
+              <Text className="mt-3 text-center text-sm leading-6" style={{ color: onVideo.muted }}>
                 {description}
               </Text>
             ) : null}
             {highlights.length > 0 ? (
               <View className="mt-5 gap-2">
                 {highlights.map((highlight) => (
-                  <Text key={highlight} className="text-center text-sm" style={{ color: colors.mutedForeground }}>
+                  <Text key={highlight} className="text-center text-sm" style={{ color: onVideo.muted }}>
                     {highlight}
                   </Text>
                 ))}
@@ -106,10 +111,10 @@ export function AuthScreenShell({
           </View>
 
           <View
-            className="rounded-[32px] border px-5 pb-6 pt-6"
+            className="rounded-2xl border px-5 pb-6 pt-6"
             style={[
               {
-                backgroundColor: colors.glass,
+                backgroundColor: 'rgba(20, 24, 32, 0.55)',
                 borderColor: colors.border,
                 shadowColor: 'rgba(3, 8, 14, 0.55)',
                 shadowOpacity: 1,
@@ -123,12 +128,12 @@ export function AuthScreenShell({
             {children}
 
             <View className="mt-6 flex-row items-center justify-center gap-1">
-              <Text className="text-sm" style={{ color: colors.mutedForeground }}>
+              <Text className="text-sm" style={{ color: onVideo.muted }}>
                 {footerPrompt}
               </Text>
               <Link href={footerLinkHref} asChild>
                 <Pressable hitSlop={10}>
-                  <Text className="text-sm font-semibold" style={{ color: colors.primary }}>
+                  <Text className="text-sm font-semibold" style={{ color: onVideo.link }}>
                     {footerLinkLabel}
                   </Text>
                 </Pressable>

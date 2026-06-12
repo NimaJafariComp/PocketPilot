@@ -16,7 +16,7 @@ export function BootScreen({
   return (
     <Screen>
       <View
-        className="flex-1 items-center justify-center rounded-[32px] border px-8"
+        className="flex-1 items-center justify-center rounded-2xl border px-8"
         style={{
           backgroundColor: colors.card,
           borderColor: colors.border,

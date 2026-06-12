@@ -3,7 +3,6 @@ import { Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useData } from '@pocketpilot/services/src/react';
 import { FormScreen } from '@/components/forms/form-screen';
-import { ScreenHeader } from '@/components/navigation/screen-header';
 import {
   type TransactionDraft,
   TransactionEditorFields,
@@ -79,18 +78,10 @@ export default function NewTransactionScreen() {
 
   return (
     <FormScreen
-      header={
-        <ScreenHeader
-          eyebrow="Transactions"
-          title="New Transaction"
-          subtitle="Capture a transaction quickly."
-          backLabel="Back"
-        />
-      }
       footer={
         <View className="flex-row gap-3">
           <Pressable
-            className="flex-1 rounded-[20px] px-4 py-4"
+            className="flex-1 rounded-xl px-4 py-4"
             style={{ backgroundColor: colors.secondary }}
             onPress={() => router.back()}
           >
@@ -102,7 +93,7 @@ export default function NewTransactionScreen() {
             </Text>
           </Pressable>
           <Pressable
-            className="flex-1 rounded-[20px] px-4 py-4"
+            className="flex-1 rounded-xl px-4 py-4"
             style={{ backgroundColor: colors.primary, opacity: isSaving ? 0.65 : 1 }}
             disabled={isSaving}
             onPress={handleSave}

@@ -1,17 +1,7 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  ArrowRight,
-  DatabaseZap,
-  Info,
-  Sparkles,
-  Target,
-  TrendingDown,
-  TrendingUp,
-  Upload,
-} from 'lucide-react-native';
+import { ChevronRight, Sparkles, Upload } from 'lucide-react-native';
 import {
   buildDashboardViewModel,
   generateSampleBudgets,
@@ -20,25 +10,83 @@ import {
 } from '@pocketpilot/core';
 import { useData } from '@pocketpilot/services/src/react';
 import { AlertBanner } from '@/components/data/alert-banner';
-import { HeaderActions } from '@/components/navigation/header-actions';
 import { EmptyStateCard } from '@/components/data/empty-state-card';
 import { ProgressSummaryRow } from '@/components/data/progress-summary-row';
 import { Screen } from '@/components/screen';
-import { ScreenHeader } from '@/components/navigation/screen-header';
+import { useTabScrollPadding } from '@/lib/tab-scroll';
 import { SectionCard } from '@/components/data/section-card';
 import { TransactionRow } from '@/components/transactions/transaction-row';
 import { VerticalBarChart } from '@/components/charts/vertical-bar-chart';
 import { useAppTheme } from '@/providers/theme-provider';
 import { mobileServices } from '@/config/services';
 import { fontFamilies } from '@/theme/tokens';
-import { formatCurrency, formatMonthLabel } from '@/lib/format';
+import { formatCurrency } from '@/lib/format';
+import { hapticSuccess } from '@/lib/haptics';
 import { FittedValueText } from '@/components/data/fitted-value-text';
+import type { ReactNode } from 'react';
+
+function PrimaryButton({
+  label,
+  icon,
+  onPress,
+  disabled,
+  variant = 'filled',
+}: {
+  label: string;
+  icon?: ReactNode;
+  onPress: () => void;
+  disabled?: boolean;
+  variant?: 'filled' | 'gray';
+}) {
+  const { colors } = useAppTheme();
+  const filled = variant === 'filled';
+
+  return (
+    <Pressable
+      className="flex-1 flex-row items-center justify-center gap-2 rounded-xl px-4 py-3.5"
+      style={{
+        backgroundColor: filled ? colors.primary : colors.glass,
+        opacity: disabled ? 0.6 : 1,
+      }}
+      onPress={onPress}
+      disabled={disabled}
+    >
+      {icon}
+      <Text
+        className="text-[16px]"
+        style={{
+          color: filled ? colors.primaryForeground : colors.tint,
+          fontFamily: fontFamilies.sans.semibold,
+        }}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function ViewAllRow({ label, onPress }: { label: string; onPress: () => void }) {
+  const { colors } = useAppTheme();
+
+  return (
+    <Pressable
+      className="flex-row items-center justify-between py-3"
+      onPress={onPress}
+      style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+    >
+      <Text className="text-[16px]" style={{ color: colors.tint, fontFamily: fontFamilies.sans.regular }}>
+        {label}
+      </Text>
+      <ChevronRight size={17} color={colors.mutedForeground} strokeWidth={2} />
+    </Pressable>
+  );
+}
 
 export default function DashboardScreen() {
   const router = useRouter();
   const { transactions, budgets, goals, loading, importTransactions, addBudget, addGoal } = useData();
-  const { colors, resolvedTheme } = useAppTheme();
-  const insets = useSafeAreaInsets();
+  const { colors } = useAppTheme();
+  const tabScrollPadding = useTabScrollPadding();
   const [isLoadingSampleData, setIsLoadingSampleData] = useState(false);
 
   const model = useMemo(
@@ -62,6 +110,7 @@ export default function DashboardScreen() {
       await Promise.all(sampleBudgets.map((budget) => addBudget(budget)));
       await Promise.all(sampleGoals.map((goal) => addGoal(goal)));
 
+      hapticSuccess();
       await mobileServices.dialog.alert(
         'Sample data is ready. Explore transactions, budgets, goals, and insights across the mobile app.',
         'Workspace loaded',
@@ -72,156 +121,85 @@ export default function DashboardScreen() {
   }
 
   return (
-    <Screen atmospheric atmosphericIntensity="medium">
+    <Screen>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ gap: 16, paddingTop: 8, paddingBottom: Math.max(160, insets.bottom + 32) }}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={{ gap: 24, paddingTop: 16, paddingBottom: tabScrollPadding }}
       >
-        <ScreenHeader
-          eyebrow="Dashboard"
-          title="Dashboard"
-          subtitle={formatMonthLabel()}
-          rightSlot={<HeaderActions />}
-        />
         {loading ? (
           <EmptyStateCard
             title="Loading dashboard"
-            description="Syncing transactions, budgets, and goals from the shared data layer."
+            description="Syncing transactions, budgets, and goals."
           />
         ) : model.hasNoData ? (
           <>
-            <View
-              className="overflow-hidden rounded-[34px] border px-5 pb-6 pt-5"
-              style={{
-                backgroundColor: colors.hero,
-                borderColor: colors.border,
-                shadowColor: colors.sectionAccents.dashboard.shadow,
-                shadowOpacity: 1,
-                shadowRadius: 18,
-                shadowOffset: { width: 0, height: 10 },
-                elevation: 2,
-              }}
-            >
-              <View className="absolute inset-x-0 top-0 h-1.5" style={{ backgroundColor: colors.sectionAccents.dashboard.line }} />
-
-              <View
-                className="self-start rounded-full px-3 py-1.5"
-                style={{ backgroundColor: colors.sectionAccents.dashboard.chipBackground }}
-              >
-                <Text
-                  className="text-[11px] uppercase tracking-[1.8px]"
-                  style={{ color: colors.sectionAccents.dashboard.chipColor, fontFamily: fontFamilies.sans.semibold }}
-                >
-                  AI-powered financial clarity
-                </Text>
-              </View>
-
-              <FittedValueText
-                className="mt-5 text-[36px] leading-[40px] tracking-tight"
-                style={{ color: colors.foreground, fontFamily: fontFamilies.serif.semibold }}
-              >
-                Your money, finally under control.
-              </FittedValueText>
+            <View className="rounded-xl px-4 py-5" style={{ backgroundColor: colors.card }}>
               <Text
-                className="mt-3 text-sm leading-6"
+                className="text-[22px] tracking-tight"
+                style={{ color: colors.foreground, fontFamily: fontFamilies.sans.bold }}
+              >
+                Welcome to PocketPilot
+              </Text>
+              <Text
+                className="mt-1 text-[15px] leading-5"
                 style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
               >
-                Import your transactions, set smart budgets, track goals, and get AI-powered insights.
+                Import transactions, set budgets, track goals, and get insights. Supports CSV, OFX, QFX, and QBO files.
               </Text>
 
-              <View className="mt-6 flex-row gap-3">
-                <Pressable
-                  className="flex-1 flex-row items-center justify-center gap-2 rounded-[20px] px-4 py-4"
-                  style={{ backgroundColor: colors.primary }}
+              <View className="mt-5 flex-row gap-3">
+                <PrimaryButton
+                  label="Import"
+                  icon={<Upload size={17} color={colors.primaryForeground} strokeWidth={2} />}
                   onPress={() => router.push('/import')}
-                >
-                  <Upload size={18} color={colors.primaryForeground} strokeWidth={2.2} />
-                  <Text
-                    className="text-sm"
-                    style={{ color: colors.primaryForeground, fontFamily: fontFamilies.sans.semibold }}
-                  >
-                    Import Transactions
-                  </Text>
-                </Pressable>
-                <Pressable
-                  className="flex-1 flex-row items-center justify-center gap-2 rounded-[20px] px-4 py-4"
-                  style={{ backgroundColor: colors.secondary }}
+                />
+                <PrimaryButton
+                  label={isLoadingSampleData ? 'Loading…' : 'Try Sample Data'}
+                  icon={<Sparkles size={17} color={colors.tint} strokeWidth={2} />}
                   onPress={handleLoadSampleData}
                   disabled={isLoadingSampleData}
-                >
-                  <Sparkles size={18} color={colors.secondaryForeground} strokeWidth={2.2} />
-                  <Text
-                    className="text-sm"
-                    style={{ color: colors.secondaryForeground, fontFamily: fontFamilies.sans.semibold }}
-                  >
-                    {isLoadingSampleData ? 'Loading...' : 'Try Sample Data'}
-                  </Text>
-                </Pressable>
-              </View>
-
-              <View className="mt-5 flex-row flex-wrap items-center gap-2">
-                <Text
-                  className="text-xs"
-                  style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
-                >
-                  Supports
-                </Text>
-                {['CSV', 'OFX', 'QFX', 'QBO'].map((format) => (
-                  <View
-                    key={format}
-                    className="rounded-full border px-2.5 py-1"
-                    style={{ backgroundColor: colors.glass, borderColor: colors.border }}
-                  >
-                    <Text
-                      className="text-[11px]"
-                      style={{ color: colors.foreground, fontFamily: fontFamilies.sans.medium }}
-                    >
-                      {format}
-                    </Text>
-                  </View>
-                ))}
+                  variant="gray"
+                />
               </View>
             </View>
 
-            <SectionCard
-              title="Up and running in 3 steps"
-              subtitle="The same onboarding story from web, adapted for mobile."
-              eyebrow="Start here"
-              tone="dashboard"
-              badge="Guide"
-            >
-              <View className="gap-3">
+            <SectionCard title="Getting started">
+              <View>
                 {[
-                  { step: '1', title: 'Import', description: 'Upload a CSV or load a sample workspace.' },
-                  { step: '2', title: 'Categorize', description: 'Review AI-sorted merchants and adjust the edge cases.' },
-                  { step: '3', title: 'Understand', description: 'Use budgets, goals, and insights to steer the next month.' },
+                  { step: '1', title: 'Import', description: 'Upload a CSV or load a sample workspace.', last: false },
+                  { step: '2', title: 'Categorize', description: 'Review AI-sorted merchants and adjust edge cases.', last: false },
+                  { step: '3', title: 'Understand', description: 'Use budgets, goals, and insights to plan ahead.', last: true },
                 ].map((item) => (
-                  <View key={item.step} className="flex-row items-start gap-4">
-                    <View
-                      className="h-10 w-10 items-center justify-center rounded-full"
-                      style={{ backgroundColor: colors.primary }}
-                    >
-                      <Text
-                        className="text-sm"
-                        style={{ color: colors.primaryForeground, fontFamily: fontFamilies.sans.semibold }}
+                  <View key={item.step}>
+                    <View className="flex-row items-center gap-3 py-3">
+                      <View
+                        className="h-7 w-7 items-center justify-center rounded-full"
+                        style={{ backgroundColor: colors.primary }}
                       >
-                        {item.step}
-                      </Text>
+                        <Text
+                          className="text-[13px]"
+                          style={{ color: colors.primaryForeground, fontFamily: fontFamilies.sans.semibold }}
+                        >
+                          {item.step}
+                        </Text>
+                      </View>
+                      <View className="flex-1">
+                        <Text
+                          className="text-[16px]"
+                          style={{ color: colors.foreground, fontFamily: fontFamilies.sans.medium }}
+                        >
+                          {item.title}
+                        </Text>
+                        <Text
+                          className="mt-0.5 text-[13px] leading-4"
+                          style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
+                        >
+                          {item.description}
+                        </Text>
+                      </View>
                     </View>
-                    <View className="flex-1">
-                      <Text
-                        className="text-sm"
-                        style={{ color: colors.foreground, fontFamily: fontFamilies.sans.semibold }}
-                      >
-                        {item.title}
-                      </Text>
-                      <Text
-                        className="mt-1 text-sm leading-6"
-                        style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
-                      >
-                        {item.description}
-                      </Text>
-                    </View>
+                    {!item.last ? <View className="ml-10 h-px" style={{ backgroundColor: colors.border }} /> : null}
                   </View>
                 ))}
               </View>
@@ -229,137 +207,118 @@ export default function DashboardScreen() {
           </>
         ) : (
           <>
-            {model.alerts.map((alert) => {
-              if (alert.kind === 'over-budget') {
-                return (
-                  <AlertBanner
-                    key={alert.kind}
-                    tone="danger"
-                    message={`You've exceeded your monthly budget by ${formatCurrency(Math.round(alert.value))}.`}
-                    actionLabel="Review budgets"
-                    onActionPress={() => router.push('/budgets')}
-                  />
-                );
-              }
+            {model.alerts.length > 0 ? (
+              <View className="gap-2">
+                {model.alerts.map((alert) => {
+                  if (alert.kind === 'over-budget') {
+                    return (
+                      <AlertBanner
+                        key={alert.kind}
+                        tone="danger"
+                        message={`Over budget by ${formatCurrency(Math.round(alert.value))} this month.`}
+                        actionLabel="Review"
+                        onActionPress={() => router.push('/budgets')}
+                      />
+                    );
+                  }
 
-              if (alert.kind === 'warning') {
-                return (
-                  <AlertBanner
-                    key={alert.kind}
-                    tone="warning"
-                    message={`You've used ${Math.round(model.budgetPct)}% of your monthly budget with ${formatCurrency(Math.round(alert.value))} remaining.`}
-                    actionLabel="View budgets"
-                    onActionPress={() => router.push('/budgets')}
-                  />
-                );
-              }
+                  if (alert.kind === 'warning') {
+                    return (
+                      <AlertBanner
+                        key={alert.kind}
+                        tone="warning"
+                        message={`${Math.round(model.budgetPct)}% of budget used, ${formatCurrency(Math.round(alert.value))} left.`}
+                        actionLabel="View"
+                        onActionPress={() => router.push('/budgets')}
+                      />
+                    );
+                  }
 
-              return (
-                <AlertBanner
-                  key={alert.kind}
-                  tone="neutral"
-                  message={`${alert.value} transaction${alert.value === 1 ? '' : 's'} still need categorizing.`}
-                  actionLabel="Categorize"
-                  onActionPress={() => router.push('/transactions')}
-                  icon={<Info size={16} color={colors.foreground} strokeWidth={2.2} />}
-                />
-              );
-            })}
+                  return (
+                    <AlertBanner
+                      key={alert.kind}
+                      tone="neutral"
+                      message={`${alert.value} transaction${alert.value === 1 ? '' : 's'} need categorizing.`}
+                      actionLabel="Review"
+                      onActionPress={() => router.push('/transactions')}
+                    />
+                  );
+                })}
+              </View>
+            ) : null}
 
             {model.totalBudget > 0 ? (
-              <View
-                className="overflow-hidden rounded-[34px] border px-5 pb-6 pt-5"
-                style={{
-                  backgroundColor: colors.hero,
-                  borderColor: colors.border,
-                  shadowColor: colors.sectionAccents.dashboard.shadow,
-                  shadowOpacity: 1,
-                  shadowRadius: 18,
-                  shadowOffset: { width: 0, height: 10 },
-                  elevation: 2,
-                }}
-              >
-                <View className="absolute inset-x-0 top-0 h-1.5" style={{ backgroundColor: colors.sectionAccents.dashboard.line }} />
+              <View className="rounded-xl px-4 py-4" style={{ backgroundColor: colors.card }}>
                 <Text
-                  className="text-[11px] uppercase tracking-[1.8px]"
-                  style={{ color: colors.sectionAccents.dashboard.chipColor, fontFamily: fontFamilies.sans.medium }}
+                  className="text-[13px]"
+                  style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
                 >
-                  Total spent this month
+                  Spent this month
                 </Text>
-                <View className="mt-3 flex-row items-end gap-2">
-              <FittedValueText
-                className="text-[34px] tracking-tight"
-                style={{ color: colors.foreground, fontFamily: fontFamilies.sans.semibold }}
-              >
-                {formatCurrency(model.totalSpent)}
-              </FittedValueText>
+                <View className="mt-1 flex-row items-end gap-2">
+                  <FittedValueText
+                    className="text-[34px] tracking-tight"
+                    style={{ color: colors.foreground, fontFamily: fontFamilies.sans.bold }}
+                  >
+                    {formatCurrency(model.totalSpent)}
+                  </FittedValueText>
                   <Text
-                    className="pb-1 text-base"
+                    className="pb-1.5 text-[15px]"
                     style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
                   >
-                    / {formatCurrency(model.totalBudget)}
+                    of {formatCurrency(model.totalBudget)}
                   </Text>
                 </View>
+
+                <View className="mt-3 h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: colors.glass }}>
+                  <View
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.min(model.budgetPct, 100)}%`,
+                      backgroundColor:
+                        model.budgetPct >= 100
+                          ? colors.danger
+                          : model.budgetPct >= 80
+                            ? colors.warning
+                            : colors.success,
+                    }}
+                  />
+                </View>
                 <Text
-                  className="mt-2 text-sm leading-6"
+                  className="mt-2 text-[13px]"
                   style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
                 >
                   {model.remaining >= 0
-                    ? `${formatCurrency(Math.round(model.remaining))} still available across all budgets`
+                    ? `${formatCurrency(Math.round(model.remaining))} remaining`
                     : `${formatCurrency(Math.round(Math.abs(model.remaining)))} over budget`}
                 </Text>
-                <View className="mt-4 gap-1.5">
-                  <View className="flex-row justify-between">
-                    {['0%', `${Math.round(model.budgetPct)}% used`, '100%'].map((label) => (
-                      <Text
-                        key={label}
-                        className="text-xs"
-                        style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
-                      >
-                        {label}
-                      </Text>
-                    ))}
-                  </View>
-                  <View className="h-2 overflow-hidden rounded-full" style={{ backgroundColor: colors.muted }}>
-                    <View
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${Math.min(model.budgetPct, 100)}%`,
-                        backgroundColor:
-                          model.budgetPct >= 100
-                            ? colors.danger
-                            : model.budgetPct >= 80
-                              ? colors.warning
-                              : colors.success,
-                      }}
-                    />
-                  </View>
-                </View>
 
-                <View className="mt-5 flex-row gap-3">
-                  <View className="flex-1 rounded-[22px] px-4 py-4" style={{ backgroundColor: colors.glass }}>
+                <View className="mt-4 h-px" style={{ backgroundColor: colors.border }} />
+
+                <View className="mt-3 flex-row">
+                  <View className="flex-1">
                     <Text
-                      className="text-[11px] uppercase tracking-[1.5px]"
-                      style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.medium }}
+                      className="text-[13px]"
+                      style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
                     >
                       Income
                     </Text>
                     <FittedValueText
-                      className="mt-2 text-xl"
+                      className="mt-0.5 text-[20px]"
                       style={{ color: colors.success, fontFamily: fontFamilies.sans.semibold }}
                     >
                       {formatCurrency(model.totalIncome)}
                     </FittedValueText>
                   </View>
-                  <View className="flex-1 rounded-[22px] px-4 py-4" style={{ backgroundColor: colors.glass }}>
+                  <View className="flex-1">
                     <Text
-                      className="text-[11px] uppercase tracking-[1.5px]"
-                      style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.medium }}
+                      className="text-[13px]"
+                      style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
                     >
                       Remaining
                     </Text>
                     <FittedValueText
-                      className="mt-2 text-xl"
+                      className="mt-0.5 text-[20px]"
                       style={{
                         color: model.remaining < 0 ? colors.danger : colors.foreground,
                         fontFamily: fontFamilies.sans.semibold,
@@ -372,26 +331,14 @@ export default function DashboardScreen() {
               </View>
             ) : null}
 
-            <SectionCard
-              title="Top Spending Categories"
-              subtitle="Your biggest expense categories for the current month."
-              eyebrow="Dashboard"
-              tone="dashboard"
-              badge="Spend mix"
-            >
+            <SectionCard title="Top spending categories">
               <VerticalBarChart data={model.topCategories} emptyLabel="No spending data yet" />
             </SectionCard>
 
-            <SectionCard
-              title="Goals"
-              subtitle="A quick look at your current savings momentum."
-              eyebrow="Goals"
-              tone="goals"
-              badge="Momentum"
-            >
-              <View className="gap-4">
-                {model.goalProgress.length > 0 ? (
-                  <>
+            <SectionCard title="Goals">
+              {model.goalProgress.length > 0 ? (
+                <View>
+                  <View className="gap-4 py-1">
                     {model.goalProgress.map((goal) => (
                       <ProgressSummaryRow
                         key={goal.id}
@@ -401,95 +348,68 @@ export default function DashboardScreen() {
                         progressLabel={`${Math.round(goal.percentage)}% funded`}
                       />
                     ))}
-                    <Pressable
-                      className="flex-row items-center justify-center gap-2 rounded-[20px] px-4 py-4"
-                      style={{ backgroundColor: colors.secondary }}
-                      onPress={() => router.push('/goals')}
-                    >
-                      <Text
-                        className="text-sm"
-                        style={{ color: colors.secondaryForeground, fontFamily: fontFamilies.sans.semibold }}
-                      >
-                        View All Goals
-                      </Text>
-                      <ArrowRight size={16} color={colors.secondaryForeground} strokeWidth={2.2} />
-                    </Pressable>
-                  </>
-                ) : (
-                  <EmptyStateCard
-                    title="No goals yet"
-                    description="Create a goal to start tracking progress alongside your monthly spending."
+                  </View>
+                  <View className="mt-2 h-px" style={{ backgroundColor: colors.border }} />
+                  <ViewAllRow label="View All Goals" onPress={() => router.push('/goals')} />
+                </View>
+              ) : (
+                <View className="py-2">
+                  <Text
+                    className="text-[15px] leading-5"
+                    style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
                   >
-                    <Pressable
-                      className="self-start rounded-full px-4 py-2"
-                      style={{ backgroundColor: colors.secondary }}
-                      onPress={() => router.push('/goals')}
+                    No goals yet. Create one to track savings progress.
+                  </Text>
+                  <Pressable onPress={() => router.push('/goals')} hitSlop={6}>
+                    <Text
+                      className="mt-2 text-[16px]"
+                      style={{ color: colors.tint, fontFamily: fontFamilies.sans.regular }}
                     >
-                      <Text
-                        className="text-sm"
-                        style={{ color: colors.secondaryForeground, fontFamily: fontFamilies.sans.semibold }}
-                      >
-                        Create Goal
-                      </Text>
-                    </Pressable>
-                  </EmptyStateCard>
-                )}
-              </View>
+                      Create Goal
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
             </SectionCard>
 
             <SectionCard
-              title="Recent Transactions"
+              title="Recent transactions"
               subtitle={
                 model.uncategorizedCount > 0
-                  ? `${model.uncategorizedCount} uncategorized transaction${model.uncategorizedCount === 1 ? '' : 's'}`
-                  : 'Your latest activity from the shared transaction feed.'
+                  ? `${model.uncategorizedCount} uncategorized transaction${model.uncategorizedCount === 1 ? '' : 's'}.`
+                  : undefined
               }
-              eyebrow="Transactions"
-              tone="transactions"
-              badge="Latest"
             >
-              <View className="gap-3">
-                {model.recentTransactions.length > 0 ? (
-                  <>
-                    {model.recentTransactions.map((transaction) => (
-                      <TransactionRow
-                        key={transaction.id}
-                        transaction={transaction}
-                        onPress={() => router.push(`/transactions/${transaction.id}` as never)}
-                      />
-                    ))}
-                    <Pressable
-                      className="flex-row items-center justify-center gap-2 rounded-[20px] px-4 py-4"
-                      style={{ backgroundColor: colors.secondary }}
-                      onPress={() => router.push('/transactions')}
+              {model.recentTransactions.length > 0 ? (
+                <View>
+                  {model.recentTransactions.map((transaction) => (
+                    <TransactionRow
+                      key={transaction.id}
+                      transaction={transaction}
+                      separator
+                      onPress={() => router.push(`/transactions/${transaction.id}` as never)}
+                    />
+                  ))}
+                  <ViewAllRow label="View All Transactions" onPress={() => router.push('/transactions')} />
+                </View>
+              ) : (
+                <View className="py-2">
+                  <Text
+                    className="text-[15px] leading-5"
+                    style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
+                  >
+                    No transactions yet. Import a file to get started.
+                  </Text>
+                  <Pressable onPress={() => router.push('/import')} hitSlop={6}>
+                    <Text
+                      className="mt-2 text-[16px]"
+                      style={{ color: colors.tint, fontFamily: fontFamilies.sans.regular }}
                     >
-                      <Text
-                        className="text-sm"
-                        style={{ color: colors.secondaryForeground, fontFamily: fontFamilies.sans.semibold }}
-                      >
-                        View All Transactions
-                      </Text>
-                      <ArrowRight size={16} color={colors.secondaryForeground} strokeWidth={2.2} />
-                    </Pressable>
-                  </>
-                ) : (
-                  <EmptyStateCard title="No transactions yet" description="Import transactions to bring your dashboard to life.">
-                    <Pressable
-                      className="self-start flex-row items-center gap-2 rounded-full px-4 py-2"
-                      style={{ backgroundColor: colors.secondary }}
-                      onPress={() => router.push('/import')}
-                    >
-                      <DatabaseZap size={16} color={colors.secondaryForeground} strokeWidth={2.2} />
-                      <Text
-                        className="text-sm"
-                        style={{ color: colors.secondaryForeground, fontFamily: fontFamilies.sans.semibold }}
-                      >
-                        Import Transactions
-                      </Text>
-                    </Pressable>
-                  </EmptyStateCard>
-                )}
-              </View>
+                      Import Transactions
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
             </SectionCard>
           </>
         )}

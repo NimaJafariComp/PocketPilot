@@ -6,83 +6,41 @@ import { fontFamilies, type SectionTone } from '@/theme/tokens';
 interface SectionCardProps extends PropsWithChildren {
   title: string;
   subtitle?: string;
+  /** @deprecated unused in the native redesign */
   eyebrow?: string;
+  /** @deprecated unused in the native redesign */
   tone?: SectionTone;
+  /** @deprecated unused in the native redesign */
   badge?: string;
 }
 
-export function SectionCard({
-  title,
-  subtitle,
-  eyebrow,
-  tone = 'neutral',
-  badge,
-  children,
-}: SectionCardProps) {
+// iOS inset-grouped section: uppercase header above a plain rounded card,
+// optional footnote-style subtitle below the header.
+export function SectionCard({ title, subtitle, children }: SectionCardProps) {
   const { colors } = useAppTheme();
-  const accent = colors.sectionAccents[tone];
 
   return (
-    <View
-      className="overflow-hidden rounded-[28px] border px-5 py-5"
-      style={{
-        backgroundColor: colors.panel,
-        borderColor: colors.border,
-        shadowColor: accent.shadow,
-        shadowOpacity: 1,
-        shadowRadius: 18,
-        shadowOffset: { width: 0, height: 10 },
-        elevation: 2,
-      }}
-    >
-      <View className="absolute inset-x-0 top-0 h-1.5" style={{ backgroundColor: accent.line }} />
-      {(eyebrow || badge) ? (
-        <View className="mb-3 flex-row items-start justify-between gap-3">
-          {eyebrow ? (
-            <View
-              className="self-start rounded-full px-3 py-1.5"
-              style={{ backgroundColor: accent.chipBackground }}
-            >
-              <Text
-                className="text-[11px] uppercase tracking-[1.8px]"
-                style={{ color: accent.chipColor, fontFamily: fontFamilies.sans.semibold }}
-              >
-                {eyebrow}
-              </Text>
-            </View>
-          ) : (
-            <View />
-          )}
-          {badge ? (
-            <View
-              className="self-start rounded-full px-2.5 py-1"
-              style={{ backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.border }}
-            >
-              <Text
-                className="text-[11px]"
-                style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.medium }}
-              >
-                {badge}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-      ) : null}
+    <View>
       <Text
-        className="text-lg tracking-tight"
-        style={{ color: colors.foreground, fontFamily: fontFamilies.serif.semibold }}
+        className="mb-2 ml-4 text-[13px] uppercase"
+        style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
       >
         {title}
       </Text>
+      <View
+        className="rounded-xl px-4 py-3"
+        style={{ backgroundColor: colors.card }}
+      >
+        {children}
+      </View>
       {subtitle ? (
         <Text
-          className="mt-1 text-sm leading-6"
+          className="mt-2 ml-4 text-[13px] leading-[18px]"
           style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
         >
           {subtitle}
         </Text>
       ) : null}
-      <View className="mt-4">{children}</View>
     </View>
   );
 }

@@ -9,7 +9,7 @@ import {
   type PropsWithChildren,
 } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'react-native';
+import { Appearance, useColorScheme } from 'react-native';
 import { themeColors, type ResolvedTheme, type ThemeColors, type ThemePreference } from '@/theme/tokens';
 
 const THEME_STORAGE_KEY = 'pocketpilot-mobile-theme';
@@ -43,6 +43,12 @@ export function MobileThemeProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     void SystemUI.setBackgroundColorAsync(themeColors[resolvedTheme].background).catch(() => {});
   }, [resolvedTheme]);
+
+  // Keep native chrome (nav-bar glass buttons, large titles, search bar,
+  // keyboard, blur tints) in step with the in-app theme override.
+  useEffect(() => {
+    Appearance.setColorScheme(themePreference === 'system' ? null : themePreference);
+  }, [themePreference]);
 
   const value = useMemo<ThemeContextValue>(
     () => ({

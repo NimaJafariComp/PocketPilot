@@ -12,10 +12,13 @@ export interface CsvTransactionColumnMapping {
   credit?: string;
   category?: string;
   notes?: string;
+  account?: string;
 }
 
 export interface CsvTransactionParseOptions {
   invertAmounts?: boolean;
+  /** Used when the CSV has no account column (or the cell is empty). */
+  fallbackAccount?: string;
 }
 
 export interface CsvTransactionParseResult {
@@ -108,6 +111,7 @@ export function detectCsvTransactionColumns(headers: string[]): CsvTransactionCo
     credit,
     category: findHeader(headers, [/\b(category|type)\b/i]),
     notes: findHeader(headers, [/\b(note|notes|memo|details|location|time)\b/i]),
+    account: findHeader(headers, [/\b(account|account name|account number|acct|card|card number|card member)\b/i]),
   };
 }
 
@@ -134,14 +138,24 @@ export function parseCsvTransactionRow(
     errors.push(`Row ${rowNumber}: Date is invalid`);
   }
 
+  const account =
+    (mapping.account && row[mapping.account] ? String(row[mapping.account]).trim() : '') ||
+    String(options.fallbackAccount || '').trim();
+
+  const transaction: Omit<Transaction, 'id'> = {
+    date: date || '1970-01-01',
+    merchant,
+    amount: amount ?? 0,
+    category: mapping.category && row[mapping.category] ? String(row[mapping.category]).trim() : 'Uncategorized',
+    notes: mapping.notes && row[mapping.notes] ? String(row[mapping.notes]).trim() : '',
+  };
+
+  if (account) {
+    transaction.account = account;
+  }
+
   return {
-    transaction: {
-      date: date || '1970-01-01',
-      merchant,
-      amount: amount ?? 0,
-      category: mapping.category && row[mapping.category] ? String(row[mapping.category]).trim() : 'Uncategorized',
-      notes: mapping.notes && row[mapping.notes] ? String(row[mapping.notes]).trim() : '',
-    },
+    transaction,
     errors,
   };
 }
@@ -193,3 +207,5 @@ export function parseDateOnly(rawDate: string): string | null {
 export function parseIsoDate(rawDate: string): string | null {
   return parseDateOnly(rawDate);
 }
+
+export * from './dedupe';

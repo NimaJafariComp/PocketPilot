@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Activity,
   ArrowDownRight,
@@ -14,12 +13,11 @@ import {
 import { buildInsightsViewModel } from '@pocketpilot/core';
 import { useAuth, useData } from '@pocketpilot/services/src/react';
 import { AlertBanner } from '@/components/data/alert-banner';
-import { HeaderActions } from '@/components/navigation/header-actions';
 import { DonutChart } from '@/components/charts/donut-chart';
 import { EmptyStateCard } from '@/components/data/empty-state-card';
 import { HorizontalBarChart } from '@/components/charts/horizontal-bar-chart';
 import { Screen } from '@/components/screen';
-import { ScreenHeader } from '@/components/navigation/screen-header';
+import { useTabScrollPadding } from '@/lib/tab-scroll';
 import { SectionCard } from '@/components/data/section-card';
 import { SummaryStrip } from '@/components/data/summary-strip';
 import { mobileServices } from '@/config/services';
@@ -43,7 +41,7 @@ function InitialsAvatar({ name }: { name: string }) {
 
   return (
     <View
-      className="h-10 w-10 items-center justify-center rounded-[14px]"
+      className="h-10 w-10 items-center justify-center rounded-lg"
       style={{ backgroundColor: colors.secondary }}
     >
       <Text
@@ -60,7 +58,7 @@ export default function InsightsScreen() {
   const { transactions, ragSync } = useData();
   const { user } = useAuth();
   const { colors } = useAppTheme();
-  const insets = useSafeAreaInsets();
+  const tabScrollPadding = useTabScrollPadding();
   const [tab, setTab] = useState<'summary' | 'assistant'>('summary');
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -111,17 +109,12 @@ export default function InsightsScreen() {
   }
 
   return (
-    <Screen atmospheric atmosphericIntensity="medium">
+    <Screen>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ gap: 16, paddingTop: 8, paddingBottom: Math.max(160, insets.bottom + 32) }}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={{ gap: 16, paddingTop: 16, paddingBottom: tabScrollPadding }}
       >
-        <ScreenHeader
-          eyebrow="Insights"
-          title="Insights"
-          subtitle="Analyze your spending and get AI-powered answers."
-          rightSlot={<HeaderActions />}
-        />
         <View className="flex-row gap-2">
           {([
             ['summary', 'Summary'],
@@ -231,12 +224,12 @@ export default function InsightsScreen() {
                     return (
                       <View
                         key={item.category}
-                        className="flex-row items-start rounded-[22px] border px-4 py-4"
+                        className="flex-row items-start rounded-xl border px-4 py-4"
                         style={{ backgroundColor: colors.card, borderColor: colors.border }}
                       >
                         <View className="flex-1 flex-row items-center gap-3 pr-3">
                           <View
-                            className="h-10 w-10 items-center justify-center rounded-[14px]"
+                            className="h-10 w-10 items-center justify-center rounded-lg"
                             style={{ backgroundColor: isUp ? 'rgba(213, 155, 47, 0.14)' : 'rgba(31, 157, 114, 0.14)' }}
                           >
                             {isUp ? (
@@ -295,7 +288,7 @@ export default function InsightsScreen() {
                   {insights.recurringCharges.map((charge) => (
                     <View
                       key={charge.merchant}
-                      className="flex-row items-center justify-between rounded-[22px] border px-4 py-4"
+                      className="flex-row items-center justify-between rounded-xl border px-4 py-4"
                       style={{ backgroundColor: colors.card, borderColor: colors.border }}
                     >
                       <View className="flex-row items-center gap-3">
@@ -377,7 +370,7 @@ export default function InsightsScreen() {
                 {messages.length === 0 ? (
                   <View className="items-center gap-3 py-3">
                     <View
-                      className="h-12 w-12 items-center justify-center rounded-[16px]"
+                      className="h-12 w-12 items-center justify-center rounded-lg"
                       style={{ backgroundColor: colors.primary }}
                     >
                       <Sparkles size={20} color={colors.primaryForeground} strokeWidth={2.2} />
@@ -398,7 +391,7 @@ export default function InsightsScreen() {
                       {examplePrompts.map(({ icon, text }) => (
                         <Pressable
                           key={text}
-                          className="flex-row items-center gap-2 rounded-[18px] border px-4 py-3"
+                          className="flex-row items-center gap-2 rounded-lg border px-4 py-3"
                           style={{ borderColor: colors.border, backgroundColor: colors.card }}
                           onPress={() => setInput(text)}
                         >
@@ -426,14 +419,14 @@ export default function InsightsScreen() {
                           <View className="flex-row gap-2">
                             {!isUser ? (
                               <View
-                                className="mt-0.5 h-7 w-7 items-center justify-center rounded-[12px]"
+                                className="mt-0.5 h-7 w-7 items-center justify-center rounded-lg"
                                 style={{ backgroundColor: colors.primary }}
                               >
                                 <Sparkles size={14} color={colors.primaryForeground} strokeWidth={2.2} />
                               </View>
                             ) : null}
                             <View
-                              className="rounded-[22px] px-4 py-3"
+                              className="rounded-xl px-4 py-3"
                               style={{ backgroundColor: isUser ? colors.primary : colors.muted }}
                             >
                               <Text
@@ -454,12 +447,12 @@ export default function InsightsScreen() {
                     {isSending ? (
                       <View className="self-start flex-row gap-2">
                         <View
-                          className="mt-0.5 h-7 w-7 items-center justify-center rounded-[12px]"
+                          className="mt-0.5 h-7 w-7 items-center justify-center rounded-lg"
                           style={{ backgroundColor: colors.primary }}
                         >
                           <Sparkles size={14} color={colors.primaryForeground} strokeWidth={2.2} />
                         </View>
-                        <View className="rounded-[22px] px-4 py-3" style={{ backgroundColor: colors.muted }}>
+                        <View className="rounded-xl px-4 py-3" style={{ backgroundColor: colors.muted }}>
                           <Text
                             className="text-sm"
                             style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
@@ -484,7 +477,7 @@ export default function InsightsScreen() {
                     placeholderTextColor={colors.mutedForeground}
                     editable={!isSending && !!user && ragSync.isChatAvailable}
                     multiline
-                    className="min-h-[104px] rounded-[24px] border px-4 py-4 text-base"
+                    className="min-h-[104px] rounded-xl border px-4 py-4 text-base"
                     style={{
                       borderColor: colors.border,
                       backgroundColor: colors.card,
@@ -494,7 +487,7 @@ export default function InsightsScreen() {
                     }}
                   />
                   <Pressable
-                    className="flex-row items-center justify-center gap-2 rounded-[20px] px-4 py-4"
+                    className="flex-row items-center justify-center gap-2 rounded-xl px-4 py-4"
                     style={{
                       backgroundColor: colors.primary,
                       opacity: !input.trim() || isSending || !user || !ragSync.isChatAvailable ? 0.6 : 1,

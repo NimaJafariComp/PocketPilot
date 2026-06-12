@@ -3,32 +3,24 @@ import type { PropsWithChildren } from 'react';
 import { useAppTheme } from '@/providers/theme-provider';
 import { fontFamilies } from '@/theme/tokens';
 
-interface EmptyStateCardProps extends PropsWithChildren {
-  title: string;
-  description: string;
-}
-
-export function EmptyStateCard({ title, description, children }: EmptyStateCardProps) {
+export function EmptyStateCard({ title, description, children }: PropsWithChildren<{ title: string; description: string }>) {
   const { colors } = useAppTheme();
 
   return (
-    <View
-      className="rounded-[24px] border px-4 py-4"
-      style={{
-        borderColor: colors.border,
-        backgroundColor: colors.panelMuted,
-      }}
-    >
-      <Text className="text-sm" style={{ color: colors.foreground, fontFamily: fontFamilies.sans.semibold }}>
+    <View className="items-center rounded-xl px-6 py-8" style={{ backgroundColor: colors.card }}>
+      <Text
+        className="text-center text-[16px]"
+        style={{ color: colors.foreground, fontFamily: fontFamilies.sans.semibold }}
+      >
         {title}
       </Text>
       <Text
-        className="mt-2 text-sm leading-6"
+        className="mt-1 text-center text-[14px] leading-5"
         style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
       >
         {description}
       </Text>
-      {children ? <View className="mt-4">{children}</View> : null}
+      {children ? <View className="mt-4 items-center">{children}</View> : null}
     </View>
   );
 }

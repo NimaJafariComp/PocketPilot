@@ -20,50 +20,43 @@ export function AlertBanner({
   icon,
 }: AlertBannerProps) {
   const { colors, resolvedTheme } = useAppTheme();
+  const isDark = resolvedTheme === 'dark';
 
   const palette =
     tone === 'danger'
       ? {
-          borderColor: resolvedTheme === 'dark' ? 'rgba(255, 122, 136, 0.24)' : 'rgba(220, 73, 96, 0.22)',
-          backgroundColor: resolvedTheme === 'dark' ? 'rgba(255, 122, 136, 0.08)' : 'rgba(220, 73, 96, 0.08)',
+          backgroundColor: isDark ? 'rgba(255, 69, 58, 0.16)' : 'rgba(255, 59, 48, 0.10)',
           color: colors.danger,
         }
       : tone === 'warning'
         ? {
-            borderColor: resolvedTheme === 'dark' ? 'rgba(246, 199, 104, 0.22)' : 'rgba(213, 155, 47, 0.24)',
-            backgroundColor: resolvedTheme === 'dark' ? 'rgba(246, 199, 104, 0.08)' : 'rgba(213, 155, 47, 0.1)',
-            color: colors.warning,
+            backgroundColor: isDark ? 'rgba(255, 159, 10, 0.16)' : 'rgba(255, 149, 0, 0.12)',
+            color: isDark ? colors.warning : '#C76B00',
           }
         : {
-            borderColor: colors.border,
-            backgroundColor: colors.muted,
+            backgroundColor: colors.card,
             color: colors.foreground,
           };
 
   return (
-    <View
-      className="flex-row items-start gap-3 rounded-[22px] border px-4 py-3"
-      style={palette}
-    >
-      <View className="pt-0.5">
-        {icon ||
-          (tone === 'danger' ? (
-            <AlertTriangle size={16} color={palette.color} strokeWidth={2.2} />
-          ) : (
-            <Info size={16} color={palette.color} strokeWidth={2.2} />
-          ))}
-      </View>
+    <View className="flex-row items-center gap-3 rounded-xl px-4 py-3" style={{ backgroundColor: palette.backgroundColor }}>
+      {icon ||
+        (tone === 'danger' ? (
+          <AlertTriangle size={18} color={palette.color} strokeWidth={2} />
+        ) : (
+          <Info size={18} color={palette.color} strokeWidth={2} />
+        ))}
       <Text
-        className="flex-1 text-sm leading-6"
+        className="flex-1 text-[14px] leading-5"
         style={{ color: palette.color, fontFamily: fontFamilies.sans.medium }}
       >
         {message}
       </Text>
       {actionLabel && onActionPress ? (
-        <Pressable onPress={onActionPress}>
+        <Pressable onPress={onActionPress} hitSlop={8}>
           <Text
-            className="text-xs underline"
-            style={{ color: palette.color, fontFamily: fontFamilies.sans.semibold }}
+            className="text-[14px]"
+            style={{ color: colors.tint, fontFamily: fontFamilies.sans.semibold }}
           >
             {actionLabel}
           </Text>

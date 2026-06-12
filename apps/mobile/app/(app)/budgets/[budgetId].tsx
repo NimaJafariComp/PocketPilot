@@ -4,7 +4,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useData } from '@pocketpilot/services/src/react';
 import { BudgetEditorFields, type BudgetDraft } from '@/components/budgets/budget-editor-fields';
 import { FormScreen } from '@/components/forms/form-screen';
-import { ScreenHeader } from '@/components/navigation/screen-header';
 import { useAppTheme } from '@/providers/theme-provider';
 import { fontFamilies } from '@/theme/tokens';
 import { mobileServices } from '@/config/services';
@@ -108,19 +107,11 @@ export default function BudgetDetailScreen() {
 
   return (
     <FormScreen
-      header={
-        <ScreenHeader
-          eyebrow="Budgets"
-          title={budget ? 'Edit Budget' : 'Budget'}
-          subtitle={budget ? `${budget.category} · ${budget.month}` : 'This budget is no longer available.'}
-          backLabel="Back"
-        />
-      }
       footer={
         draft && budget ? (
           <View className="flex-row gap-3">
             <Pressable
-              className="rounded-[20px] px-4 py-4"
+              className="rounded-xl px-4 py-4"
               style={{ backgroundColor: colors.secondary }}
               onPress={handleDelete}
             >
@@ -132,7 +123,7 @@ export default function BudgetDetailScreen() {
               </Text>
             </Pressable>
             <Pressable
-              className="flex-1 rounded-[20px] px-4 py-4"
+              className="flex-1 rounded-xl px-4 py-4"
               style={{ backgroundColor: colors.primary, opacity: isSaving ? 0.65 : 1 }}
               onPress={handleSave}
               disabled={isSaving}

@@ -9,38 +9,37 @@ interface MenuRowProps {
   description: string;
   icon: ReactNode;
   onPress: () => void;
+  /** Hairline separator below the row; omit on the last row of a group. */
+  separator?: boolean;
 }
 
-export function MenuRow({ title, description, icon, onPress }: MenuRowProps) {
+// Settings-style table row: tinted icon square, title/description, chevron.
+export function MenuRow({ title, description, icon, onPress, separator = false }: MenuRowProps) {
   const { colors } = useAppTheme();
 
   return (
-    <Pressable
-      className="flex-row items-center gap-4 rounded-[22px] border px-4 py-4"
-      onPress={onPress}
-      style={{
-        backgroundColor: colors.card,
-        borderColor: colors.border,
-      }}
-    >
-      <View
-        className="h-11 w-11 items-center justify-center rounded-full"
-        style={{ backgroundColor: colors.secondary }}
-      >
-        {icon}
-      </View>
-      <View className="flex-1">
-        <Text className="text-sm" style={{ color: colors.foreground, fontFamily: fontFamilies.sans.semibold }}>
-          {title}
-        </Text>
-        <Text
-          className="mt-1 text-sm leading-5"
-          style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
+    <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+      <View className="flex-row items-center gap-3 py-3">
+        <View
+          className="h-8 w-8 items-center justify-center rounded-lg"
+          style={{ backgroundColor: colors.glass }}
         >
-          {description}
-        </Text>
+          {icon}
+        </View>
+        <View className="flex-1">
+          <Text className="text-[16px]" style={{ color: colors.foreground, fontFamily: fontFamilies.sans.regular }}>
+            {title}
+          </Text>
+          <Text
+            className="mt-0.5 text-[13px] leading-4"
+            style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
+          >
+            {description}
+          </Text>
+        </View>
+        <ChevronRight size={17} color={colors.mutedForeground} strokeWidth={2} />
       </View>
-      <ChevronRight size={18} color={colors.mutedForeground} strokeWidth={2.2} />
+      {separator ? <View className="ml-11 h-px" style={{ backgroundColor: colors.border }} /> : null}
     </Pressable>
   );
 }

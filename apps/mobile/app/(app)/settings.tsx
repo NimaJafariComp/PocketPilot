@@ -9,7 +9,6 @@ import { MetricGrid } from '@/components/data/metric-grid';
 import { SectionCard } from '@/components/data/section-card';
 import { StatCard } from '@/components/data/stat-card';
 import { MenuRow } from '@/components/navigation/menu-row';
-import { ScreenHeader } from '@/components/navigation/screen-header';
 import { ShellCard } from '@/components/navigation/shell-card';
 import { StackScreenScroll } from '@/components/stack-screen-scroll';
 import { useAppTheme } from '@/providers/theme-provider';
@@ -92,16 +91,7 @@ export default function SettingsScreen() {
 
   return (
     <Screen>
-      <StackScreenScroll
-        header={
-          <ScreenHeader
-            eyebrow="Settings"
-            title="App settings"
-            subtitle="Appearance, export, categories, and account-safe maintenance controls for your mobile workspace."
-            backLabel="Back"
-          />
-        }
-      >
+      <StackScreenScroll>
         <ShellCard
           eyebrow="Appearance"
           title="Theme preference"
@@ -129,7 +119,7 @@ export default function SettingsScreen() {
               return (
                 <Pressable
                   key={option.value}
-                  className="flex-1 items-center rounded-[20px] px-3 py-4"
+                  className="flex-1 items-center rounded-xl px-3 py-4"
                   style={{ backgroundColor: isActive ? colors.primary : colors.card }}
                   onPress={() => setThemePreference(option.value)}
                 >
@@ -156,7 +146,7 @@ export default function SettingsScreen() {
           subtitle="Downloads your current shared PocketPilot data as JSON using the mobile export adapter."
         >
           <Pressable
-            className="flex-row items-center justify-center gap-2 rounded-[20px] px-4 py-4"
+            className="flex-row items-center justify-center gap-2 rounded-xl px-4 py-4"
             style={{ backgroundColor: colors.primary }}
             onPress={handleExportData}
           >
@@ -177,7 +167,7 @@ export default function SettingsScreen() {
               onChangeText={setNewCategoryName}
               placeholder="New category name"
               placeholderTextColor={colors.mutedForeground}
-              className="rounded-[20px] border px-4 py-4 text-base"
+              className="rounded-xl border px-4 py-4 text-base"
               style={{
                 borderColor: colors.border,
                 backgroundColor: colors.muted,
@@ -190,7 +180,7 @@ export default function SettingsScreen() {
               placeholder="#3B82F6"
               placeholderTextColor={colors.mutedForeground}
               autoCapitalize="none"
-              className="rounded-[20px] border px-4 py-4 text-base"
+              className="rounded-xl border px-4 py-4 text-base"
               style={{
                 borderColor: colors.border,
                 backgroundColor: colors.muted,
@@ -198,7 +188,7 @@ export default function SettingsScreen() {
               }}
             />
             <Pressable
-              className="flex-row items-center justify-center gap-2 rounded-[20px] px-4 py-4"
+              className="flex-row items-center justify-center gap-2 rounded-xl px-4 py-4"
               style={{ backgroundColor: colors.secondary }}
               onPress={handleAddCategory}
             >
@@ -230,7 +220,7 @@ export default function SettingsScreen() {
           subtitle="Uses the shared confirmation dialog plus the shared clear-all-data action."
         >
           <Pressable
-            className="flex-row items-center justify-center gap-2 rounded-[20px] px-4 py-4"
+            className="flex-row items-center justify-center gap-2 rounded-xl px-4 py-4"
             style={{ backgroundColor: colors.danger }}
             onPress={handleClearAllData}
           >

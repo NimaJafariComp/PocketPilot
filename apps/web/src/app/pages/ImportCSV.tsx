@@ -10,6 +10,7 @@ import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle } from 'lucide-react
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Checkbox } from '../components/ui/checkbox';
+import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
@@ -40,9 +41,12 @@ export function ImportCSV() {
     credit: '',
     category: '',
     notes: '',
+    account: '',
   });
+  const [accountLabel, setAccountLabel] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const [importedCount, setImportedCount] = useState(0);
+  const [skippedDuplicates, setSkippedDuplicates] = useState(0);
   const [invertAmounts, setInvertAmounts] = useState(false);
 
   const parseCsvFile = useCallback((file: File) => {
@@ -78,7 +82,9 @@ export function ImportCSV() {
           credit: detectedMapping.credit || '',
           category: detectedMapping.category || '',
           notes: detectedMapping.notes || '',
+          account: detectedMapping.account || '',
         });
+        setAccountLabel((current) => current || file.name.replace(/\.[^.]+$/, ''));
       },
       error: (error) => {
         setErrors([`Failed to parse CSV: ${error.message}`]);
@@ -130,8 +136,9 @@ export function ImportCSV() {
   const handleImport = async () => {
     const importErrors: string[] = [];
 
+    const fallbackAccount = accountLabel.trim();
     const transactions = parsedData.map((row, index) => {
-      const result = parseCsvTransactionRow(row, mapping, index + 1, { invertAmounts });
+      const result = parseCsvTransactionRow(row, mapping, index + 1, { invertAmounts, fallbackAccount });
       importErrors.push(...result.errors);
       return result.transaction;
     });
@@ -141,8 +148,9 @@ export function ImportCSV() {
       return;
     }
 
-    await importTransactions(transactions);
-    setImportedCount(transactions.length);
+    const result = await importTransactions(transactions);
+    setImportedCount(result.imported);
+    setSkippedDuplicates(result.skippedDuplicates);
     setErrors([]);
     setStep('success');
   };
@@ -343,6 +351,49 @@ export function ImportCSV() {
               </div>
             </div>
 
+            <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+              <div className="space-y-1">
+                <Label className="font-medium">Account</Label>
+                <p className="text-sm text-muted-foreground">
+                  Keeps statements from different banks or cards separate, so identical-looking
+                  transactions across accounts are never merged as duplicates.
+                </p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Account column (auto-detected)</Label>
+                  <Select
+                    value={mapping.account || NO_CATEGORY_VALUE}
+                    onValueChange={(value) =>
+                      setMapping({ ...mapping, account: value === NO_CATEGORY_VALUE ? '' : value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select account column" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_CATEGORY_VALUE}>None</SelectItem>
+                      {headers.map(h => (
+                        <SelectItem key={h} value={h}>{h}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="account-label">Account label (fallback)</Label>
+                  <Input
+                    id="account-label"
+                    value={accountLabel}
+                    onChange={(event) => setAccountLabel(event.target.value)}
+                    placeholder="e.g. Chase Checking"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Used for rows without an account column value.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="rounded-lg border border-border bg-muted/30 p-4">
               <div className="flex items-start gap-3">
                 <Checkbox
@@ -460,7 +511,12 @@ export function ImportCSV() {
               </div>
               <h3 className="text-2xl font-semibold mb-2">Import Successful!</h3>
               <p className="mb-6 text-muted-foreground">
-                Successfully imported {importedCount} transactions
+                {importedCount > 0
+                  ? `Successfully imported ${importedCount} new transaction${importedCount === 1 ? '' : 's'}`
+                  : 'No new transactions to import'}
+                {skippedDuplicates > 0
+                  ? ` — ${skippedDuplicates} duplicate${skippedDuplicates === 1 ? '' : 's'} from earlier imports skipped`
+                  : ''}
               </p>
               <div className="flex gap-3 justify-center">
                 <Button onClick={() => navigate('/transactions')}>

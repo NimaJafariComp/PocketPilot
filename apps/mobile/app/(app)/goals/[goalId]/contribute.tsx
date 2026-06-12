@@ -5,7 +5,6 @@ import { useData } from '@pocketpilot/services/src/react';
 import { FormField } from '@/components/forms/form-field';
 import { FormScreen } from '@/components/forms/form-screen';
 import { ProgressSummaryRow } from '@/components/data/progress-summary-row';
-import { ScreenHeader } from '@/components/navigation/screen-header';
 import { useAppTheme } from '@/providers/theme-provider';
 import { fontFamilies } from '@/theme/tokens';
 import { formatCurrency } from '@/lib/format';
@@ -57,19 +56,11 @@ export default function GoalContributionScreen() {
 
   return (
     <FormScreen
-      header={
-        <ScreenHeader
-          eyebrow="Goals"
-          title="Add Contribution"
-          subtitle={goal ? goal.name : 'This goal is no longer available.'}
-          backLabel="Back"
-        />
-      }
       footer={
         goal ? (
           <View className="flex-row gap-3">
             <Pressable
-              className="flex-1 rounded-[20px] px-4 py-4"
+              className="flex-1 rounded-xl px-4 py-4"
               style={{ backgroundColor: colors.secondary }}
               onPress={() => router.back()}
             >
@@ -81,7 +72,7 @@ export default function GoalContributionScreen() {
               </Text>
             </Pressable>
             <Pressable
-              className="flex-1 rounded-[20px] px-4 py-4"
+              className="flex-1 rounded-xl px-4 py-4"
               style={{ backgroundColor: colors.primary, opacity: isSaving ? 0.65 : 1 }}
               onPress={handleSave}
               disabled={isSaving}
@@ -112,7 +103,7 @@ export default function GoalContributionScreen() {
               placeholder="100.00"
               placeholderTextColor={colors.mutedForeground}
               keyboardType="decimal-pad"
-              className="rounded-[20px] border px-4 py-4 text-base"
+              className="rounded-xl border px-4 py-4 text-base"
               style={{
                 borderColor: colors.border,
                 backgroundColor: colors.card,

@@ -14,7 +14,7 @@ export function PlaceholderScreen({ eyebrow, title, description }: PlaceholderSc
   return (
     <Screen>
       <View
-        className="flex-1 rounded-[32px] border px-6 py-6"
+        className="flex-1 rounded-2xl border px-6 py-6"
         style={{
           backgroundColor: colors.card,
           borderColor: colors.border,
@@ -39,7 +39,7 @@ export function PlaceholderScreen({ eyebrow, title, description }: PlaceholderSc
         </View>
 
         <View
-          className="mt-8 rounded-[28px] px-5 py-5"
+          className="mt-8 rounded-xl px-5 py-5"
           style={{
             backgroundColor: resolvedTheme === 'dark' ? '#102035' : '#EDF2FB',
           }}

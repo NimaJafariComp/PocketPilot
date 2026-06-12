@@ -43,7 +43,7 @@ export function TransactionEditorFields({
               placeholder="2026-04-07"
               placeholderTextColor={colors.mutedForeground}
               autoCapitalize="none"
-              className="rounded-[16px] border px-3.5 py-3 text-sm"
+              className="rounded-lg border px-3.5 py-3 text-sm"
               style={inputStyle}
             />
           </FormField>
@@ -56,7 +56,7 @@ export function TransactionEditorFields({
               placeholder="0.00"
               placeholderTextColor={colors.mutedForeground}
               keyboardType="decimal-pad"
-              className="rounded-[16px] border px-3.5 py-3 text-sm"
+              className="rounded-lg border px-3.5 py-3 text-sm"
               style={inputStyle}
             />
           </FormField>
@@ -95,7 +95,7 @@ export function TransactionEditorFields({
           onChangeText={(value) => setDraft((current) => ({ ...current, merchant: value }))}
           placeholder="Whole Foods"
           placeholderTextColor={colors.mutedForeground}
-          className="rounded-[16px] border px-3.5 py-3 text-sm"
+          className="rounded-lg border px-3.5 py-3 text-sm"
           style={inputStyle}
         />
       </FormField>
@@ -134,7 +134,7 @@ export function TransactionEditorFields({
           placeholderTextColor={colors.mutedForeground}
           multiline
           textAlignVertical="top"
-          className="min-h-[88px] rounded-[18px] border px-3.5 py-3 text-sm"
+          className="min-h-[88px] rounded-lg border px-3.5 py-3 text-sm"
           style={inputStyle}
         />
       </FormField>

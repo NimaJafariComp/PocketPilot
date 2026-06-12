@@ -3,7 +3,6 @@ import { Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useData } from '@pocketpilot/services/src/react';
 import { FormScreen } from '@/components/forms/form-screen';
-import { ScreenHeader } from '@/components/navigation/screen-header';
 import { BudgetEditorFields, type BudgetDraft } from '@/components/budgets/budget-editor-fields';
 import { useAppTheme } from '@/providers/theme-provider';
 import { fontFamilies } from '@/theme/tokens';
@@ -70,18 +69,10 @@ export default function NewBudgetScreen() {
 
   return (
     <FormScreen
-      header={
-        <ScreenHeader
-          eyebrow="Budgets"
-          title="Create Budget"
-          subtitle="Set the same budget thresholds and month rules available on web."
-          backLabel="Back"
-        />
-      }
       footer={
         <View className="flex-row gap-3">
           <Pressable
-            className="flex-1 rounded-[20px] px-4 py-4"
+            className="flex-1 rounded-xl px-4 py-4"
             style={{ backgroundColor: colors.secondary }}
             onPress={() => router.back()}
           >
@@ -93,7 +84,7 @@ export default function NewBudgetScreen() {
             </Text>
           </Pressable>
           <Pressable
-            className="flex-1 rounded-[20px] px-4 py-4"
+            className="flex-1 rounded-xl px-4 py-4"
             style={{ backgroundColor: colors.primary, opacity: isSaving ? 0.65 : 1 }}
             onPress={handleSave}
             disabled={isSaving}

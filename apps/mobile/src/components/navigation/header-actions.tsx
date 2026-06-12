@@ -3,7 +3,11 @@ import { useRouter } from 'expo-router';
 import { MoonStar, SunMedium } from 'lucide-react-native';
 import { useAuth } from '@pocketpilot/services/src/react';
 import { useAppTheme } from '@/providers/theme-provider';
+import { hapticSelect } from '@/lib/haptics';
+import { Platform } from 'react-native';
+import { SymbolView } from 'expo-symbols';
 
+// Bare icon buttons sized for a native UINavigationBar right slot.
 export function HeaderActions() {
   const router = useRouter();
   const { user } = useAuth();
@@ -19,32 +23,50 @@ export function HeaderActions() {
   const showingDark = resolvedTheme === 'dark';
 
   return (
-    <View className="flex-row items-center gap-2">
+    <View className="h-9 flex-row items-center gap-3">
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`Switch to ${showingDark ? 'light' : 'dark'} theme`}
-        className="h-10 w-10 items-center justify-center rounded-full border"
-        onPress={() => setThemePreference(showingDark ? 'light' : 'dark')}
-        style={{
-          backgroundColor: colors.glass,
-          borderColor: colors.border,
+        className="h-9 w-9 items-center justify-center"
+        hitSlop={8}
+        onPress={() => {
+          hapticSelect();
+          setThemePreference(showingDark ? 'light' : 'dark');
         }}
       >
-        {showingDark ? (
-          <SunMedium size={16} color={colors.foreground} strokeWidth={2.2} />
+        <View style={{ transform: [{ translateX: 2 }] }}>
+        {Platform.OS === 'ios' ? (
+          <SymbolView
+            name={showingDark ? 'sun.max' : 'moon.stars'}
+            tintColor={colors.tint}
+            weight="medium"
+            size={20}
+            resizeMode="scaleAspectFit"
+            fallback={
+              showingDark ? (
+                <SunMedium size={22} color={colors.tint} strokeWidth={2} />
+              ) : (
+                <MoonStar size={22} color={colors.tint} strokeWidth={2} />
+              )
+            }
+          />
+        ) : showingDark ? (
+          <SunMedium size={22} color={colors.tint} strokeWidth={2} />
         ) : (
-          <MoonStar size={16} color={colors.foreground} strokeWidth={2.2} />
+          <MoonStar size={22} color={colors.tint} strokeWidth={2} />
         )}
+        </View>
       </Pressable>
 
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Open profile"
-        className="h-11 w-11 items-center justify-center rounded-full"
+        hitSlop={6}
+        className="h-8 w-8 items-center justify-center rounded-full"
         onPress={() => router.push('/(app)/profile')}
         style={{ backgroundColor: colors.primary }}
       >
-        <Text className="text-sm font-semibold" style={{ color: colors.primaryForeground }}>
+        <Text className="text-xs font-semibold" style={{ color: colors.primaryForeground }}>
           {initials}
         </Text>
       </Pressable>

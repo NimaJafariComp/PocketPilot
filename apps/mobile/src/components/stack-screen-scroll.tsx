@@ -13,16 +13,17 @@ export function StackScreenScroll({
   bottomInset,
 }: StackScreenScrollProps) {
   const insets = useSafeAreaInsets();
-  const resolvedBottomInset = bottomInset ?? Math.max(160, insets.bottom + 32);
+  const resolvedBottomInset = bottomInset ?? Math.max(32, insets.bottom + 16);
 
   return (
     <ScrollView
       className="flex-1"
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{ paddingTop: 8, paddingBottom: resolvedBottomInset }}
+      contentInsetAdjustmentBehavior="automatic"
+      contentContainerStyle={{ paddingTop: 16, paddingBottom: resolvedBottomInset }}
     >
-      <View className="gap-4">
+      <View className="gap-5">
         {header}
         {children}
       </View>

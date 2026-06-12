@@ -1,7 +1,7 @@
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { DatabaseZap, FileSpreadsheet, FileUp, TriangleAlert, X } from 'lucide-react-native';
+import { DatabaseZap, FileSpreadsheet, FileUp, TriangleAlert } from 'lucide-react-native';
 import Papa from 'papaparse';
 import {
   detectCsvTransactionColumns,
@@ -12,14 +12,13 @@ import {
 } from '@pocketpilot/core';
 import { useData } from '@pocketpilot/services/src/react';
 import { Screen } from '@/components/screen';
-import { IconButton } from '@/components/navigation/icon-button';
-import { ScreenHeader } from '@/components/navigation/screen-header';
 import { EmptyStateCard } from '@/components/data/empty-state-card';
 import { KeyValueRow } from '@/components/data/key-value-row';
 import { SectionCard } from '@/components/data/section-card';
 import { StackScreenScroll } from '@/components/stack-screen-scroll';
 import { useAppTheme } from '@/providers/theme-provider';
 import { mobileServices } from '@/config/services';
+import { hapticSuccess } from '@/lib/haptics';
 
 type ParsedRow = Record<string, string>;
 
@@ -28,6 +27,7 @@ export default function ImportScreen() {
   const { importTransactions, addBudget, addGoal } = useData();
   const { colors } = useAppTheme();
   const [fileName, setFileName] = useState('');
+  const [accountName, setAccountName] = useState('');
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [error, setError] = useState('');
   const [isPickingFile, setIsPickingFile] = useState(false);
@@ -70,6 +70,7 @@ export default function ImportScreen() {
           }
 
           setFileName(pickedFile.name);
+          setAccountName((current) => current || pickedFile.name.replace(/\.[^.]+$/, ''));
           setParsedRows(nextRows);
         },
         error: (nextError: { message?: string }) => {
@@ -104,8 +105,9 @@ export default function ImportScreen() {
       }
 
       const importErrors: string[] = [];
+      const fallbackAccount = accountName.trim();
       const transactions = parsedRows.map((row, index) => {
-        const result = parseCsvTransactionRow(row, mapping, index + 1);
+        const result = parseCsvTransactionRow(row, mapping, index + 1, { fallbackAccount });
         importErrors.push(...result.errors);
         return result.transaction;
       });
@@ -114,8 +116,17 @@ export default function ImportScreen() {
         throw new Error(importErrors.slice(0, 3).join('\n'));
       }
 
-      await importTransactions(transactions);
-      await mobileServices.dialog.alert(`Imported ${transactions.length} transactions successfully.`, 'Import Complete');
+      const result = await importTransactions(transactions);
+      hapticSuccess();
+      const summary =
+        result.imported > 0
+          ? `Imported ${result.imported} new transaction${result.imported === 1 ? '' : 's'}.`
+          : 'No new transactions found.';
+      const duplicateNote =
+        result.skippedDuplicates > 0
+          ? ` Skipped ${result.skippedDuplicates} duplicate${result.skippedDuplicates === 1 ? '' : 's'} already in your workspace.`
+          : '';
+      await mobileServices.dialog.alert(`${summary}${duplicateNote}`, 'Import Complete');
       router.replace('/transactions');
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Import failed.');
@@ -141,6 +152,7 @@ export default function ImportScreen() {
       await Promise.all(sampleBudgets.map((budget) => addBudget(budget)));
       await Promise.all(sampleGoals.map((goal) => addGoal(goal)));
 
+      hapticSuccess();
       await mobileServices.dialog.alert(
         `Loaded ${sampleTransactions.length} sample transactions, ${sampleBudgets.length} budgets, and ${sampleGoals.length} goals.`,
         'Sample workspace ready',
@@ -155,28 +167,13 @@ export default function ImportScreen() {
 
   return (
     <Screen>
-      <StackScreenScroll
-        header={
-          <ScreenHeader
-            eyebrow="Import"
-            title="Import transactions"
-            subtitle="This route now behaves like a real mobile modal launched from transactions."
-            rightSlot={
-              <IconButton
-                label="Close import"
-                onPress={() => router.back()}
-                icon={<X size={18} color={colors.foreground} strokeWidth={2.2} />}
-              />
-            }
-          />
-        }
-      >
+      <StackScreenScroll>
         <SectionCard
           title="Pick a CSV file"
           subtitle="The file picker comes from the shared mobile services adapter and keeps import logic out of the UI layer."
         >
           <Pressable
-            className="flex-row items-center justify-center gap-2 rounded-[20px] px-4 py-4"
+            className="flex-row items-center justify-center gap-2 rounded-xl px-4 py-4"
             style={{ backgroundColor: colors.primary }}
             onPress={handlePickFile}
             disabled={isPickingFile}
@@ -193,7 +190,7 @@ export default function ImportScreen() {
           subtitle="Load a realistic PocketPilot workspace with transactions, budgets, and goals so the app is explorable right away."
         >
           <Pressable
-            className="flex-row items-center justify-center gap-2 rounded-[20px] px-4 py-4"
+            className="flex-row items-center justify-center gap-2 rounded-xl px-4 py-4"
             style={{ backgroundColor: colors.secondary }}
             onPress={handleLoadSampleData}
             disabled={isLoadingSampleData}
@@ -226,7 +223,7 @@ export default function ImportScreen() {
                 {preview.map((row, index) => (
                   <View
                     key={`${index}-${Object.values(row).join('-')}`}
-                    className="rounded-[22px] border px-4 py-4"
+                    className="rounded-xl border px-4 py-4"
                     style={{
                       backgroundColor: colors.card,
                       borderColor: colors.border,
@@ -243,11 +240,25 @@ export default function ImportScreen() {
             </SectionCard>
 
             <SectionCard
+              title="Account"
+              subtitle="Detected automatically when the CSV has an account/card column; otherwise every imported row gets this label. Keeps statements from different banks separate."
+            >
+              <TextInput
+                value={accountName}
+                onChangeText={setAccountName}
+                placeholder="e.g. Chase Checking"
+                placeholderTextColor={colors.mutedForeground}
+                className="rounded-xl px-4 py-3 text-[16px]"
+                style={{ backgroundColor: colors.glass, color: colors.foreground }}
+              />
+            </SectionCard>
+
+            <SectionCard
               title="Import into PocketPilot"
               subtitle="Rows will be normalized, categorized through the shared layer, and added to your live transaction feed."
             >
               <Pressable
-                className="flex-row items-center justify-center gap-2 rounded-[20px] px-4 py-4"
+                className="flex-row items-center justify-center gap-2 rounded-xl px-4 py-4"
                 style={{ backgroundColor: colors.primary }}
                 onPress={handleImport}
                 disabled={isImporting}

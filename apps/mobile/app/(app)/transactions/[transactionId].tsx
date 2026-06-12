@@ -5,7 +5,6 @@ import { useData, useServices } from '@pocketpilot/services/src/react';
 import { CategoryBadge } from '@/components/transactions/category-badge';
 import { CategorizationStatusBadge } from '@/components/transactions/categorization-status-badge';
 import { FormScreen } from '@/components/forms/form-screen';
-import { ScreenHeader } from '@/components/navigation/screen-header';
 import {
   type TransactionDraft,
   TransactionEditorFields,
@@ -14,6 +13,7 @@ import { useAppTheme } from '@/providers/theme-provider';
 import { formatCurrencyPrecise } from '@/lib/format';
 import { fontFamilies } from '@/theme/tokens';
 import { mobileServices } from '@/config/services';
+import { hapticWarning } from '@/lib/haptics';
 
 function buildDraftFromTransaction(transaction: {
   date: string;
@@ -136,6 +136,7 @@ export default function TransactionDetailScreen() {
   }
 
   async function handleDelete() {
+    hapticWarning();
     if (!transaction) {
       return;
     }
@@ -163,14 +164,6 @@ export default function TransactionDetailScreen() {
   if (!transaction || !draft) {
     return (
       <FormScreen
-        header={
-          <ScreenHeader
-            eyebrow="Transactions"
-            title="Transaction"
-            subtitle="This transaction is no longer available."
-            backLabel="Back"
-          />
-        }
       >
         <Text style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}>
           Return to the transactions tab and choose another row.
@@ -181,18 +174,10 @@ export default function TransactionDetailScreen() {
 
   return (
     <FormScreen
-      header={
-        <ScreenHeader
-          eyebrow="Transactions"
-          title="Edit Transaction"
-          subtitle={transaction.merchant}
-          backLabel="Back"
-        />
-      }
       footer={
         <View className="flex-row gap-3">
           <Pressable
-            className="rounded-[20px] px-4 py-4"
+            className="rounded-xl px-4 py-4"
             style={{ backgroundColor: colors.secondary }}
             onPress={handleDelete}
           >
@@ -204,7 +189,7 @@ export default function TransactionDetailScreen() {
             </Text>
           </Pressable>
           <Pressable
-            className="flex-1 rounded-[20px] px-4 py-4"
+            className="flex-1 rounded-xl px-4 py-4"
             style={{ backgroundColor: colors.primary, opacity: isSaving ? 0.65 : 1 }}
             disabled={isSaving}
             onPress={handleSave}
@@ -220,7 +205,7 @@ export default function TransactionDetailScreen() {
       }
     >
       <View
-        className="rounded-[22px] border px-4 py-4"
+        className="rounded-xl border px-4 py-4"
         style={{ backgroundColor: colors.card, borderColor: colors.border }}
       >
         <Text

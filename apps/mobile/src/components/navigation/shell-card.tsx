@@ -4,49 +4,31 @@ import type { PropsWithChildren } from 'react';
 import { fontFamilies } from '@/theme/tokens';
 
 interface ShellCardProps extends PropsWithChildren {
+  /** @deprecated unused in the native redesign */
   eyebrow?: string;
   title: string;
   description: string;
 }
 
-export function ShellCard({ eyebrow, title, description, children }: ShellCardProps) {
+export function ShellCard({ title, description, children }: ShellCardProps) {
   const { colors } = useAppTheme();
 
   return (
-    <View
-      className="rounded-[30px] border px-5 py-5"
-      style={{
-        backgroundColor: colors.panel,
-        borderColor: colors.border,
-      }}
-    >
-      {eyebrow ? (
-        <Text
-          className="text-[11px] uppercase tracking-[2px]"
-          style={{ color: colors.primary, fontFamily: fontFamilies.sans.semibold }}
-        >
-          {eyebrow}
-        </Text>
-      ) : null}
+    <View className="rounded-xl px-4 py-4" style={{ backgroundColor: colors.card }}>
       <Text
-        className="mt-3 text-2xl tracking-tight"
-        style={{ color: colors.foreground, fontFamily: fontFamilies.serif.semibold }}
+        className="text-[17px] tracking-tight"
+        style={{ color: colors.foreground, fontFamily: fontFamilies.sans.semibold }}
       >
         {title}
       </Text>
       <Text
-        className="mt-2 text-sm leading-6"
+        className="mt-1 text-[14px] leading-5"
         style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
       >
         {description}
       </Text>
 
-      <View
-        className="mt-5 rounded-[24px] px-4 py-4"
-        style={{
-          backgroundColor: colors.panelMuted,
-        }}
-      >
+      <View className="mt-4 rounded-lg px-3 py-3" style={{ backgroundColor: colors.panelMuted }}>
         {children}
       </View>
     </View>

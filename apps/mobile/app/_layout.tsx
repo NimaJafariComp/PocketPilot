@@ -4,30 +4,12 @@ import '@/styles/global.css';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
-import { PlayfairDisplay_400Regular, PlayfairDisplay_600SemiBold } from '@expo-google-fonts/playfair-display';
 import { AppProviders } from '@/providers/app-providers';
 import { useAppTheme } from '@/providers/theme-provider';
 import { BootScreen } from '@/components/boot-screen';
-import { Text, type StyleProp, type TextStyle } from 'react-native';
-
-const UI_SCALE = 0.9;
-const TEXT_SCALE = 1 / UI_SCALE;
-type TextWithDefaultProps = typeof Text & {
-  defaultProps?: {
-    style?: StyleProp<TextStyle>;
-  };
-};
-const TextComponent = Text as TextWithDefaultProps;
-
-if (!TextComponent.defaultProps) {
-  TextComponent.defaultProps = {};
-}
-
-const defaultTextStyle = TextComponent.defaultProps.style;
-TextComponent.defaultProps.style = [defaultTextStyle, { transform: [{ scale: TEXT_SCALE }] }];
 
 function RootNavigator() {
-  const { colors, resolvedTheme } = useAppTheme();
+  const { colors } = useAppTheme();
 
   return (
     <Stack
@@ -36,7 +18,6 @@ function RootNavigator() {
         contentStyle: {
           backgroundColor: colors.background,
         },
-        animation: resolvedTheme === 'dark' ? 'fade' : 'default',
       }}
     />
   );
@@ -48,13 +29,11 @@ export default function RootLayout() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
-    PlayfairDisplay_400Regular,
-    PlayfairDisplay_600SemiBold,
   });
 
   return (
     <AppProviders>
-      {fontsLoaded ? <RootNavigator /> : <BootScreen message="Loading the mobile design system." />}
+      {fontsLoaded ? <RootNavigator /> : <BootScreen message="Loading PocketPilot." />}
     </AppProviders>
   );
 }

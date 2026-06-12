@@ -12,80 +12,52 @@ export interface SummaryStripItem {
 
 interface SummaryStripProps {
   items: SummaryStripItem[];
+  /** @deprecated unused in the native redesign */
   eyebrow?: string;
+  /** @deprecated unused in the native redesign */
   tone?: SectionTone;
 }
 
-export function SummaryStrip({ items, eyebrow, tone = 'neutral' }: SummaryStripProps) {
+// Plain grouped card split into equal columns by hairline dividers.
+export function SummaryStrip({ items }: SummaryStripProps) {
   const { colors } = useAppTheme();
-  const accent = colors.sectionAccents[tone];
 
   return (
-    <View
-      className="overflow-hidden rounded-[28px] border"
-      style={{
-        backgroundColor: colors.panel,
-        borderColor: colors.border,
-        shadowColor: accent.shadow,
-        shadowOpacity: 1,
-        shadowRadius: 16,
-        shadowOffset: { width: 0, height: 10 },
-        elevation: 2,
-      }}
-    >
-      <View className="h-1.5" style={{ backgroundColor: accent.line }} />
-      {eyebrow ? (
-        <View className="px-5 pt-4">
-          <View
-            className="self-start rounded-full px-3 py-1.5"
-            style={{ backgroundColor: accent.chipBackground }}
+    <View className="flex-row rounded-xl" style={{ backgroundColor: colors.card }}>
+      {items.map((item, index) => (
+        <View
+          key={`${item.label}-${index}`}
+          className="flex-1 px-4 py-3"
+          style={{
+            borderLeftWidth: index === 0 ? 0 : 1,
+            borderColor: colors.border,
+          }}
+        >
+          <Text
+            className="text-[13px]"
+            style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
           >
-            <Text
-              className="text-[11px] uppercase tracking-[1.8px]"
-              style={{ color: accent.chipColor, fontFamily: fontFamilies.sans.semibold }}
-            >
-              {eyebrow}
-            </Text>
-          </View>
-        </View>
-      ) : null}
-      <View className="flex-row flex-wrap">
-        {items.map((item, index) => (
-          <View
-            key={`${item.label}-${index}`}
-            className="min-w-[33%] flex-1 px-5 py-5"
+            {item.label}
+          </Text>
+          <FittedValueText
+            className="mt-1 text-[22px] tracking-tight"
             style={{
-              borderLeftWidth: index === 0 ? 0 : 1,
-              borderTopWidth: eyebrow ? 0 : 0,
-              borderColor: colors.border,
+              color: item.valueColor || colors.foreground,
+              fontFamily: fontFamilies.sans.semibold,
             }}
           >
+            {item.value}
+          </FittedValueText>
+          {item.detail ? (
             <Text
-              className="text-[11px] uppercase tracking-[1.8px]"
-              style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.medium }}
+              className="mt-1 text-[12px] leading-4"
+              style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
             >
-              {item.label}
+              {item.detail}
             </Text>
-            <FittedValueText
-              className="mt-2 text-[28px] tracking-tight"
-              style={{
-                color: item.valueColor || colors.foreground,
-                fontFamily: fontFamilies.sans.semibold,
-              }}
-            >
-              {item.value}
-            </FittedValueText>
-            {item.detail ? (
-              <Text
-                className="mt-1 text-xs leading-5"
-                style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
-              >
-                {item.detail}
-              </Text>
-            ) : null}
-          </View>
-        ))}
-      </View>
+          ) : null}
+        </View>
+      ))}
     </View>
   );
 }

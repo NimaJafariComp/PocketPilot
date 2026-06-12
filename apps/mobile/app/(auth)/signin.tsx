@@ -100,9 +100,9 @@ export default function SignInScreen() {
       </View>
 
       <Pressable
-        className="mt-6 rounded-[22px] px-5 py-4"
+        className="mt-6 rounded-xl px-5 py-4"
         style={{
-          backgroundColor: isDisabled ? colors.secondary : colors.primary,
+          backgroundColor: isDisabled ? 'rgba(255, 255, 255, 0.12)' : '#0A84FF',
           opacity: isSubmitting ? 0.8 : 1,
         }}
         disabled={isDisabled}
@@ -110,7 +110,7 @@ export default function SignInScreen() {
       >
         <Text
           className="text-center text-base font-semibold"
-          style={{ color: isDisabled ? colors.secondaryForeground : colors.primaryForeground }}
+          style={{ color: isDisabled ? 'rgba(235, 235, 245, 0.45)' : '#FFFFFF' }}
         >
           {isSubmitting ? 'Signing in...' : 'Sign in'}
         </Text>

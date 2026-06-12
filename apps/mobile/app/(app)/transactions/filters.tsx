@@ -5,7 +5,6 @@ import { useData } from '@pocketpilot/services/src/react';
 import { DEFAULT_TRANSACTION_FILTERS, type TransactionDateFilterType } from '@pocketpilot/core';
 import { FormField } from '@/components/forms/form-field';
 import { FormScreen } from '@/components/forms/form-screen';
-import { ScreenHeader } from '@/components/navigation/screen-header';
 import { useAppTheme } from '@/providers/theme-provider';
 import { fontFamilies } from '@/theme/tokens';
 
@@ -82,18 +81,10 @@ export default function TransactionFiltersScreen() {
 
   return (
     <FormScreen
-      header={
-        <ScreenHeader
-          eyebrow="Transactions"
-          title="Filters"
-          subtitle="Match the web transaction filters with a native mobile form."
-          backLabel="Back"
-        />
-      }
       footer={
         <View className="flex-row gap-3">
           <Pressable
-            className="rounded-[20px] px-4 py-4"
+            className="rounded-xl px-4 py-4"
             style={{ backgroundColor: colors.secondary }}
             onPress={handleReset}
           >
@@ -105,7 +96,7 @@ export default function TransactionFiltersScreen() {
             </Text>
           </Pressable>
           <Pressable
-            className="flex-1 rounded-[20px] px-4 py-4"
+            className="flex-1 rounded-xl px-4 py-4"
             style={{ backgroundColor: colors.primary }}
             onPress={handleApply}
           >
@@ -125,7 +116,7 @@ export default function TransactionFiltersScreen() {
           onChangeText={setMerchantFilter}
           placeholder="Search merchant"
           placeholderTextColor={colors.mutedForeground}
-          className="rounded-[20px] border px-4 py-4 text-base"
+          className="rounded-xl border px-4 py-4 text-base"
           style={inputStyle}
         />
       </FormField>
@@ -163,7 +154,7 @@ export default function TransactionFiltersScreen() {
           placeholder="25.50"
           placeholderTextColor={colors.mutedForeground}
           keyboardType="decimal-pad"
-          className="rounded-[20px] border px-4 py-4 text-base"
+          className="rounded-xl border px-4 py-4 text-base"
           style={inputStyle}
         />
       </FormField>
@@ -205,7 +196,7 @@ export default function TransactionFiltersScreen() {
             onChangeText={setSpecificDate}
             placeholder="2026-04-07"
             placeholderTextColor={colors.mutedForeground}
-            className="rounded-[20px] border px-4 py-4 text-base"
+            className="rounded-xl border px-4 py-4 text-base"
             style={inputStyle}
           />
         </FormField>
@@ -220,7 +211,7 @@ export default function TransactionFiltersScreen() {
                 onChangeText={setFromDate}
                 placeholder="2026-04-01"
                 placeholderTextColor={colors.mutedForeground}
-                className="rounded-[20px] border px-4 py-4 text-base"
+                className="rounded-xl border px-4 py-4 text-base"
                 style={inputStyle}
               />
             </FormField>
@@ -232,7 +223,7 @@ export default function TransactionFiltersScreen() {
                 onChangeText={setToDate}
                 placeholder="2026-04-30"
                 placeholderTextColor={colors.mutedForeground}
-                className="rounded-[20px] border px-4 py-4 text-base"
+                className="rounded-xl border px-4 py-4 text-base"
                 style={inputStyle}
               />
             </FormField>
