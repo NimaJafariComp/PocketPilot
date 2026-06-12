@@ -71,7 +71,7 @@ export function AuthScreenShell({
           <View className="items-center pb-8">
             <Image
               source={require('../../../assets/icon.png')}
-              className="h-16 w-16"
+              className="h-16 w-16 rounded-2xl"
               resizeMode="contain"
             />
             <Text
