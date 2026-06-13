@@ -1,19 +1,19 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useData, useServices } from '@pocketpilot/services/src/react';
-import { CategoryBadge } from '@/components/transactions/category-badge';
-import { CategorizationStatusBadge } from '@/components/transactions/categorization-status-badge';
-import { FormScreen } from '@/components/forms/form-screen';
+import { useData, useServices } from "@pocketpilot/services/src/react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
+import { Pressable, Text, View } from "react-native";
+import { FormScreen } from "@/components/forms/form-screen";
+import { CategorizationStatusBadge } from "@/components/transactions/categorization-status-badge";
+import { CategoryBadge } from "@/components/transactions/category-badge";
 import {
   type TransactionDraft,
   TransactionEditorFields,
-} from '@/components/transactions/transaction-editor-fields';
-import { useAppTheme } from '@/providers/theme-provider';
-import { formatCurrencyPrecise } from '@/lib/format';
-import { fontFamilies } from '@/theme/tokens';
-import { mobileServices } from '@/config/services';
-import { hapticWarning } from '@/lib/haptics';
+} from "@/components/transactions/transaction-editor-fields";
+import { mobileServices } from "@/config/services";
+import { formatCurrencyPrecise } from "@/lib/format";
+import { hapticWarning } from "@/lib/haptics";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 function buildDraftFromTransaction(transaction: {
   date: string;
@@ -23,12 +23,14 @@ function buildDraftFromTransaction(transaction: {
   notes?: string;
 }): TransactionDraft {
   return {
-    date: transaction.date.includes('T') ? transaction.date.split('T')[0] || transaction.date : transaction.date,
+    date: transaction.date.includes("T")
+      ? transaction.date.split("T")[0] || transaction.date
+      : transaction.date,
     merchant: transaction.merchant,
     amount: String(Math.abs(transaction.amount)),
-    type: transaction.amount < 0 ? 'expense' : 'income',
+    type: transaction.amount < 0 ? "expense" : "income",
     category: transaction.category,
-    notes: transaction.notes || '',
+    notes: transaction.notes || "",
   };
 }
 
@@ -49,8 +51,11 @@ export default function TransactionDetailScreen() {
   }, [transaction]);
 
   const availableCategories = useMemo(
-    () => (categories.length > 0 ? categories : [{ id: 'uncategorized', name: 'Uncategorized', color: '#94A3B8' }]),
-    [categories],
+    () =>
+      categories.length > 0
+        ? categories
+        : [{ id: "uncategorized", name: "Uncategorized", color: "#94A3B8" }],
+    [categories]
   );
 
   const setDraft = (updater: (current: TransactionDraft) => TransactionDraft) => {
@@ -66,12 +71,12 @@ export default function TransactionDetailScreen() {
     const parsedAmount = Number.parseFloat(draft.amount);
 
     if (!merchant) {
-      await mobileServices.dialog.alert('Merchant is required.', 'Missing merchant');
+      await mobileServices.dialog.alert("Merchant is required.", "Missing merchant");
       return;
     }
 
     if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
-      await mobileServices.dialog.alert('Enter a valid amount greater than 0.', 'Invalid amount');
+      await mobileServices.dialog.alert("Enter a valid amount greater than 0.", "Invalid amount");
       return;
     }
 
@@ -82,18 +87,18 @@ export default function TransactionDetailScreen() {
         ...transaction,
         date: new Date(draft.date).toISOString(),
         merchant,
-        amount: draft.type === 'expense' ? -parsedAmount : parsedAmount,
+        amount: draft.type === "expense" ? -parsedAmount : parsedAmount,
         category: draft.category,
         notes: draft.notes.trim(),
       };
 
-      if (transactionToSave.category === 'Uncategorized') {
+      if (transactionToSave.category === "Uncategorized") {
         const [result] = await services.categorization.categorizeTransactions({
           transactions: [
             {
               merchant: transactionToSave.merchant,
               amount: transactionToSave.amount,
-              notes: transactionToSave.notes || '',
+              notes: transactionToSave.notes || "",
             },
           ],
           categories: availableCategories.map((category) => category.name),
@@ -112,7 +117,7 @@ export default function TransactionDetailScreen() {
       } else if (transactionToSave.category !== transaction.category) {
         transactionToSave = {
           ...transactionToSave,
-          categorySource: 'manual',
+          categorySource: "manual",
           categoryConfidence: 1,
           categoryNeedsReview: false,
         };
@@ -124,11 +129,11 @@ export default function TransactionDetailScreen() {
       }
 
       await updateTransaction(transaction.id, transactionToSave);
-      router.replace('/transactions');
+      router.replace("/transactions");
     } catch (error) {
       await mobileServices.dialog.alert(
-        error instanceof Error ? error.message : 'Failed to update the transaction.',
-        'Save failed',
+        error instanceof Error ? error.message : "Failed to update the transaction.",
+        "Save failed"
       );
     } finally {
       setIsSaving(false);
@@ -143,7 +148,7 @@ export default function TransactionDetailScreen() {
 
     const confirmed = await mobileServices.dialog.confirm(
       `Delete ${transaction.merchant}? This action cannot be undone.`,
-      'Delete transaction',
+      "Delete transaction"
     );
 
     if (!confirmed) {
@@ -152,19 +157,18 @@ export default function TransactionDetailScreen() {
 
     try {
       await deleteTransaction(transaction.id);
-      router.replace('/transactions');
+      router.replace("/transactions");
     } catch (error) {
       await mobileServices.dialog.alert(
-        error instanceof Error ? error.message : 'Failed to delete the transaction.',
-        'Delete failed',
+        error instanceof Error ? error.message : "Failed to delete the transaction.",
+        "Delete failed"
       );
     }
   }
 
   if (!transaction || !draft) {
     return (
-      <FormScreen
-      >
+      <FormScreen>
         <Text style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}>
           Return to the transactions tab and choose another row.
         </Text>
@@ -182,7 +186,7 @@ export default function TransactionDetailScreen() {
             onPress={handleDelete}
           >
             <Text
-              className="text-sm"
+              className="text-[16px]"
               style={{ color: colors.danger, fontFamily: fontFamilies.sans.semibold }}
             >
               Delete
@@ -195,10 +199,10 @@ export default function TransactionDetailScreen() {
             onPress={handleSave}
           >
             <Text
-              className="text-center text-sm"
+              className="text-center text-[16px]"
               style={{ color: colors.primaryForeground, fontFamily: fontFamilies.sans.semibold }}
             >
-              {isSaving ? 'Saving...' : 'Save Changes'}
+              {isSaving ? "Saving..." : "Save Changes"}
             </Text>
           </Pressable>
         </View>
@@ -215,11 +219,11 @@ export default function TransactionDetailScreen() {
             fontFamily: fontFamilies.sans.semibold,
           }}
         >
-          {transaction.amount < 0 ? '-' : '+'}
+          {transaction.amount < 0 ? "-" : "+"}
           {formatCurrencyPrecise(Math.abs(transaction.amount))}
         </Text>
         <Text
-          className="mt-1.5 text-xs leading-5"
+          className="mt-1.5 text-[12px] leading-5"
           style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
         >
           {draft.date}

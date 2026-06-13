@@ -1,1 +1,24 @@
-{"rustc":15541343239192488793,"features":"[\"default\", \"std\"]","declared_features":"[\"debugger_visualizer\", \"default\", \"expose_internals\", \"serde\", \"std\"]","target":7686100221094031937,"profile":15657897354478470176,"path":10018188973830819746,"deps":[[1074175012458081222,"form_urlencoded",false,9511362492576350042],[6159443412421938570,"idna",false,7191374382657524354],[6803352382179706244,"percent_encoding",false,1418694921734326700]],"local":[{"CheckDepInfo":{"dep_info":"debug/.fingerprint/url-b496996b9c3c1244/dep-lib-url","checksum":false}}],"rustflags":[],"config":2069994364910194474,"compile_kind":0}
+{
+  "rustc": 15541343239192488793,
+  "features": "[\"default\", \"std\"]",
+  "declared_features": "[\"debugger_visualizer\", \"default\", \"expose_internals\", \"serde\", \"std\"]",
+  "target": 7686100221094031937,
+  "profile": 15657897354478470176,
+  "path": 10018188973830819746,
+  "deps": [
+    [1074175012458081222, "form_urlencoded", false, 9511362492576350042],
+    [6159443412421938570, "idna", false, 7191374382657524354],
+    [6803352382179706244, "percent_encoding", false, 1418694921734326700]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug/.fingerprint/url-b496996b9c3c1244/dep-lib-url",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

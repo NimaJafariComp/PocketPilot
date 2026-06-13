@@ -1,7 +1,7 @@
-import { Stack } from 'expo-router';
-import { HeaderActions } from '@/components/navigation/header-actions';
-import { useAppTheme } from '@/providers/theme-provider';
-import { largeTitleScreenOptions } from '@/lib/navigation';
+import { Stack } from "expo-router";
+import { HeaderActions } from "@/components/navigation/header-actions";
+import { largeTitleScreenOptions } from "@/lib/navigation";
+import { useAppTheme } from "@/providers/theme-provider";
 
 export default function GoalsStackLayout() {
   const { colors } = useAppTheme();
@@ -11,8 +11,8 @@ export default function GoalsStackLayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: 'Goals',
-        headerRight: () => <HeaderActions />,
+          title: "Goals",
+          headerRight: () => <HeaderActions />,
         }}
       />
     </Stack>

@@ -1,7 +1,7 @@
-import { Text, View } from 'react-native';
-import Svg, { G, Line, Rect, Text as SvgText } from 'react-native-svg';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies } from '@/theme/tokens';
+import { Text, View } from "react-native";
+import Svg, { G, Line, Rect, Text as SvgText } from "react-native-svg";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 interface VerticalBarDatum {
   name: string;
@@ -19,7 +19,7 @@ export function VerticalBarChart({
   data,
   height = 220,
   colors: chartColors,
-  emptyLabel = 'No data',
+  emptyLabel = "No data",
 }: VerticalBarChartProps) {
   const { colors } = useAppTheme();
   const palette = chartColors || colors.chartPalette;
@@ -43,7 +43,14 @@ export function VerticalBarChart({
 
   return (
     <Svg width="100%" height={height} viewBox={`0 0 ${chartWidth} ${height}`}>
-      <Line x1="0" y1={innerHeight} x2={chartWidth} y2={innerHeight} stroke={colors.border} strokeWidth="1" />
+      <Line
+        x1="0"
+        y1={innerHeight}
+        x2={chartWidth}
+        y2={innerHeight}
+        stroke={colors.border}
+        strokeWidth="1"
+      />
       {data.map((item, index) => {
         const barHeight = maxValue > 0 ? (item.value / maxValue) * (innerHeight - 16) : 0;
         const x = slotWidth * index + (slotWidth - barWidth) / 2;

@@ -1,5 +1,5 @@
-import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
-import type { ThemeColors } from '@/theme/tokens';
+import type { NativeStackNavigationOptions } from "@react-navigation/native-stack";
+import type { ThemeColors } from "@/theme/tokens";
 
 // System-font native headers (UINavigationBar). Large titles collapse on
 // scroll when paired with contentInsetAdjustmentBehavior="automatic".
@@ -25,6 +25,6 @@ export function modalScreenOptions(colors: ThemeColors): NativeStackNavigationOp
     headerTintColor: colors.tint,
     headerTitleStyle: { color: colors.foreground },
     contentStyle: { backgroundColor: colors.background },
-    presentation: 'modal',
+    presentation: "modal",
   };
 }

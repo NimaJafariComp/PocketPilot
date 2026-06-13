@@ -1,10 +1,20 @@
-import { Image, KeyboardAvoidingView, Platform, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
-import { Link } from 'expo-router';
-import { useVideoPlayer, VideoView } from 'expo-video';
-import { Screen } from '@/components/screen';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies } from '@/theme/tokens';
-import type { PropsWithChildren, ReactNode } from 'react';
+import { Link } from "expo-router";
+import { useVideoPlayer, VideoView } from "expo-video";
+import type { PropsWithChildren, ReactNode } from "react";
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  type StyleProp,
+  StyleSheet,
+  Text,
+  View,
+  type ViewStyle,
+} from "react-native";
+import { Screen } from "@/components/screen";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 interface AuthScreenShellProps extends PropsWithChildren {
   eyebrow?: string;
@@ -12,7 +22,7 @@ interface AuthScreenShellProps extends PropsWithChildren {
   description?: string;
   footerPrompt: string;
   footerLinkLabel: string;
-  footerLinkHref: '/(auth)/signin' | '/(auth)/signup';
+  footerLinkHref: "/(auth)/signin" | "/(auth)/signup";
   highlights?: string[];
   headerAction?: ReactNode;
   panelStyle?: StyleProp<ViewStyle>;
@@ -30,7 +40,7 @@ export function AuthScreenShell({
   footerLinkLabel,
   footerLinkHref,
   highlights = [],
-  headerAction,
+  headerAction: _headerAction,
   panelStyle,
   brandFontFamily = fontFamilies.sans.semibold,
   titleFontFamily = fontFamilies.sans.semibold,
@@ -38,18 +48,18 @@ export function AuthScreenShell({
 }: AuthScreenShellProps) {
   const { colors } = useAppTheme();
   const onVideo = {
-    foreground: '#FFFFFF',
-    muted: 'rgba(235, 235, 245, 0.72)',
-    link: '#9CC8FF',
+    foreground: "#FFFFFF",
+    muted: "rgba(235, 235, 245, 0.72)",
+    link: "#9CC8FF",
   };
-  const player = useVideoPlayer(require('../../../assets/login-bg.mp4'), (videoPlayer) => {
+  const player = useVideoPlayer(require("../../../assets/login-bg.mp4"), (videoPlayer) => {
     videoPlayer.loop = true;
     videoPlayer.muted = true;
     videoPlayer.play();
   });
 
   return (
-    <Screen padded={false} safeEdges={['left', 'right']}>
+    <Screen padded={false} safeEdges={["left", "right"]}>
       <View className="absolute inset-0">
         <VideoView
           player={player}
@@ -64,13 +74,13 @@ export function AuthScreenShell({
 
       <KeyboardAvoidingView
         className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 12 : 0}
       >
         <View className="flex-1 justify-center px-5 pb-10 pt-12">
           <View className="items-center pb-8">
             <Image
-              source={require('../../../assets/icon.png')}
+              source={require("../../../assets/icon.png")}
               className="h-16 w-16 rounded-2xl"
               resizeMode="contain"
             />
@@ -102,7 +112,11 @@ export function AuthScreenShell({
             {highlights.length > 0 ? (
               <View className="mt-5 gap-2">
                 {highlights.map((highlight) => (
-                  <Text key={highlight} className="text-center text-sm" style={{ color: onVideo.muted }}>
+                  <Text
+                    key={highlight}
+                    className="text-center text-sm"
+                    style={{ color: onVideo.muted }}
+                  >
                     {highlight}
                   </Text>
                 ))}
@@ -114,9 +128,9 @@ export function AuthScreenShell({
             className="rounded-2xl border px-5 pb-6 pt-6"
             style={[
               {
-                backgroundColor: 'rgba(20, 24, 32, 0.55)',
+                backgroundColor: "rgba(20, 24, 32, 0.55)",
                 borderColor: colors.border,
-                shadowColor: 'rgba(3, 8, 14, 0.55)',
+                shadowColor: "rgba(3, 8, 14, 0.55)",
                 shadowOpacity: 1,
                 shadowRadius: 18,
                 shadowOffset: { width: 0, height: 10 },
@@ -128,12 +142,18 @@ export function AuthScreenShell({
             {children}
 
             <View className="mt-6 flex-row items-center justify-center gap-1">
-              <Text className="text-sm" style={{ color: onVideo.muted }}>
+              <Text
+                className="text-[14px]"
+                style={{ color: onVideo.muted, fontFamily: fontFamilies.sans.regular }}
+              >
                 {footerPrompt}
               </Text>
               <Link href={footerLinkHref} asChild>
                 <Pressable hitSlop={10}>
-                  <Text className="text-sm font-semibold" style={{ color: onVideo.link }}>
+                  <Text
+                    className="text-[14px]"
+                    style={{ color: onVideo.link, fontFamily: fontFamilies.sans.semibold }}
+                  >
                     {footerLinkLabel}
                   </Text>
                 </Pressable>

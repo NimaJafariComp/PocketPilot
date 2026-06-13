@@ -1,7 +1,7 @@
-import { Text, View } from 'react-native';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies } from '@/theme/tokens';
-import type { PropsWithChildren } from 'react';
+import type { PropsWithChildren } from "react";
+import { Text, View } from "react-native";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 interface FormFieldProps extends PropsWithChildren {
   label: string;

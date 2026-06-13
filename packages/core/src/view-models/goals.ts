@@ -1,5 +1,5 @@
-import { format, parseISO } from 'date-fns';
-import { type Goal } from '../models/index';
+import { format, parseISO } from "date-fns";
+import type { Goal } from "../models/index";
 
 export interface GoalProgressPoint {
   date: string;
@@ -27,14 +27,14 @@ export function buildGoalProgress(goal: Goal): GoalProgressPoint[] {
   }
 
   const sortedContributions = [...goal.contributions].sort(
-    (left, right) => new Date(left.date).getTime() - new Date(right.date).getTime(),
+    (left, right) => new Date(left.date).getTime() - new Date(right.date).getTime()
   );
 
   let running = 0;
   return sortedContributions.map((contribution) => {
     running += contribution.amount;
     return {
-      date: format(parseISO(contribution.date), 'MMM d'),
+      date: format(parseISO(contribution.date), "MMM d"),
       amount: running,
     };
   });
@@ -45,7 +45,7 @@ export function buildGoalsViewModel(goals: Goal[]): GoalsViewModel {
     totalSaved: goals.reduce((sum, goal) => sum + goal.currentAmount, 0),
     totalNeeded: goals.reduce(
       (sum, goal) => sum + Math.max(0, goal.targetAmount - goal.currentAmount),
-      0,
+      0
     ),
     completedCount: goals.filter((goal) => goal.currentAmount >= goal.targetAmount).length,
     goalRows: goals.map((goal) => {

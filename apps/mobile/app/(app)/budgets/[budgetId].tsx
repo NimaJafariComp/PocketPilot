@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useData } from '@pocketpilot/services/src/react';
-import { BudgetEditorFields, type BudgetDraft } from '@/components/budgets/budget-editor-fields';
-import { FormScreen } from '@/components/forms/form-screen';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies } from '@/theme/tokens';
-import { mobileServices } from '@/config/services';
+import { useData } from "@pocketpilot/services/src/react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
+import { Pressable, Text, View } from "react-native";
+import { type BudgetDraft, BudgetEditorFields } from "@/components/budgets/budget-editor-fields";
+import { FormScreen } from "@/components/forms/form-screen";
+import { mobileServices } from "@/config/services";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 function buildDraft(budget: {
   category: string;
@@ -52,11 +52,14 @@ export default function BudgetDetailScreen() {
 
     const amount = Number.parseFloat(draft.amount);
     if (!draft.category) {
-      await mobileServices.dialog.alert('Choose a budget category.', 'Missing category');
+      await mobileServices.dialog.alert("Choose a budget category.", "Missing category");
       return;
     }
     if (Number.isNaN(amount) || amount <= 0) {
-      await mobileServices.dialog.alert('Enter a valid budget amount greater than 0.', 'Invalid amount');
+      await mobileServices.dialog.alert(
+        "Enter a valid budget amount greater than 0.",
+        "Invalid amount"
+      );
       return;
     }
 
@@ -69,11 +72,11 @@ export default function BudgetDetailScreen() {
         warningThreshold: draft.warningThreshold,
         limitThreshold: draft.limitThreshold,
       });
-      router.replace('/budgets');
+      router.replace("/budgets");
     } catch (error) {
       await mobileServices.dialog.alert(
-        error instanceof Error ? error.message : 'Failed to update the budget.',
-        'Save failed',
+        error instanceof Error ? error.message : "Failed to update the budget.",
+        "Save failed"
       );
     } finally {
       setIsSaving(false);
@@ -87,7 +90,7 @@ export default function BudgetDetailScreen() {
 
     const confirmed = await mobileServices.dialog.confirm(
       `Delete the ${budget.category} budget for ${budget.month}?`,
-      'Delete budget',
+      "Delete budget"
     );
 
     if (!confirmed) {
@@ -96,11 +99,11 @@ export default function BudgetDetailScreen() {
 
     try {
       await deleteBudget(budget.id);
-      router.replace('/budgets');
+      router.replace("/budgets");
     } catch (error) {
       await mobileServices.dialog.alert(
-        error instanceof Error ? error.message : 'Failed to delete the budget.',
-        'Delete failed',
+        error instanceof Error ? error.message : "Failed to delete the budget.",
+        "Delete failed"
       );
     }
   }
@@ -116,7 +119,7 @@ export default function BudgetDetailScreen() {
               onPress={handleDelete}
             >
               <Text
-                className="text-sm"
+                className="text-[16px]"
                 style={{ color: colors.danger, fontFamily: fontFamilies.sans.semibold }}
               >
                 Delete
@@ -129,10 +132,10 @@ export default function BudgetDetailScreen() {
               disabled={isSaving}
             >
               <Text
-                className="text-center text-sm"
+                className="text-center text-[16px]"
                 style={{ color: colors.primaryForeground, fontFamily: fontFamilies.sans.semibold }}
               >
-                {isSaving ? 'Saving...' : 'Save Changes'}
+                {isSaving ? "Saving..." : "Save Changes"}
               </Text>
             </Pressable>
           </View>

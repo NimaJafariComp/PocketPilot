@@ -1,32 +1,32 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Wallet, Check } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { Alert, AlertDescription } from '../components/ui/alert';
-import { ThemeToggle } from '../components/ThemeToggle';
+import { Check, Wallet } from "lucide-react";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router";
+import { ThemeToggle } from "../components/ThemeToggle";
+import { Alert, AlertDescription } from "../components/ui/alert";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { useAuth } from "../context/AuthContext";
 
 export function SignIn() {
   const navigate = useNavigate();
   const { signIn } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setError('');
+    setError("");
 
     try {
       await signIn(email, password);
-      navigate('/dashboard');
+      navigate("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign in failed');
+      setError(err instanceof Error ? err.message : "Sign in failed");
     } finally {
       setIsSubmitting(false);
     }
@@ -52,52 +52,58 @@ export function SignIn() {
         <div
           className="relative hidden flex-1 overflow-hidden border-r border-white/10 p-12 text-white lg:flex lg:flex-col lg:justify-between"
           style={{
-            backgroundColor: 'var(--auth-panel-end)',
+            backgroundColor: "var(--auth-panel-end)",
             backgroundImage:
-              'radial-gradient(circle at top left, var(--auth-panel-glow), transparent 34%), linear-gradient(145deg, var(--auth-panel-start), var(--auth-panel-end))',
+              "radial-gradient(circle at top left, var(--auth-panel-glow), transparent 34%), linear-gradient(145deg, var(--auth-panel-start), var(--auth-panel-end))",
           }}
         >
           <div className="absolute inset-x-0 top-0 h-px bg-white/20" />
 
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
-            <Wallet className="w-6 h-6" />
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+              <Wallet className="w-6 h-6" />
+            </div>
+            <span className="font-semibold text-xl">PocketPilot</span>
           </div>
-          <span className="font-semibold text-xl">PocketPilot</span>
-        </div>
 
-        <div>
-          <h1 className="text-4xl font-bold mb-6">Own your financial control. Own your data.</h1>
-          <ul className="space-y-4">
-            <li className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Check className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="font-medium">Import & categorize transactions</p>
-                <p className="text-sm text-white/72">Upload CSV files and automatically organize your spending</p>
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Check className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="font-medium">Set budgets & track goals</p>
-                <p className="text-sm text-white/72">Create monthly budgets and savings goals with progress tracking</p>
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Check className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="font-medium">AI-powered insights</p>
-                <p className="text-sm text-white/72">Get personalized spending insights and trend analysis</p>
-              </div>
-            </li>
-          </ul>
-        </div>
+          <div>
+            <h1 className="text-4xl font-bold mb-6">Own your financial control. Own your data.</h1>
+            <ul className="space-y-4">
+              <li className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Check className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="font-medium">Import & categorize transactions</p>
+                  <p className="text-sm text-white/72">
+                    Upload CSV files and automatically organize your spending
+                  </p>
+                </div>
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Check className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="font-medium">Set budgets & track goals</p>
+                  <p className="text-sm text-white/72">
+                    Create monthly budgets and savings goals with progress tracking
+                  </p>
+                </div>
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Check className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="font-medium">AI-powered insights</p>
+                  <p className="text-sm text-white/72">
+                    Get personalized spending insights and trend analysis
+                  </p>
+                </div>
+              </li>
+            </ul>
+          </div>
 
           <p className="text-sm text-white/72">© 2026 PocketPilot. All rights reserved.</p>
         </div>
@@ -144,11 +150,11 @@ export function SignIn() {
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? 'Signing In...' : 'Sign In'}
+                  {isSubmitting ? "Signing In..." : "Sign In"}
                 </Button>
               </form>
               <div className="mt-4 text-center text-sm">
-                Don't have an account?{' '}
+                Don't have an account?{" "}
                 <Link to="/signup" className="text-primary hover:underline">
                   Sign up
                 </Link>

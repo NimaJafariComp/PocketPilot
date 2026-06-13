@@ -1,22 +1,23 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import { useMemo } from 'react';
-import { Stack, useRouter } from 'expo-router';
-import { Plus } from 'lucide-react-native';
-import { buildBudgetsViewModel } from '@pocketpilot/core';
-import { useData } from '@pocketpilot/services/src/react';
-import { AlertBanner } from '@/components/data/alert-banner';
-import { ProgressSummaryRow } from '@/components/data/progress-summary-row';
-import { Screen } from '@/components/screen';
-import { HeaderIconButton } from '@/components/navigation/header-icon-button';
-import { useTabScrollPadding } from '@/lib/tab-scroll';
-import { SectionCard } from '@/components/data/section-card';
-import { SummaryStrip } from '@/components/data/summary-strip';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies } from '@/theme/tokens';
-import { formatCurrency } from '@/lib/format';
+import { buildBudgetsViewModel } from "@pocketpilot/core";
+import { useData } from "@pocketpilot/services/src/react";
+import { Stack, useRouter } from "expo-router";
+import { Plus } from "lucide-react-native";
+import { useMemo } from "react";
+import { Pressable, ScrollView, Text, View } from "react-native";
+import { AlertBanner } from "@/components/data/alert-banner";
+import { hapticSelect } from "@/lib/haptics";
+import { ProgressSummaryRow } from "@/components/data/progress-summary-row";
+import { SectionCard } from "@/components/data/section-card";
+import { SummaryStrip } from "@/components/data/summary-strip";
+import { HeaderIconButton } from "@/components/navigation/header-icon-button";
+import { Screen } from "@/components/screen";
+import { formatCurrency } from "@/lib/format";
+import { useTabScrollPadding } from "@/lib/tab-scroll";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
-function statusLabel(status: 'over' | 'warning' | 'good') {
-  return status === 'over' ? 'Over limit' : status === 'warning' ? 'Warning' : 'On track';
+function statusLabel(status: "over" | "warning" | "good") {
+  return status === "over" ? "Over limit" : status === "warning" ? "Warning" : "On track";
 }
 
 export default function BudgetsScreen() {
@@ -24,10 +25,17 @@ export default function BudgetsScreen() {
   const { budgets, transactions } = useData();
   const { colors } = useAppTheme();
   const tabScrollPadding = useTabScrollPadding();
-  const model = useMemo(() => buildBudgetsViewModel(budgets, transactions), [budgets, transactions]);
+  const model = useMemo(
+    () => buildBudgetsViewModel(budgets, transactions),
+    [budgets, transactions]
+  );
 
-  function statusColor(status: 'over' | 'warning' | 'good') {
-    return status === 'over' ? colors.danger : status === 'warning' ? colors.warning : colors.success;
+  function statusColor(status: "over" | "warning" | "good") {
+    return status === "over"
+      ? colors.danger
+      : status === "warning"
+        ? colors.warning
+        : colors.success;
   }
 
   return (
@@ -39,7 +47,7 @@ export default function BudgetsScreen() {
               label="Create budget"
               symbol="plus"
               fallback={<Plus size={22} color={colors.tint} strokeWidth={2} />}
-              onPress={() => router.push('/budgets/new' as never)}
+              onPress={() => router.push("/budgets/new" as never)}
             />
           ),
         }}
@@ -71,17 +79,29 @@ export default function BudgetsScreen() {
                 of {formatCurrency(model.totalBudget)}
               </Text>
             </View>
-            <View className="mt-3 h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: colors.glass }}>
+            <View
+              className="mt-3 h-2 overflow-hidden rounded-full"
+              style={{ backgroundColor: colors.glass }}
+            >
               <View
                 className="h-full rounded-full"
-                style={{ width: `${Math.min(model.totalPct, 100)}%`, backgroundColor: colors.primary }}
+                style={{
+                  width: `${Math.min(model.totalPct, 100)}%`,
+                  backgroundColor:
+                    model.totalPct >= 100
+                      ? colors.danger
+                      : model.totalPct >= 80
+                        ? colors.warning
+                        : colors.success,
+                }}
               />
             </View>
             <Text
               className="mt-2 text-[13px]"
               style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
             >
-              {formatCurrency(Math.max(0, model.totalRemaining))} remaining • {Math.round(model.totalPct)}% used
+              {formatCurrency(Math.max(0, model.totalRemaining))} remaining •{" "}
+              {Math.round(model.totalPct)}% used
             </Text>
           </View>
         ) : null}
@@ -89,9 +109,13 @@ export default function BudgetsScreen() {
         {model.budgetRows.length > 0 ? (
           <SummaryStrip
             items={[
-              { label: 'Over limit', value: String(model.overCount), valueColor: model.overCount > 0 ? colors.danger : colors.foreground },
-              { label: 'Warning', value: String(model.warningCount) },
-              { label: 'On track', value: String(model.goodCount), valueColor: colors.success },
+              {
+                label: "Over limit",
+                value: String(model.overCount),
+                valueColor: model.overCount > 0 ? colors.danger : colors.foreground,
+              },
+              { label: "Warning", value: String(model.warningCount) },
+              { label: "On track", value: String(model.goodCount), valueColor: colors.success },
             ]}
           />
         ) : null}
@@ -101,9 +125,9 @@ export default function BudgetsScreen() {
             {model.alertBudgets.map((budget) => (
               <AlertBanner
                 key={budget.id}
-                tone={budget.status === 'over' ? 'danger' : 'warning'}
+                tone={budget.status === "over" ? "danger" : "warning"}
                 message={
-                  budget.status === 'over'
+                  budget.status === "over"
                     ? `${budget.category} is ${formatCurrency(Math.round(Math.abs(budget.remaining)))} over its ${formatCurrency(Math.round(budget.amount))} limit.`
                     : `${budget.category} is at ${Math.round(budget.percentage)}% with ${formatCurrency(Math.round(budget.remaining))} left.`
                 }
@@ -120,7 +144,7 @@ export default function BudgetsScreen() {
               {model.budgetRows.map((budget, index) => (
                 <Pressable
                   key={budget.id}
-                  onPress={() => router.push(`/budgets/${budget.id}` as never)}
+                  onPress={() => { hapticSelect(); router.push(`/budgets/${budget.id}` as never); }}
                   style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
                 >
                   <View className="gap-2 py-3">
@@ -137,15 +161,18 @@ export default function BudgetsScreen() {
                       </Text>
                       <Text
                         className="text-[13px]"
-                        style={{ color: statusColor(budget.status), fontFamily: fontFamilies.sans.medium }}
+                        style={{
+                          color: statusColor(budget.status),
+                          fontFamily: fontFamilies.sans.medium,
+                        }}
                       >
                         {statusLabel(budget.status)}
                       </Text>
                     </View>
                     <ProgressSummaryRow
-                      title={budget.status === 'over' ? 'Over by' : 'Remaining'}
+                      title={budget.status === "over" ? "Over by" : "Remaining"}
                       value={
-                        budget.status === 'over'
+                        budget.status === "over"
                           ? formatCurrency(Math.abs(budget.remaining))
                           : formatCurrency(budget.remaining)
                       }
@@ -168,10 +195,10 @@ export default function BudgetsScreen() {
               >
                 No budgets for this month yet.
               </Text>
-              <Pressable onPress={() => router.push('/budgets/new' as never)} hitSlop={6}>
+              <Pressable onPress={() => router.push("/budgets/new" as never)} hitSlop={6}>
                 <Text
                   className="mt-2 text-[16px]"
-                  style={{ color: colors.tint, fontFamily: fontFamilies.sans.regular }}
+                  style={{ color: colors.tint, fontFamily: fontFamilies.sans.medium }}
                 >
                   Create Your First Budget
                 </Text>

@@ -1,7 +1,7 @@
-import { endOfMonth, format, parseISO, startOfMonth } from 'date-fns';
-import { type Budget, type Transaction } from '../models/index';
+import { endOfMonth, format, parseISO, startOfMonth } from "date-fns";
+import type { Budget, Transaction } from "../models/index";
 
-export type BudgetStatus = 'over' | 'warning' | 'good';
+export type BudgetStatus = "over" | "warning" | "good";
 
 export interface BudgetRow extends Budget {
   spent: number;
@@ -28,9 +28,9 @@ const STATUS_ORDER: Record<BudgetStatus, number> = { over: 0, warning: 1, good: 
 export function buildBudgetsViewModel(
   budgets: Budget[],
   transactions: Transaction[],
-  now = new Date(),
+  now = new Date()
 ): BudgetsViewModel {
-  const month = format(now, 'yyyy-MM');
+  const month = format(now, "yyyy-MM");
   const currentMonthStart = startOfMonth(now);
   const currentMonthEnd = endOfMonth(now);
 
@@ -48,16 +48,16 @@ export function buildBudgetsViewModel(
               date <= currentMonthEnd
             );
           })
-          .reduce((sum, transaction) => sum + transaction.amount, 0),
+          .reduce((sum, transaction) => sum + transaction.amount, 0)
       );
 
       const percentage = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
       const status: BudgetStatus =
         percentage >= budget.limitThreshold
-          ? 'over'
+          ? "over"
           : percentage >= budget.warningThreshold
-            ? 'warning'
-            : 'good';
+            ? "warning"
+            : "good";
 
       return {
         ...budget,
@@ -81,11 +81,11 @@ export function buildBudgetsViewModel(
     totalSpent,
     totalRemaining,
     totalPct,
-    overCount: budgetRows.filter((budget) => budget.status === 'over').length,
-    warningCount: budgetRows.filter((budget) => budget.status === 'warning').length,
-    goodCount: budgetRows.filter((budget) => budget.status === 'good').length,
+    overCount: budgetRows.filter((budget) => budget.status === "over").length,
+    warningCount: budgetRows.filter((budget) => budget.status === "warning").length,
+    goodCount: budgetRows.filter((budget) => budget.status === "good").length,
     alertBudgets: budgetRows.filter(
-      (budget) => budget.status === 'over' || budget.status === 'warning',
+      (budget) => budget.status === "over" || budget.status === "warning"
     ),
   };
 }

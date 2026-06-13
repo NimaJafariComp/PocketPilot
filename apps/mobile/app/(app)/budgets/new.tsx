@@ -1,18 +1,18 @@
-import { useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useData } from '@pocketpilot/services/src/react';
-import { FormScreen } from '@/components/forms/form-screen';
-import { BudgetEditorFields, type BudgetDraft } from '@/components/budgets/budget-editor-fields';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies } from '@/theme/tokens';
-import { mobileServices } from '@/config/services';
-import { getMonthKey } from '@/lib/format';
+import { useData } from "@pocketpilot/services/src/react";
+import { useRouter } from "expo-router";
+import { useMemo, useState } from "react";
+import { Pressable, Text, View } from "react-native";
+import { type BudgetDraft, BudgetEditorFields } from "@/components/budgets/budget-editor-fields";
+import { FormScreen } from "@/components/forms/form-screen";
+import { mobileServices } from "@/config/services";
+import { getMonthKey } from "@/lib/format";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 function buildInitialDraft(): BudgetDraft {
   return {
-    category: '',
-    amount: '',
+    category: "",
+    amount: "",
     month: getMonthKey(),
     warningThreshold: 80,
     limitThreshold: 100,
@@ -39,11 +39,14 @@ export default function NewBudgetScreen() {
 
     const amount = Number.parseFloat(draft.amount);
     if (!draft.category) {
-      await mobileServices.dialog.alert('Choose a budget category.', 'Missing category');
+      await mobileServices.dialog.alert("Choose a budget category.", "Missing category");
       return;
     }
     if (Number.isNaN(amount) || amount <= 0) {
-      await mobileServices.dialog.alert('Enter a valid budget amount greater than 0.', 'Invalid amount');
+      await mobileServices.dialog.alert(
+        "Enter a valid budget amount greater than 0.",
+        "Invalid amount"
+      );
       return;
     }
 
@@ -56,11 +59,11 @@ export default function NewBudgetScreen() {
         warningThreshold: draft.warningThreshold,
         limitThreshold: draft.limitThreshold,
       });
-      router.replace('/budgets');
+      router.replace("/budgets");
     } catch (error) {
       await mobileServices.dialog.alert(
-        error instanceof Error ? error.message : 'Failed to create the budget.',
-        'Save failed',
+        error instanceof Error ? error.message : "Failed to create the budget.",
+        "Save failed"
       );
     } finally {
       setIsSaving(false);
@@ -77,7 +80,7 @@ export default function NewBudgetScreen() {
             onPress={() => router.back()}
           >
             <Text
-              className="text-center text-sm"
+              className="text-center text-[16px]"
               style={{ color: colors.secondaryForeground, fontFamily: fontFamilies.sans.semibold }}
             >
               Cancel
@@ -90,10 +93,10 @@ export default function NewBudgetScreen() {
             disabled={isSaving}
           >
             <Text
-              className="text-center text-sm"
+              className="text-center text-[16px]"
               style={{ color: colors.primaryForeground, fontFamily: fontFamilies.sans.semibold }}
             >
-              {isSaving ? 'Saving...' : 'Create Budget'}
+              {isSaving ? "Saving..." : "Create Budget"}
             </Text>
           </Pressable>
         </View>

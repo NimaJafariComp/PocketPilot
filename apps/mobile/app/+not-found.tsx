@@ -1,7 +1,7 @@
-import { Link } from 'expo-router';
-import { Pressable, Text } from 'react-native';
-import { Screen } from '@/components/screen';
-import { useAppTheme } from '@/providers/theme-provider';
+import { Link } from "expo-router";
+import { Pressable, Text } from "react-native";
+import { Screen } from "@/components/screen";
+import { useAppTheme } from "@/providers/theme-provider";
 
 export default function NotFoundScreen() {
   const { colors } = useAppTheme();

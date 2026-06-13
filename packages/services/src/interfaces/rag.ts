@@ -1,4 +1,4 @@
-export type RagRole = 'user' | 'assistant';
+export type RagRole = "user" | "assistant";
 
 export interface RagMessage {
   role: RagRole;
@@ -11,7 +11,7 @@ export interface RagDocumentMetadata {
 
 export interface RagDocument {
   id: string;
-  kind: 'transaction' | 'budget' | 'goal' | 'insight' | 'note';
+  kind: "transaction" | "budget" | "goal" | "insight" | "note";
   text: string;
   tags?: string[];
   metadata?: RagDocumentMetadata;

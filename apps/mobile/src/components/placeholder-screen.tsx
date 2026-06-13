@@ -1,6 +1,6 @@
-import { Pressable, Text, View } from 'react-native';
-import { Screen } from '@/components/screen';
-import { useAppTheme } from '@/providers/theme-provider';
+import { Pressable, Text, View } from "react-native";
+import { Screen } from "@/components/screen";
+import { useAppTheme } from "@/providers/theme-provider";
 
 interface PlaceholderScreenProps {
   eyebrow: string;
@@ -24,13 +24,19 @@ export function PlaceholderScreen({ eyebrow, title, description }: PlaceholderSc
           className="mb-6 self-start rounded-full px-3 py-1.5"
           style={{ backgroundColor: colors.secondary }}
         >
-          <Text className="text-xs font-semibold uppercase tracking-[2px]" style={{ color: colors.secondaryForeground }}>
+          <Text
+            className="text-xs font-semibold uppercase tracking-[2px]"
+            style={{ color: colors.secondaryForeground }}
+          >
             {eyebrow}
           </Text>
         </View>
 
         <View className="gap-3">
-          <Text className="text-4xl font-semibold tracking-tight" style={{ color: colors.foreground }}>
+          <Text
+            className="text-4xl font-semibold tracking-tight"
+            style={{ color: colors.foreground }}
+          >
             {title}
           </Text>
           <Text className="text-base leading-6" style={{ color: colors.mutedForeground }}>
@@ -41,14 +47,18 @@ export function PlaceholderScreen({ eyebrow, title, description }: PlaceholderSc
         <View
           className="mt-8 rounded-xl px-5 py-5"
           style={{
-            backgroundColor: resolvedTheme === 'dark' ? '#102035' : '#EDF2FB',
+            backgroundColor: resolvedTheme === "dark" ? "#102035" : "#EDF2FB",
           }}
         >
-          <Text className="text-sm font-semibold uppercase tracking-[2px]" style={{ color: colors.mutedForeground }}>
+          <Text
+            className="text-sm font-semibold uppercase tracking-[2px]"
+            style={{ color: colors.mutedForeground }}
+          >
             Phase 1 Foundation
           </Text>
           <Text className="mt-3 text-sm leading-6" style={{ color: colors.foreground }}>
-            Expo Router, NativeWind, safe area handling, theme persistence, and the mobile route tree are in place.
+            Expo Router, NativeWind, safe area handling, theme persistence, and the mobile route
+            tree are in place.
           </Text>
         </View>
 
@@ -57,7 +67,7 @@ export function PlaceholderScreen({ eyebrow, title, description }: PlaceholderSc
             Theme preference: {themePreference}
           </Text>
           <View className="flex-row gap-3">
-            {(['light', 'dark', 'system'] as const).map((option) => {
+            {(["light", "dark", "system"] as const).map((option) => {
               const isActive = option === themePreference;
               return (
                 <Pressable

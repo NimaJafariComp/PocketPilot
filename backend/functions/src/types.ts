@@ -1,9 +1,4 @@
-export type EmbeddingKind =
-  | "transaction"
-  | "budget"
-  | "goal"
-  | "insight"
-  | "note";
+export type EmbeddingKind = "transaction" | "budget" | "goal" | "insight" | "note";
 
 export interface VectorPayload {
   userId: string;

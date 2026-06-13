@@ -1,7 +1,7 @@
-import { Text, View } from 'react-native';
-import { ProgressMeter } from '@/components/data/progress-meter';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies } from '@/theme/tokens';
+import { Text, View } from "react-native";
+import { ProgressMeter } from "@/components/data/progress-meter";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 interface ProgressSummaryRowProps {
   title: string;
@@ -23,10 +23,16 @@ export function ProgressSummaryRow({
   return (
     <View className="gap-2">
       <View className="flex-row items-center justify-between">
-        <Text className="text-sm" style={{ color: colors.foreground, fontFamily: fontFamilies.sans.semibold }}>
+        <Text
+          className="text-[14px]"
+          style={{ color: colors.foreground, fontFamily: fontFamilies.sans.semibold }}
+        >
           {title}
         </Text>
-        <Text className="text-sm" style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}>
+        <Text
+          className="text-[14px]"
+          style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
+        >
           {value}
         </Text>
       </View>

@@ -1,31 +1,31 @@
 import {
   addDoc,
+  type CollectionReference,
   collection,
+  type DocumentData,
   deleteDoc,
   doc,
+  type Firestore,
   getDocs,
   onSnapshot,
   setDoc,
   updateDoc,
   writeBatch,
-  type CollectionReference,
-  type DocumentData,
-  type Firestore,
-} from 'firebase/firestore';
-import type { DataStoreAdapter } from '../interfaces/data-store';
+} from "firebase/firestore";
+import type { DataStoreAdapter } from "../interfaces/data-store";
 
 function getUserCollections(db: Firestore, userId: string) {
-  const userDoc = doc(db, 'users', userId);
+  const userDoc = doc(db, "users", userId);
   return {
-    transactions: collection(userDoc, 'transactions') as CollectionReference<DocumentData>,
-    budgets: collection(userDoc, 'budgets') as CollectionReference<DocumentData>,
-    goals: collection(userDoc, 'goals') as CollectionReference<DocumentData>,
-    categories: collection(userDoc, 'categories') as CollectionReference<DocumentData>,
-    settings: collection(userDoc, 'settings') as CollectionReference<DocumentData>,
+    transactions: collection(userDoc, "transactions") as CollectionReference<DocumentData>,
+    budgets: collection(userDoc, "budgets") as CollectionReference<DocumentData>,
+    goals: collection(userDoc, "goals") as CollectionReference<DocumentData>,
+    categories: collection(userDoc, "categories") as CollectionReference<DocumentData>,
+    settings: collection(userDoc, "settings") as CollectionReference<DocumentData>,
   };
 }
 
-function stripId<T extends { id: string }>(record: Partial<T>): Omit<Partial<T>, 'id'> {
+function stripId<T extends { id: string }>(record: Partial<T>): Omit<Partial<T>, "id"> {
   const { id, ...rest } = record;
   return rest;
 }
@@ -37,9 +37,10 @@ export function createDataStoreFirestoreWeb(db: Firestore): DataStoreAdapter {
       return onSnapshot(refs.transactions, (snapshot) => {
         const rows = snapshot.docs
           .map((d) => ({ id: d.id, ...(d.data() as object) }))
-          .sort((a, b) =>
-            new Date((b as { date?: string }).date || 0).getTime() -
-            new Date((a as { date?: string }).date || 0).getTime(),
+          .sort(
+            (a, b) =>
+              new Date((b as { date?: string }).date || 0).getTime() -
+              new Date((a as { date?: string }).date || 0).getTime()
           );
         cb(rows as never);
       });
@@ -137,7 +138,9 @@ export function createDataStoreFirestoreWeb(db: Firestore): DataStoreAdapter {
 
       for (let i = 0; i < allDocs.length; i += 450) {
         const batch = writeBatch(db);
-        allDocs.slice(i, i + 450).forEach((entry) => batch.delete(entry.ref));
+        allDocs.slice(i, i + 450).forEach((entry) => {
+          batch.delete(entry.ref);
+        });
         await batch.commit();
       }
     },

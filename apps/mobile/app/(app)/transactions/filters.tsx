@@ -1,14 +1,14 @@
-import { useMemo, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useData } from '@pocketpilot/services/src/react';
-import { DEFAULT_TRANSACTION_FILTERS, type TransactionDateFilterType } from '@pocketpilot/core';
-import { FormField } from '@/components/forms/form-field';
-import { FormScreen } from '@/components/forms/form-screen';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies } from '@/theme/tokens';
+import { DEFAULT_TRANSACTION_FILTERS, type TransactionDateFilterType } from "@pocketpilot/core";
+import { useData } from "@pocketpilot/services/src/react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useMemo, useState } from "react";
+import { Pressable, Text, TextInput, View } from "react-native";
+import { FormField } from "@/components/forms/form-field";
+import { FormScreen } from "@/components/forms/form-screen";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
-function getStringParam(value: string | string[] | undefined, fallback = '') {
+function getStringParam(value: string | string[] | undefined, fallback = "") {
   return Array.isArray(value) ? value[0] || fallback : value || fallback;
 }
 
@@ -18,33 +18,51 @@ export default function TransactionFiltersScreen() {
   const { categories } = useData();
   const { colors } = useAppTheme();
   const [merchantFilter, setMerchantFilter] = useState(
-    getStringParam(params.merchantFilter as string | string[] | undefined, DEFAULT_TRANSACTION_FILTERS.merchantFilter),
+    getStringParam(
+      params.merchantFilter as string | string[] | undefined,
+      DEFAULT_TRANSACTION_FILTERS.merchantFilter
+    )
   );
   const [categoryFilter, setCategoryFilter] = useState(
-    getStringParam(params.categoryFilter as string | string[] | undefined, DEFAULT_TRANSACTION_FILTERS.categoryFilter),
+    getStringParam(
+      params.categoryFilter as string | string[] | undefined,
+      DEFAULT_TRANSACTION_FILTERS.categoryFilter
+    )
   );
   const [amountFilter, setAmountFilter] = useState(
-    getStringParam(params.amountFilter as string | string[] | undefined, DEFAULT_TRANSACTION_FILTERS.amountFilter),
+    getStringParam(
+      params.amountFilter as string | string[] | undefined,
+      DEFAULT_TRANSACTION_FILTERS.amountFilter
+    )
   );
   const [dateFilterType, setDateFilterType] = useState<TransactionDateFilterType>(
     (getStringParam(
       params.dateFilterType as string | string[] | undefined,
-      DEFAULT_TRANSACTION_FILTERS.dateFilterType,
-    ) as TransactionDateFilterType) || 'all',
+      DEFAULT_TRANSACTION_FILTERS.dateFilterType
+    ) as TransactionDateFilterType) || "all"
   );
   const [specificDate, setSpecificDate] = useState(
-    getStringParam(params.specificDate as string | string[] | undefined, DEFAULT_TRANSACTION_FILTERS.specificDate),
+    getStringParam(
+      params.specificDate as string | string[] | undefined,
+      DEFAULT_TRANSACTION_FILTERS.specificDate
+    )
   );
   const [fromDate, setFromDate] = useState(
-    getStringParam(params.fromDate as string | string[] | undefined, DEFAULT_TRANSACTION_FILTERS.fromDate),
+    getStringParam(
+      params.fromDate as string | string[] | undefined,
+      DEFAULT_TRANSACTION_FILTERS.fromDate
+    )
   );
   const [toDate, setToDate] = useState(
-    getStringParam(params.toDate as string | string[] | undefined, DEFAULT_TRANSACTION_FILTERS.toDate),
+    getStringParam(
+      params.toDate as string | string[] | undefined,
+      DEFAULT_TRANSACTION_FILTERS.toDate
+    )
   );
 
   const availableCategories = useMemo(
-    () => ['all', ...categories.map((category) => category.name)],
-    [categories],
+    () => ["all", ...categories.map((category) => category.name)],
+    [categories]
   );
 
   const inputStyle = {
@@ -66,12 +84,12 @@ export default function TransactionFiltersScreen() {
 
   function handleApply() {
     router.replace({
-      pathname: '/transactions',
+      pathname: "/transactions",
       params: {
         merchantFilter: merchantFilter || undefined,
-        categoryFilter: categoryFilter === 'all' ? undefined : categoryFilter,
+        categoryFilter: categoryFilter === "all" ? undefined : categoryFilter,
         amountFilter: amountFilter || undefined,
-        dateFilterType: dateFilterType === 'all' ? undefined : dateFilterType,
+        dateFilterType: dateFilterType === "all" ? undefined : dateFilterType,
         specificDate: specificDate || undefined,
         fromDate: fromDate || undefined,
         toDate: toDate || undefined,
@@ -89,7 +107,7 @@ export default function TransactionFiltersScreen() {
             onPress={handleReset}
           >
             <Text
-              className="text-sm"
+              className="text-[16px]"
               style={{ color: colors.secondaryForeground, fontFamily: fontFamilies.sans.semibold }}
             >
               Reset
@@ -101,7 +119,7 @@ export default function TransactionFiltersScreen() {
             onPress={handleApply}
           >
             <Text
-              className="text-center text-sm"
+              className="text-center text-[16px]"
               style={{ color: colors.primaryForeground, fontFamily: fontFamilies.sans.semibold }}
             >
               Apply Filters
@@ -128,8 +146,9 @@ export default function TransactionFiltersScreen() {
             return (
               <Pressable
                 key={category}
-                className="rounded-full px-3 py-2"
+                className="h-[34px] items-center justify-center rounded-full px-3"
                 style={{ backgroundColor: active ? colors.primary : colors.secondary }}
+                hitSlop={6}
                 onPress={() => setCategoryFilter(category)}
               >
                 <Text
@@ -139,7 +158,7 @@ export default function TransactionFiltersScreen() {
                     fontFamily: fontFamilies.sans.medium,
                   }}
                 >
-                  {category === 'all' ? 'All Categories' : category}
+                  {category === "all" ? "All Categories" : category}
                 </Text>
               </Pressable>
             );
@@ -161,11 +180,13 @@ export default function TransactionFiltersScreen() {
 
       <FormField label="Date">
         <View className="flex-row gap-2">
-          {([
-            ['all', 'All'],
-            ['specific', 'Specific'],
-            ['range', 'Range'],
-          ] as const).map(([value, label]) => {
+          {(
+            [
+              ["all", "All"],
+              ["specific", "Specific"],
+              ["range", "Range"],
+            ] as const
+          ).map(([value, label]) => {
             const active = dateFilterType === value;
             return (
               <Pressable
@@ -189,7 +210,7 @@ export default function TransactionFiltersScreen() {
         </View>
       </FormField>
 
-      {dateFilterType === 'specific' ? (
+      {dateFilterType === "specific" ? (
         <FormField label="Specific Date">
           <TextInput
             value={specificDate}
@@ -202,7 +223,7 @@ export default function TransactionFiltersScreen() {
         </FormField>
       ) : null}
 
-      {dateFilterType === 'range' ? (
+      {dateFilterType === "range" ? (
         <View className="flex-row gap-3">
           <View className="flex-1">
             <FormField label="From">

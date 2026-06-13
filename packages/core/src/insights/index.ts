@@ -1,5 +1,6 @@
-import type { Transaction } from '../models/index';
-export * from './buildRagDocuments';
+import type { Transaction } from "../models/index";
+
+export * from "./buildRagDocuments";
 
 export function topCategories(transactions: Transaction[], limit = 5) {
   const totals = transactions.reduce<Record<string, number>>((acc, tx) => {

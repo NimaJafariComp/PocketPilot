@@ -1,6 +1,6 @@
-import { Text, View } from 'react-native';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies } from '@/theme/tokens';
+import { Text, View } from "react-native";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 interface HorizontalBarDatum {
   name: string;
@@ -43,8 +43,14 @@ export function HorizontalBarChart({
                 {formatter(item.value)}
               </Text>
             </View>
-            <View className="h-2 overflow-hidden rounded-full" style={{ backgroundColor: colors.muted }}>
-              <View className="h-full rounded-full" style={{ width: `${width}%`, backgroundColor: color }} />
+            <View
+              className="h-2 overflow-hidden rounded-full"
+              style={{ backgroundColor: colors.muted }}
+            >
+              <View
+                className="h-full rounded-full"
+                style={{ width: `${width}%`, backgroundColor: color }}
+              />
             </View>
           </View>
         );

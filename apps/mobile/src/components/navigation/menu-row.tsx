@@ -1,8 +1,8 @@
-import { Pressable, Text, View } from 'react-native';
-import { ChevronRight } from 'lucide-react-native';
-import { useAppTheme } from '@/providers/theme-provider';
-import type { ReactNode } from 'react';
-import { fontFamilies } from '@/theme/tokens';
+import { ChevronRight } from "lucide-react-native";
+import type { ReactNode } from "react";
+import { Pressable, Text, View } from "react-native";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 interface MenuRowProps {
   title: string;
@@ -27,7 +27,10 @@ export function MenuRow({ title, description, icon, onPress, separator = false }
           {icon}
         </View>
         <View className="flex-1">
-          <Text className="text-[16px]" style={{ color: colors.foreground, fontFamily: fontFamilies.sans.regular }}>
+          <Text
+            className="text-[16px]"
+            style={{ color: colors.foreground, fontFamily: fontFamilies.sans.medium }}
+          >
             {title}
           </Text>
           <Text
@@ -39,7 +42,9 @@ export function MenuRow({ title, description, icon, onPress, separator = false }
         </View>
         <ChevronRight size={17} color={colors.mutedForeground} strokeWidth={2} />
       </View>
-      {separator ? <View className="ml-11 h-px" style={{ backgroundColor: colors.border }} /> : null}
+      {separator ? (
+        <View className="ml-11 h-px" style={{ backgroundColor: colors.border }} />
+      ) : null}
     </Pressable>
   );
 }

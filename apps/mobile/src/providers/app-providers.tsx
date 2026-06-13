@@ -1,10 +1,10 @@
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import Toast from 'react-native-toast-message';
-import { MobileThemeProvider } from '@/providers/theme-provider';
-import type { PropsWithChildren } from 'react';
-import { ServicesProvider, AuthProvider, DataProvider } from '@pocketpilot/services/src/react';
-import { mobileServices } from '@/config/services';
+import { AuthProvider, DataProvider, ServicesProvider } from "@pocketpilot/services/src/react";
+import type { PropsWithChildren } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import Toast from "react-native-toast-message";
+import { mobileServices } from "@/config/services";
+import { MobileThemeProvider } from "@/providers/theme-provider";
 
 export function AppProviders({ children }: PropsWithChildren) {
   return (

@@ -1,5 +1,6 @@
-import { Text, View } from 'react-native';
-import { useAppTheme } from '@/providers/theme-provider';
+import { Text, View } from "react-native";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 interface KeyValueRowProps {
   label: string;
@@ -13,12 +14,18 @@ export function KeyValueRow({ label, value, emphasizeLabel = true }: KeyValueRow
   return (
     <View className="flex-row items-center justify-between gap-3">
       <Text
-        className={emphasizeLabel ? 'text-sm font-semibold' : 'text-sm'}
-        style={{ color: emphasizeLabel ? colors.foreground : colors.mutedForeground }}
+        className="text-[14px]"
+        style={{
+          color: emphasizeLabel ? colors.foreground : colors.mutedForeground,
+          fontFamily: emphasizeLabel ? fontFamilies.sans.medium : fontFamilies.sans.regular,
+        }}
       >
         {label}
       </Text>
-      <Text className="text-sm" style={{ color: colors.mutedForeground }}>
+      <Text
+        className="text-[14px]"
+        style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
+      >
         {value}
       </Text>
     </View>

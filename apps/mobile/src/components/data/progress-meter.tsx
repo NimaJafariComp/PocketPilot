@@ -1,6 +1,7 @@
-import { Text, View } from 'react-native';
-import { useAppTheme } from '@/providers/theme-provider';
-import type { DimensionValue } from 'react-native';
+import type { DimensionValue } from "react-native";
+import { Text, View } from "react-native";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 interface ProgressMeterProps {
   value: number;
@@ -24,7 +25,10 @@ export function ProgressMeter({ value, color, label }: ProgressMeterProps) {
         />
       </View>
       {label ? (
-        <Text className="text-xs leading-5" style={{ color: colors.mutedForeground }}>
+        <Text
+          className="text-[12px] leading-5"
+          style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
+        >
           {label}
         </Text>
       ) : null}

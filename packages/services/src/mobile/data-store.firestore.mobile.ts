@@ -1,31 +1,31 @@
 import {
   addDoc,
+  type CollectionReference,
   collection,
+  type DocumentData,
   deleteDoc,
   doc,
+  type Firestore,
   getDocs,
   onSnapshot,
   setDoc,
   updateDoc,
   writeBatch,
-  type CollectionReference,
-  type DocumentData,
-  type Firestore,
-} from 'firebase/firestore';
-import type { DataStoreAdapter } from '../interfaces/data-store';
+} from "firebase/firestore";
+import type { DataStoreAdapter } from "../interfaces/data-store";
 
 function getUserCollections(db: Firestore, userId: string) {
-  const userDoc = doc(db, 'users', userId);
+  const userDoc = doc(db, "users", userId);
   return {
-    transactions: collection(userDoc, 'transactions') as CollectionReference<DocumentData>,
-    budgets: collection(userDoc, 'budgets') as CollectionReference<DocumentData>,
-    goals: collection(userDoc, 'goals') as CollectionReference<DocumentData>,
-    categories: collection(userDoc, 'categories') as CollectionReference<DocumentData>,
-    settings: collection(userDoc, 'settings') as CollectionReference<DocumentData>,
+    transactions: collection(userDoc, "transactions") as CollectionReference<DocumentData>,
+    budgets: collection(userDoc, "budgets") as CollectionReference<DocumentData>,
+    goals: collection(userDoc, "goals") as CollectionReference<DocumentData>,
+    categories: collection(userDoc, "categories") as CollectionReference<DocumentData>,
+    settings: collection(userDoc, "settings") as CollectionReference<DocumentData>,
   };
 }
 
-function stripId<T extends { id: string }>(record: Partial<T>): Omit<Partial<T>, 'id'> {
+function stripId<T extends { id: string }>(record: Partial<T>): Omit<Partial<T>, "id"> {
   const { id, ...rest } = record;
   return rest;
 }
@@ -40,7 +40,7 @@ export function createDataStoreFirestoreMobile(db: Firestore): DataStoreAdapter 
           .sort(
             (a, b) =>
               new Date((b as { date?: string }).date || 0).getTime() -
-              new Date((a as { date?: string }).date || 0).getTime(),
+              new Date((a as { date?: string }).date || 0).getTime()
           );
         cb(rows as never);
       });
@@ -124,7 +124,9 @@ export function createDataStoreFirestoreMobile(db: Firestore): DataStoreAdapter 
 
       for (let index = 0; index < allDocs.length; index += 450) {
         const batch = writeBatch(db);
-        allDocs.slice(index, index + 450).forEach((entry) => batch.delete(entry.ref));
+        allDocs.slice(index, index + 450).forEach((entry) => {
+          batch.delete(entry.ref);
+        });
         await batch.commit();
       }
     },

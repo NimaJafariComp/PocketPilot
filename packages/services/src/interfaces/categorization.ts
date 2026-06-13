@@ -1,4 +1,4 @@
-export type CategorySource = 'imported' | 'manual' | 'auto-rule' | 'auto-history' | 'auto-ai';
+export type CategorySource = "imported" | "manual" | "auto-rule" | "auto-history" | "auto-ai";
 
 export interface CategorizationInput {
   merchant: string;
@@ -20,8 +20,5 @@ export interface CategorizationAdapter {
     transactions: CategorizationInput[];
     categories: string[];
   }): Promise<CategorizationResult[]>;
-  learnMerchantCategory(params: {
-    merchant: string;
-    category: string;
-  }): Promise<void>;
+  learnMerchantCategory(params: { merchant: string; category: string }): Promise<void>;
 }

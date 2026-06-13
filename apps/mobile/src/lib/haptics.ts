@@ -1,7 +1,7 @@
-import * as Haptics from 'expo-haptics';
-import { Platform } from 'react-native';
+import * as Haptics from "expo-haptics";
+import { Platform } from "react-native";
 
-const enabled = Platform.OS === 'ios' || Platform.OS === 'android';
+const enabled = Platform.OS === "ios" || Platform.OS === "android";
 
 // Fire-and-forget wrappers — haptics must never block or throw into UI code.
 export function hapticSelect() {
@@ -13,9 +13,11 @@ export function hapticImpactLight() {
 }
 
 export function hapticSuccess() {
-  if (enabled) void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  if (enabled)
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 }
 
 export function hapticWarning() {
-  if (enabled) void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+  if (enabled)
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
 }

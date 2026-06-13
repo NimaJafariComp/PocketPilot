@@ -1,9 +1,9 @@
-import { endOfMonth, parseISO, startOfMonth } from 'date-fns';
-import { type Budget, type Goal, type Transaction } from '../models/index';
-import { topCategories } from '../insights/index';
+import { endOfMonth, parseISO, startOfMonth } from "date-fns";
+import { topCategories } from "../insights/index";
+import type { Budget, Goal, Transaction } from "../models/index";
 
 export interface DashboardAlert {
-  kind: 'over-budget' | 'warning' | 'uncategorized';
+  kind: "over-budget" | "warning" | "uncategorized";
   value: number;
 }
 
@@ -31,9 +31,9 @@ export function buildDashboardViewModel(
   transactions: Transaction[],
   budgets: Budget[],
   goals: Goal[],
-  now = new Date(),
+  now = new Date()
 ): DashboardViewModel {
-  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const monthStart = startOfMonth(now);
   const monthEnd = endOfMonth(now);
 
@@ -43,7 +43,9 @@ export function buildDashboardViewModel(
   });
 
   const monthExpenses = monthTransactions.filter((transaction) => transaction.amount < 0);
-  const totalSpent = Math.abs(monthExpenses.reduce((sum, transaction) => sum + transaction.amount, 0));
+  const totalSpent = Math.abs(
+    monthExpenses.reduce((sum, transaction) => sum + transaction.amount, 0)
+  );
   const totalIncome = monthTransactions
     .filter((transaction) => transaction.amount > 0)
     .reduce((sum, transaction) => sum + transaction.amount, 0);
@@ -52,19 +54,19 @@ export function buildDashboardViewModel(
     .reduce((sum, budget) => sum + budget.amount, 0);
   const budgetPct = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
   const uncategorizedCount = transactions.filter(
-    (transaction) => transaction.category === 'Uncategorized',
+    (transaction) => transaction.category === "Uncategorized"
   ).length;
   const remaining = totalBudget - totalSpent;
 
   const alerts: DashboardAlert[] = [];
   if (budgetPct >= 100) {
-    alerts.push({ kind: 'over-budget', value: totalSpent - totalBudget });
+    alerts.push({ kind: "over-budget", value: totalSpent - totalBudget });
   } else if (budgetPct >= 80) {
-    alerts.push({ kind: 'warning', value: remaining });
+    alerts.push({ kind: "warning", value: remaining });
   }
 
   if (uncategorizedCount > 0) {
-    alerts.push({ kind: 'uncategorized', value: uncategorizedCount });
+    alerts.push({ kind: "uncategorized", value: uncategorizedCount });
   }
 
   const goalProgress = goals

@@ -1,33 +1,33 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Wallet, Check } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { Alert, AlertDescription } from '../components/ui/alert';
-import { ThemeToggle } from '../components/ThemeToggle';
+import { Check, Wallet } from "lucide-react";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router";
+import { ThemeToggle } from "../components/ThemeToggle";
+import { Alert, AlertDescription } from "../components/ui/alert";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { useAuth } from "../context/AuthContext";
 
 export function SignUp() {
   const navigate = useNavigate();
   const { signUp } = useAuth();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setError('');
+    setError("");
 
     try {
       await signUp(name, email, password);
-      navigate('/dashboard');
+      navigate("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign up failed');
+      setError(err instanceof Error ? err.message : "Sign up failed");
     } finally {
       setIsSubmitting(false);
     }
@@ -43,9 +43,9 @@ export function SignUp() {
         <div
           className="relative hidden flex-1 overflow-hidden border-r border-white/10 p-12 text-white lg:flex lg:flex-col lg:justify-between"
           style={{
-            backgroundColor: 'var(--auth-panel-end)',
+            backgroundColor: "var(--auth-panel-end)",
             backgroundImage:
-              'radial-gradient(circle at top left, var(--auth-panel-glow), transparent 34%), linear-gradient(145deg, var(--auth-panel-start), var(--auth-panel-end))',
+              "radial-gradient(circle at top left, var(--auth-panel-glow), transparent 34%), linear-gradient(145deg, var(--auth-panel-start), var(--auth-panel-end))",
           }}
         >
           <div className="absolute inset-x-0 top-0 h-px bg-white/20" />
@@ -66,7 +66,9 @@ export function SignUp() {
                 </div>
                 <div>
                   <p className="font-medium">Start with a clean financial workspace</p>
-                  <p className="text-sm text-white/72">Create your account and keep transactions, budgets, and goals in one place.</p>
+                  <p className="text-sm text-white/72">
+                    Create your account and keep transactions, budgets, and goals in one place.
+                  </p>
                 </div>
               </li>
               <li className="flex items-start gap-3">
@@ -75,7 +77,10 @@ export function SignUp() {
                 </div>
                 <div>
                   <p className="font-medium">See progress earlier</p>
-                  <p className="text-sm text-white/72">Set budgets and savings targets right away so your dashboard tells a fuller story.</p>
+                  <p className="text-sm text-white/72">
+                    Set budgets and savings targets right away so your dashboard tells a fuller
+                    story.
+                  </p>
                 </div>
               </li>
               <li className="flex items-start gap-3">
@@ -84,7 +89,10 @@ export function SignUp() {
                 </div>
                 <div>
                   <p className="font-medium">Grow into AI-powered guidance</p>
-                  <p className="text-sm text-white/72">As your data builds up, PocketPilot can surface trends, categories, and insights automatically.</p>
+                  <p className="text-sm text-white/72">
+                    As your data builds up, PocketPilot can surface trends, categories, and insights
+                    automatically.
+                  </p>
                 </div>
               </li>
             </ul>
@@ -103,7 +111,9 @@ export function SignUp() {
                 <span className="text-lg font-semibold">PocketPilot</span>
               </div>
               <CardTitle className="text-2xl">Create an account</CardTitle>
-              <CardDescription>Start managing your finances with a calmer, clearer setup</CardDescription>
+              <CardDescription>
+                Start managing your finances with a calmer, clearer setup
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {error && (
@@ -146,11 +156,11 @@ export function SignUp() {
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? 'Creating Account...' : 'Create Account'}
+                  {isSubmitting ? "Creating Account..." : "Create Account"}
                 </Button>
               </form>
               <div className="mt-4 text-center text-sm">
-                Already have an account?{' '}
+                Already have an account?{" "}
                 <Link to="/signin" className="text-primary hover:underline">
                   Sign in
                 </Link>

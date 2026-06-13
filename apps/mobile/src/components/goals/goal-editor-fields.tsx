@@ -1,7 +1,7 @@
-import { TextInput } from 'react-native';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies } from '@/theme/tokens';
-import { FormField } from '@/components/forms/form-field';
+import { TextInput } from "react-native";
+import { FormField } from "@/components/forms/form-field";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 export interface GoalDraft {
   name: string;

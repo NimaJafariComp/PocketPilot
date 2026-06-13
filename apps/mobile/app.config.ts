@@ -1,19 +1,19 @@
-import type { ExpoConfig } from 'expo/config';
+import type { ExpoConfig } from "expo/config";
 
 const config: ExpoConfig = {
-  name: 'PocketPilot',
-  slug: 'pocketpilot-mobile',
-  scheme: 'pocketpilot',
-  version: '0.1.0',
-  icon: './assets/icon.png',
-  orientation: 'portrait',
-  userInterfaceStyle: 'automatic',
+  name: "PocketPilot",
+  slug: "pocketpilot-mobile",
+  scheme: "pocketpilot",
+  version: "0.1.0",
+  icon: "./assets/icon.png",
+  orientation: "portrait",
+  userInterfaceStyle: "automatic",
   newArchEnabled: true,
-  assetBundlePatterns: ['**/*'],
+  assetBundlePatterns: ["**/*"],
   experiments: {
     typedRoutes: true,
   },
-  plugins: ['expo-router'],
+  plugins: ["expo-router"],
   extra: {
     firebaseApiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
     firebaseAuthDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -27,15 +27,15 @@ const config: ExpoConfig = {
   },
   ios: {
     supportsTablet: true,
-    bundleIdentifier: 'com.pocketpilot.mobile',
-    icon: './assets/icon.png',
+    bundleIdentifier: "com.pocketpilot.mobile",
+    icon: "./assets/icon.png",
   },
   android: {
-    package: 'com.pocketpilot.mobile',
+    package: "com.pocketpilot.mobile",
     adaptiveIcon: {
-      foregroundImage: './assets/adaptive-icon-foreground.png',
-      monochromeImage: './assets/adaptive-icon-monochrome.png',
-      backgroundColor: '#0B1730',
+      foregroundImage: "./assets/adaptive-icon-foreground.png",
+      monochromeImage: "./assets/adaptive-icon-monochrome.png",
+      backgroundColor: "#0B1730",
     },
   },
 };

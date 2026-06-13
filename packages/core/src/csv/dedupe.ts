@@ -1,4 +1,4 @@
-import type { Transaction } from '../models/index';
+import type { Transaction } from "../models/index";
 
 export interface ImportPartition<T> {
   /** Transactions that are new and should be imported. */
@@ -7,7 +7,7 @@ export interface ImportPartition<T> {
   duplicateCount: number;
 }
 
-type TransactionLike = Pick<Transaction, 'date' | 'merchant' | 'amount'> & { account?: string };
+type TransactionLike = Pick<Transaction, "date" | "merchant" | "amount"> & { account?: string };
 
 function dateKey(isoDate: string): string {
   const parsed = new Date(isoDate);
@@ -18,9 +18,9 @@ function dateKey(isoDate: string): string {
 }
 
 function normalizeMerchantKey(merchant: string): string {
-  return String(merchant || '')
+  return String(merchant || "")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }
 
@@ -35,7 +35,9 @@ function normalizeMerchantKey(merchant: string): string {
  */
 export function transactionFingerprint(transaction: TransactionLike): string {
   const cents = Math.round(Number(transaction.amount) * 100);
-  const account = String(transaction.account || '').toLowerCase().trim();
+  const account = String(transaction.account || "")
+    .toLowerCase()
+    .trim();
   return `${account}|${dateKey(transaction.date)}|${cents}|${normalizeMerchantKey(transaction.merchant)}`;
 }
 
@@ -49,7 +51,7 @@ export function transactionFingerprint(transaction: TransactionLike): string {
  */
 export function partitionNewTransactions<T extends TransactionLike>(
   existing: readonly TransactionLike[],
-  incoming: readonly T[],
+  incoming: readonly T[]
 ): ImportPartition<T> {
   const existingCounts = new Map<string, number>();
   for (const transaction of existing) {

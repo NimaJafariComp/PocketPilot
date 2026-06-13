@@ -1,11 +1,11 @@
-import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
-import type { FileImportAdapter } from '../interfaces/file-import';
+import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
+import type { FileImportAdapter } from "../interfaces/file-import";
 
 export const fileImportMobile: FileImportAdapter = {
   async pickCsvFile() {
     const result = await DocumentPicker.getDocumentAsync({
-      type: ['text/csv', 'text/comma-separated-values', 'public.comma-separated-values-text'],
+      type: ["text/csv", "text/comma-separated-values", "public.comma-separated-values-text"],
       copyToCacheDirectory: true,
       multiple: false,
     });
@@ -18,7 +18,8 @@ export const fileImportMobile: FileImportAdapter = {
 
     return {
       name: asset.name,
-      text: () => FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.UTF8 }),
+      text: () =>
+        FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.UTF8 }),
     };
   },
 };

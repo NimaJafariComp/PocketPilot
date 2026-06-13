@@ -1,6 +1,6 @@
-import { Redirect, Stack } from 'expo-router';
-import { useAuth } from '@pocketpilot/services/src/react';
-import { BootScreen } from '@/components/boot-screen';
+import { useAuth } from "@pocketpilot/services/src/react";
+import { Redirect, Stack } from "expo-router";
+import { BootScreen } from "@/components/boot-screen";
 
 export default function AuthLayout() {
   const { user, loading } = useAuth();
@@ -17,7 +17,7 @@ export default function AuthLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        animation: 'slide_from_right',
+        animation: "slide_from_right",
       }}
     />
   );

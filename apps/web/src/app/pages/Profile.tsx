@@ -1,33 +1,35 @@
-import { User, Mail, ShieldCheck, Sparkles } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { useData } from '../context/DataContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
+import { Mail, ShieldCheck, Sparkles, User } from "lucide-react";
+import { Badge } from "../components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { useAuth } from "../context/AuthContext";
+import { useData } from "../context/DataContext";
 
 function initialsFromName(name?: string | null, email?: string | null): string {
   if (name?.trim()) {
     const parts = name.trim().split(/\s+/);
     const initials = parts.slice(0, 2).map((part) => part.charAt(0).toUpperCase());
-    return initials.join('');
+    return initials.join("");
   }
   if (email?.trim()) {
     return email.charAt(0).toUpperCase();
   }
-  return 'U';
+  return "U";
 }
 
 export function Profile() {
   const { user } = useAuth();
   const { transactions, budgets, goals } = useData();
 
-  const fullName = user?.displayName?.trim() || 'No name set';
-  const email = user?.email?.trim() || 'No email available';
+  const fullName = user?.displayName?.trim() || "No name set";
+  const email = user?.email?.trim() || "No email available";
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Profile</h1>
-        <p className="mt-1 text-muted-foreground">Your account identity and personal workspace overview</p>
+        <p className="mt-1 text-muted-foreground">
+          Your account identity and personal workspace overview
+        </p>
       </div>
 
       <Card className="border-primary/15 bg-gradient-to-br from-card via-card to-primary/10 shadow-[0_22px_50px_-36px_rgba(43,103,246,0.45)]">
@@ -44,7 +46,10 @@ export function Profile() {
               </div>
             </div>
             <div className="sm:ml-auto">
-              <Badge variant="outline" className="border-success/20 bg-success text-success-foreground hover:bg-success">
+              <Badge
+                variant="outline"
+                className="border-success/20 bg-success text-success-foreground hover:bg-success"
+              >
                 Authenticated
               </Badge>
             </div>
@@ -80,27 +85,25 @@ export function Profile() {
             <CardTitle>Account & Security</CardTitle>
           </div>
           <CardDescription>
-            This profile is derived from Firebase Authentication and your user-scoped PocketPilot data.
+            This profile is derived from Firebase Authentication and your user-scoped PocketPilot
+            data.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <div className="flex items-start gap-2">
             <User className="mt-0.5 w-4 h-4 text-muted-foreground" />
             <p>
-              Full name is sourced from <span className="font-medium">Firebase display name</span> set at sign-up.
+              Full name is sourced from <span className="font-medium">Firebase display name</span>{" "}
+              set at sign-up.
             </p>
           </div>
           <div className="flex items-start gap-2">
             <Mail className="mt-0.5 w-4 h-4 text-muted-foreground" />
-            <p>
-              Email is sourced from your authenticated account and used for sign-in.
-            </p>
+            <p>Email is sourced from your authenticated account and used for sign-in.</p>
           </div>
           <div className="flex items-start gap-2">
             <Sparkles className="mt-0.5 w-4 h-4 text-muted-foreground" />
-            <p>
-              Insights and AI responses are scoped to your authenticated user data only.
-            </p>
+            <p>Insights and AI responses are scoped to your authenticated user data only.</p>
           </div>
         </CardContent>
       </Card>

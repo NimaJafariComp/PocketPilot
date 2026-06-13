@@ -1,20 +1,13 @@
-import { Link, useLocation } from 'react-router';
-import {
-  LayoutDashboard,
-  Receipt,
-  Wallet,
-  Target,
-  Sparkles,
-  Settings,
-} from 'lucide-react';
+import { LayoutDashboard, Receipt, Settings, Sparkles, Target, Wallet } from "lucide-react";
+import { Link, useLocation } from "react-router";
 
 const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: Receipt, label: 'Transactions', path: '/transactions' },
-  { icon: Wallet, label: 'Budgets', path: '/budgets' },
-  { icon: Target, label: 'Goals', path: '/goals' },
-  { icon: Sparkles, label: 'Insights', path: '/insights' },
-  { icon: Settings, label: 'Settings', path: '/settings' },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+  { icon: Receipt, label: "Transactions", path: "/transactions" },
+  { icon: Wallet, label: "Budgets", path: "/budgets" },
+  { icon: Target, label: "Goals", path: "/goals" },
+  { icon: Sparkles, label: "Insights", path: "/insights" },
+  { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
 export function MobileSidebar({ onNavigate }: { onNavigate?: () => void }) {
@@ -24,9 +17,7 @@ export function MobileSidebar({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full flex-col bg-sidebar">
       <div className="border-b border-sidebar-border p-6">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-info to-primary text-primary-foreground shadow-lg shadow-primary/20">
-            <Wallet className="w-5 h-5 text-white" />
-          </div>
+          <img src="/logo.svg" alt="PocketPilot" className="h-9 w-9 rounded-2xl object-cover shadow-lg shadow-primary/20" />
           <div>
             <span className="block text-lg font-semibold tracking-tight">PocketPilot</span>
             <span className="text-xs text-muted-foreground">Finance cockpit</span>
@@ -45,8 +36,8 @@ export function MobileSidebar({ onNavigate }: { onNavigate?: () => void }) {
                   onClick={onNavigate}
                   className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
                     isActive
-                      ? 'border-primary/20 bg-primary/12 text-primary shadow-sm shadow-primary/10'
-                      : 'border-transparent text-muted-foreground hover:border-border/70 hover:bg-accent/70 hover:text-foreground'
+                      ? "border-primary/20 bg-primary/12 text-primary shadow-sm shadow-primary/10"
+                      : "border-transparent text-muted-foreground hover:border-border/70 hover:bg-accent/70 hover:text-foreground"
                   }`}
                 >
                   <Icon className="w-5 h-5" />

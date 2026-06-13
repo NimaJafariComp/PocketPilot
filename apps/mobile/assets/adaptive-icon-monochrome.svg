@@ -1,11 +1,35 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
-  <path
-    d="M318 706V366C318 335.072 343.072 310 374 310H514C612.307 310 692 389.693 692 488C692 586.307 612.307 666 514 666H430V706C430 736.928 404.928 762 374 762C343.072 762 318 736.928 318 706Z"
-    fill="#F8FBFF"
-  />
-  <path
-    d="M430 554H514C550.451 554 580 524.451 580 488C580 451.549 550.451 422 514 422H430V554Z"
-    fill="#0B1730"
-    fill-opacity="0.28"
-  />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- White-only monochrome version for Android themed icons -->
+  <g transform="translate(512,512) scale(0.82) translate(-512,-512)">
+
+    <!-- Money bills — white silhouettes -->
+    <g transform="translate(700,710) rotate(28)" opacity="0.5">
+      <rect x="-42" y="-26" width="84" height="52" rx="7" fill="white"/>
+    </g>
+    <g transform="translate(768,642) rotate(-10)" opacity="0.6">
+      <rect x="-54" y="-33" width="108" height="66" rx="9" fill="white"/>
+    </g>
+    <g transform="translate(628,724) rotate(32)" opacity="0.7">
+      <rect x="-60" y="-36" width="120" height="72" rx="10" fill="white"/>
+    </g>
+    <g transform="translate(730,565) rotate(-16)" opacity="0.8">
+      <rect x="-68" y="-41" width="136" height="82" rx="11" fill="white"/>
+    </g>
+    <g transform="translate(646,638) rotate(6)">
+      <rect x="-82" y="-50" width="164" height="100" rx="13" fill="white"/>
+    </g>
+
+    <!-- Airplane — white silhouette -->
+    <g transform="translate(488,452) rotate(-22)">
+      <ellipse cx="25" cy="0" rx="295" ry="54" fill="white"/>
+      <path d="M 295 -28 C 322 -16 365 -6 378 0 C 365 6 322 16 295 28 Z" fill="white"/>
+      <path d="M 55 -16 L -28 -232 L -118 -228 L -96 -16 Z" fill="white"/>
+      <path d="M 55 16 L -28 232 L -118 228 L -96 16 Z" fill="white"/>
+      <rect x="-82" y="-185" width="112" height="44" rx="22" fill="white"/>
+      <rect x="-82" y="141" width="112" height="44" rx="22" fill="white"/>
+      <path d="M -242 -10 L -296 -96 L -322 -91 L -274 -10 Z" fill="white"/>
+      <path d="M -242 10 L -296 96 L -322 91 L -274 10 Z" fill="white"/>
+      <path d="M -212 -12 L -250 -128 L -282 -106 L -250 -12 Z" fill="white"/>
+    </g>
+  </g>
 </svg>

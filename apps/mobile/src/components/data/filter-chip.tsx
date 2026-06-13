@@ -1,7 +1,7 @@
-import { Pressable, Text } from 'react-native';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies } from '@/theme/tokens';
-import { hapticSelect } from '@/lib/haptics';
+import { Pressable, Text } from "react-native";
+import { hapticSelect } from "@/lib/haptics";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 interface FilterChipProps {
   label: string;
@@ -15,8 +15,9 @@ export function FilterChip({ label, active, onPress }: FilterChipProps) {
 
   return (
     <Pressable
-      className="rounded-full px-3.5 py-2"
+      className="h-[34px] items-center justify-center rounded-full px-4"
       style={{ backgroundColor: active ? colors.tint : colors.glass }}
+      hitSlop={6}
       onPress={() => {
         hapticSelect();
         onPress();

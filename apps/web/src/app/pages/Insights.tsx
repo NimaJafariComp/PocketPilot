@@ -1,39 +1,45 @@
-import { useMemo, useState } from 'react';
-import { useData } from '../context/DataContext';
-import { useAuth } from '../context/AuthContext';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Progress } from '../components/ui/progress';
-import { Sparkles, TrendingUp, TrendingDown, Repeat, Send, Info, ArrowUpRight, ArrowDownRight, Activity, Package } from 'lucide-react';
+import { endOfMonth, format, parseISO, startOfMonth, subMonths } from "date-fns";
 import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-} from 'recharts';
-import { startOfMonth, endOfMonth, subMonths, parseISO, format } from 'date-fns';
-import { services } from '../lib/services';
+  Activity,
+  ArrowDownRight,
+  ArrowUpRight,
+  Info,
+  Package,
+  Repeat,
+  Send,
+  Sparkles,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import { Cell, Pie, PieChart, Tooltip } from "recharts";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Progress } from "../components/ui/progress";
+import { useAuth } from "../context/AuthContext";
+import { useData } from "../context/DataContext";
+import { services } from "../lib/services";
 
 const CHART_COLORS = [
-  'var(--chart-1)',
-  'var(--chart-2)',
-  'var(--chart-4)',
-  'var(--chart-3)',
-  'var(--chart-5)',
-  'var(--muted-foreground)',
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-4)",
+  "var(--chart-3)",
+  "var(--chart-5)",
+  "var(--muted-foreground)",
 ];
 
 const TOOLTIP_STYLE = {
-  backgroundColor: 'var(--popover)',
-  color: 'var(--popover-foreground)',
-  border: '1px solid var(--border)',
-  borderRadius: '0.75rem',
-  fontSize: '0.75rem',
-  boxShadow: '0 18px 40px rgba(2, 6, 23, 0.24)',
+  backgroundColor: "var(--popover)",
+  color: "var(--popover-foreground)",
+  border: "1px solid var(--border)",
+  borderRadius: "0.75rem",
+  fontSize: "0.75rem",
+  boxShadow: "0 18px 40px rgba(2, 6, 23, 0.24)",
 };
 
 interface Message {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
 }
 
@@ -56,7 +62,17 @@ function LegendRow({ name, pct, color }: { name: string; pct: number; color: str
 }
 
 // ── Horizontal bar row ────────────────────────────────────────────
-function HBar({ name, value, max, color }: { name: string; value: number; max: number; color: string }) {
+function HBar({
+  name,
+  value,
+  max,
+  color,
+}: {
+  name: string;
+  value: number;
+  max: number;
+  color: string;
+}) {
   const pct = max > 0 ? (value / max) * 100 : 0;
   return (
     <div className="space-y-1.5">
@@ -73,7 +89,12 @@ function HBar({ name, value, max, color }: { name: string; value: number; max: n
 
 // ── Initials avatar ───────────────────────────────────────────────
 function Avatar({ name }: { name: string }) {
-  const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const initials = name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
   return (
     <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 text-xs font-semibold text-muted-foreground">
       {initials}
@@ -84,31 +105,45 @@ function Avatar({ name }: { name: string }) {
 export function Insights() {
   const { transactions, ragSync } = useData();
   const { user: currentUser } = useAuth();
-  const [tab, setTab] = useState<'summary' | 'assistant'>('summary');
+  const [tab, setTab] = useState<"summary" | "assistant">("summary");
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [assistantError, setAssistantError] = useState('');
+  const [assistantError, setAssistantError] = useState("");
 
   // ── Computed insights ─────────────────────────────────────────────
   const insights = useMemo(() => {
     const now = new Date();
     const thisMonthStart = startOfMonth(now);
-    const thisMonthEnd   = endOfMonth(now);
+    const thisMonthEnd = endOfMonth(now);
     const lastMonthStart = startOfMonth(subMonths(now, 1));
-    const lastMonthEnd   = endOfMonth(subMonths(now, 1));
+    const lastMonthEnd = endOfMonth(subMonths(now, 1));
 
-    const thisMonthTx = transactions.filter(t => { const d = parseISO(t.date); return d >= thisMonthStart && d <= thisMonthEnd && t.amount < 0; });
-    const lastMonthTx = transactions.filter(t => { const d = parseISO(t.date); return d >= lastMonthStart && d <= lastMonthEnd && t.amount < 0; });
+    const thisMonthTx = transactions.filter((t) => {
+      const d = parseISO(t.date);
+      return d >= thisMonthStart && d <= thisMonthEnd && t.amount < 0;
+    });
+    const lastMonthTx = transactions.filter((t) => {
+      const d = parseISO(t.date);
+      return d >= lastMonthStart && d <= lastMonthEnd && t.amount < 0;
+    });
 
     const thisMonthSpent = Math.abs(thisMonthTx.reduce((s, t) => s + t.amount, 0));
     const lastMonthSpent = Math.abs(lastMonthTx.reduce((s, t) => s + t.amount, 0));
-    const changePercent  = lastMonthSpent > 0 ? ((thisMonthSpent - lastMonthSpent) / lastMonthSpent) * 100 : 0;
-    const thisMonthCount = transactions.filter(t => { const d = parseISO(t.date); return d >= thisMonthStart && d <= thisMonthEnd; }).length;
+    const changePercent =
+      lastMonthSpent > 0 ? ((thisMonthSpent - lastMonthSpent) / lastMonthSpent) * 100 : 0;
+    const thisMonthCount = transactions.filter((t) => {
+      const d = parseISO(t.date);
+      return d >= thisMonthStart && d <= thisMonthEnd;
+    }).length;
 
-    const categorySpending = thisMonthTx.reduce((acc, t) => {
-      acc[t.category] = (acc[t.category] || 0) + Math.abs(t.amount); return acc;
-    }, {} as Record<string, number>);
+    const categorySpending = thisMonthTx.reduce(
+      (acc, t) => {
+        acc[t.category] = (acc[t.category] || 0) + Math.abs(t.amount);
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
     const categoryData = Object.entries(categorySpending)
       .map(([name, value]) => ({ name, value: Math.round(value) }))
@@ -117,31 +152,55 @@ export function Insights() {
 
     const totalCategorySpend = categoryData.reduce((s, c) => s + c.value, 0);
 
-    const lastMonthCats = lastMonthTx.reduce((acc, t) => {
-      acc[t.category] = (acc[t.category] || 0) + Math.abs(t.amount); return acc;
-    }, {} as Record<string, number>);
+    const lastMonthCats = lastMonthTx.reduce(
+      (acc, t) => {
+        acc[t.category] = (acc[t.category] || 0) + Math.abs(t.amount);
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
-    const changes = Object.keys({ ...categorySpending, ...lastMonthCats }).map(category => {
-      const thisMonth = categorySpending[category] || 0;
-      const lastMonth = lastMonthCats[category] || 0;
-      const change = lastMonth > 0 ? ((thisMonth - lastMonth) / lastMonth) * 100 : (thisMonth > 0 ? 100 : 0);
-      return { category, change, thisMonth, lastMonth, delta: thisMonth - lastMonth };
-    }).sort((a, b) => Math.abs(b.change) - Math.abs(a.change)).slice(0, 3);
+    const changes = Object.keys({ ...categorySpending, ...lastMonthCats })
+      .map((category) => {
+        const thisMonth = categorySpending[category] || 0;
+        const lastMonth = lastMonthCats[category] || 0;
+        const change =
+          lastMonth > 0 ? ((thisMonth - lastMonth) / lastMonth) * 100 : thisMonth > 0 ? 100 : 0;
+        return { category, change, thisMonth, lastMonth, delta: thisMonth - lastMonth };
+      })
+      .sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
+      .slice(0, 3);
 
-    const merchantFrequency = transactions.reduce((acc, t) => {
-      acc[t.merchant] = (acc[t.merchant] || 0) + 1; return acc;
-    }, {} as Record<string, number>);
+    const merchantFrequency = transactions.reduce(
+      (acc, t) => {
+        acc[t.merchant] = (acc[t.merchant] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
     const recurringCharges = Object.entries(merchantFrequency)
       .filter(([, count]) => count >= 3)
       .map(([merchant, count]) => {
-        const avgAmount = Math.abs(transactions.filter(t => t.merchant === merchant).reduce((s, t) => s + t.amount, 0) / count);
+        const avgAmount = Math.abs(
+          transactions.filter((t) => t.merchant === merchant).reduce((s, t) => s + t.amount, 0) /
+            count
+        );
         return { merchant, count, avgAmount };
       })
       .sort((a, b) => b.avgAmount - a.avgAmount)
       .slice(0, 5);
 
-    return { thisMonthSpent, lastMonthSpent, changePercent, thisMonthCount, categoryData, totalCategorySpend, changes, recurringCharges };
+    return {
+      thisMonthSpent,
+      lastMonthSpent,
+      changePercent,
+      thisMonthCount,
+      categoryData,
+      totalCategorySpend,
+      changes,
+      recurringCharges,
+    };
   }, [transactions]);
 
   // ── Send message ──────────────────────────────────────────────────
@@ -149,96 +208,131 @@ export function Insights() {
     e.preventDefault();
     if (!input.trim() || isSending || !ragSync.isChatAvailable) return;
     const userMessage = input.trim();
-    setInput('');
-    setAssistantError('');
-    const nextMessages = [...messages, { role: 'user' as const, content: userMessage }];
+    setInput("");
+    setAssistantError("");
+    const nextMessages = [...messages, { role: "user" as const, content: userMessage }];
     setMessages(nextMessages);
     setIsSending(true);
     try {
-      const response = await services.rag.ask({ query: userMessage, messages: nextMessages.slice(-8), topK: 12 });
-      setMessages(prev => [...prev, { role: 'assistant', content: response.answer }]);
+      const response = await services.rag.ask({
+        query: userMessage,
+        messages: nextMessages.slice(-8),
+        topK: 12,
+      });
+      setMessages((prev) => [...prev, { role: "assistant", content: response.answer }]);
     } catch (error) {
-      setAssistantError(error instanceof Error ? error.message : 'Assistant failed');
-      setMessages(prev => [...prev, { role: 'assistant', content: 'I could not answer right now. Check Ollama/Functions are running locally and try again.' }]);
+      setAssistantError(error instanceof Error ? error.message : "Assistant failed");
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            "I could not answer right now. Check Ollama/Functions are running locally and try again.",
+        },
+      ]);
     } finally {
       setIsSending(false);
     }
   };
 
   const examplePrompts = [
-    { icon: <Info className="w-3.5 h-3.5" />, text: 'Why was last month expensive?' },
-    { icon: <Activity className="w-3.5 h-3.5" />, text: 'Top 3 categories this month' },
-    { icon: <Package className="w-3.5 h-3.5" />, text: 'How much did I spend on groceries last 30 days?' },
+    { icon: <Info className="w-3.5 h-3.5" />, text: "Why was last month expensive?" },
+    { icon: <Activity className="w-3.5 h-3.5" />, text: "Top 3 categories this month" },
+    {
+      icon: <Package className="w-3.5 h-3.5" />,
+      text: "How much did I spend on groceries last 30 days?",
+    },
   ];
 
   const maxCategoryValue = insights.categoryData[0]?.value ?? 1;
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
-
       {/* ── Page header ── */}
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Insights</h1>
-        <p className="text-muted-foreground mt-1 text-sm">Analyze your spending and get AI-powered answers</p>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Analyze your spending and get AI-powered answers
+        </p>
       </div>
 
       {/* ── Tabs ── */}
       <div className="flex border-b border-border -mb-px">
-        {(['summary', 'assistant'] as const).map(t => (
+        {(["summary", "assistant"] as const).map((t) => (
           <button
+            type="button"
             key={t}
             onClick={() => setTab(t)}
             className={[
-              'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
+              "inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
               tab === t
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground',
-            ].join(' ')}
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            ].join(" ")}
           >
-            {t === 'assistant' && <Sparkles className="w-3.5 h-3.5" />}
-            {t === 'summary' ? 'Summary' : 'AI Assistant'}
+            {t === "assistant" && <Sparkles className="w-3.5 h-3.5" />}
+            {t === "summary" ? "Summary" : "AI Assistant"}
           </button>
         ))}
       </div>
 
       {/* ══════════ SUMMARY ══════════ */}
-      {tab === 'summary' && (
+      {tab === "summary" && (
         <div className="space-y-5">
-
           {/* Overview strip */}
           <div className="grid grid-cols-1 overflow-hidden rounded-xl border border-border bg-card shadow-[0_8px_24px_rgba(25,38,59,0.08)] sm:grid-cols-3 sm:divide-x sm:divide-border">
             <div className="relative px-6 py-5">
               <div className="absolute left-0 top-[20%] bottom-[20%] w-0.5 bg-foreground rounded-r" />
-              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">This Month</p>
-              <p className="text-2xl font-semibold tracking-tight">${Math.round(insights.thisMonthSpent).toLocaleString()}</p>
-              <p className={`text-xs mt-1 flex items-center gap-1 ${insights.changePercent > 0 ? 'text-destructive' : 'text-success'}`}>
-                {insights.changePercent > 0
-                  ? <TrendingUp className="w-3 h-3" />
-                  : <TrendingDown className="w-3 h-3" />}
-                {insights.changePercent > 0 ? '+' : ''}{Math.round(insights.changePercent)}% vs last month
+              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+                This Month
+              </p>
+              <p className="text-2xl font-semibold tracking-tight">
+                ${Math.round(insights.thisMonthSpent).toLocaleString()}
+              </p>
+              <p
+                className={`text-xs mt-1 flex items-center gap-1 ${insights.changePercent > 0 ? "text-destructive" : "text-success"}`}
+              >
+                {insights.changePercent > 0 ? (
+                  <TrendingUp className="w-3 h-3" />
+                ) : (
+                  <TrendingDown className="w-3 h-3" />
+                )}
+                {insights.changePercent > 0 ? "+" : ""}
+                {Math.round(insights.changePercent)}% vs last month
               </p>
             </div>
             <div className="border-t border-border/90 px-6 py-5 sm:border-t-0">
-              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">Last Month</p>
-              <p className="text-2xl font-semibold tracking-tight">${Math.round(insights.lastMonthSpent).toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground mt-1">{format(subMonths(new Date(), 1), 'MMMM yyyy')}</p>
+              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+                Last Month
+              </p>
+              <p className="text-2xl font-semibold tracking-tight">
+                ${Math.round(insights.lastMonthSpent).toLocaleString()}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {format(subMonths(new Date(), 1), "MMMM yyyy")}
+              </p>
             </div>
             <div className="border-t border-border/90 px-6 py-5 sm:border-t-0">
-              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">Transactions</p>
+              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+                Transactions
+              </p>
               <p className="text-2xl font-semibold tracking-tight">{insights.thisMonthCount}</p>
               <p className="text-xs text-muted-foreground mt-1">this month</p>
             </div>
           </div>
 
           {/* Charts */}
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Spending Breakdown</p>
+          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            Spending Breakdown
+          </p>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-
             {/* Donut */}
             <div className="border border-border rounded-lg bg-card overflow-hidden">
               <div className="px-5 pt-4 pb-0 flex items-center justify-between">
                 <p className="text-sm font-semibold">By Category</p>
-                <p className="text-xs font-mono text-muted-foreground">{format(new Date(), 'MMM yyyy')}</p>
+                <p className="text-xs font-mono text-muted-foreground">
+                  {format(new Date(), "MMM yyyy")}
+                </p>
               </div>
               <div className="p-5">
                 {insights.categoryData.length > 0 ? (
@@ -247,21 +341,32 @@ export function Insights() {
                       <PieChart width={160} height={160}>
                         <Pie
                           data={insights.categoryData}
-                          cx="50%" cy="50%"
-                          innerRadius={52} outerRadius={72}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={52}
+                          outerRadius={72}
                           paddingAngle={2}
                           dataKey="value"
-                          startAngle={90} endAngle={-270}
+                          startAngle={90}
+                          endAngle={-270}
                         >
                           {insights.categoryData.map((_, i) => (
-                            <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="none" />
+                            <Cell
+                              key={i}
+                              fill={CHART_COLORS[i % CHART_COLORS.length]}
+                              stroke="none"
+                            />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(v) => [`$${v}`, '']} contentStyle={TOOLTIP_STYLE} />
+                        <Tooltip formatter={(v) => [`$${v}`, ""]} contentStyle={TOOLTIP_STYLE} />
                       </PieChart>
                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-sm font-semibold tracking-tight">${Math.round(insights.thisMonthSpent).toLocaleString()}</span>
-                        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">total</span>
+                        <span className="text-sm font-semibold tracking-tight">
+                          ${Math.round(insights.thisMonthSpent).toLocaleString()}
+                        </span>
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                          total
+                        </span>
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -269,14 +374,20 @@ export function Insights() {
                         <LegendRow
                           key={cat.name}
                           name={cat.name}
-                          pct={insights.totalCategorySpend > 0 ? Math.round((cat.value / insights.totalCategorySpend) * 100) : 0}
+                          pct={
+                            insights.totalCategorySpend > 0
+                              ? Math.round((cat.value / insights.totalCategorySpend) * 100)
+                              : 0
+                          }
                           color={CHART_COLORS[i % CHART_COLORS.length]}
                         />
                       ))}
                     </div>
                   </div>
                 ) : (
-                  <div className="h-[160px] flex items-center justify-center text-muted-foreground text-sm">No data</div>
+                  <div className="h-[160px] flex items-center justify-center text-muted-foreground text-sm">
+                    No data
+                  </div>
                 )}
               </div>
             </div>
@@ -285,7 +396,9 @@ export function Insights() {
             <div className="border border-border rounded-lg bg-card overflow-hidden">
               <div className="px-5 pt-4 pb-0 flex items-center justify-between">
                 <p className="text-sm font-semibold">Top Categories</p>
-                <p className="text-xs font-mono text-muted-foreground">{format(new Date(), 'MMM yyyy')}</p>
+                <p className="text-xs font-mono text-muted-foreground">
+                  {format(new Date(), "MMM yyyy")}
+                </p>
               </div>
               <div className="p-5">
                 {insights.categoryData.length > 0 ? (
@@ -301,7 +414,9 @@ export function Insights() {
                     ))}
                   </div>
                 ) : (
-                  <div className="h-[140px] flex items-center justify-center text-muted-foreground text-sm">No data</div>
+                  <div className="h-[140px] flex items-center justify-center text-muted-foreground text-sm">
+                    No data
+                  </div>
                 )}
               </div>
             </div>
@@ -310,28 +425,41 @@ export function Insights() {
           {/* Notable Changes */}
           {insights.changes.length > 0 && (
             <>
-              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Notable Changes</p>
+              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                Notable Changes
+              </p>
               <div className="border border-border rounded-lg bg-card overflow-hidden divide-y divide-border">
                 {insights.changes.map((item) => {
                   const isUp = item.change > 0;
                   return (
-                    <div key={item.category} className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/50 transition-colors">
+                    <div
+                      key={item.category}
+                      className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/50 transition-colors"
+                    >
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isUp ? 'bg-warning/12' : 'bg-success/12'}`}>
-                          {isUp
-                            ? <ArrowUpRight className="w-4 h-4 text-warning" />
-                            : <ArrowDownRight className="w-4 h-4 text-success" />}
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isUp ? "bg-warning/12" : "bg-success/12"}`}
+                        >
+                          {isUp ? (
+                            <ArrowUpRight className="w-4 h-4 text-warning" />
+                          ) : (
+                            <ArrowDownRight className="w-4 h-4 text-success" />
+                          )}
                         </div>
                         <div>
                           <p className="text-sm font-medium">{item.category}</p>
                           <p className="text-xs text-muted-foreground">
-                            {isUp ? '+' : ''}${Math.round(Math.abs(item.delta))} {isUp ? 'more' : 'less'} than last month
+                            {isUp ? "+" : ""}${Math.round(Math.abs(item.delta))}{" "}
+                            {isUp ? "more" : "less"} than last month
                           </p>
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-0.5">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded ${isUp ? 'bg-warning/12 text-warning-foreground' : 'bg-success/12 text-success'}`}>
-                          {isUp ? '+' : ''}{Math.round(item.change)}%
+                        <span
+                          className={`text-xs font-semibold px-2 py-0.5 rounded ${isUp ? "bg-warning/12 text-warning-foreground" : "bg-success/12 text-success"}`}
+                        >
+                          {isUp ? "+" : ""}
+                          {Math.round(item.change)}%
                         </span>
                         <span className="text-xs font-mono text-muted-foreground">
                           ${Math.round(item.lastMonth)} → ${Math.round(item.thisMonth)}
@@ -354,15 +482,22 @@ export function Insights() {
               <div className="border border-border rounded-lg bg-card overflow-hidden">
                 <div className="divide-y divide-border">
                   {insights.recurringCharges.map((charge) => (
-                    <div key={charge.merchant} className="flex items-center justify-between px-5 py-3.5">
+                    <div
+                      key={charge.merchant}
+                      className="flex items-center justify-between px-5 py-3.5"
+                    >
                       <div className="flex items-center gap-3">
                         <Avatar name={charge.merchant} />
                         <div>
                           <p className="text-sm font-medium">{charge.merchant}</p>
-                          <p className="text-xs text-muted-foreground">{charge.count} transactions</p>
+                          <p className="text-xs text-muted-foreground">
+                            {charge.count} transactions
+                          </p>
                         </div>
                       </div>
-                      <p className="text-sm font-semibold font-mono">~${Math.round(charge.avgAmount)}/mo</p>
+                      <p className="text-sm font-semibold font-mono">
+                        ~${Math.round(charge.avgAmount)}/mo
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -373,7 +508,7 @@ export function Insights() {
       )}
 
       {/* ══════════ AI ASSISTANT ══════════ */}
-      {tab === 'assistant' && (
+      {tab === "assistant" && (
         <div className="space-y-4">
           <div className="flex items-center gap-2 rounded-lg border border-info/20 bg-info/10 px-4 py-3 text-sm text-info-foreground">
             <Info className="w-3.5 h-3.5 flex-shrink-0" />
@@ -389,7 +524,7 @@ export function Insights() {
 
           <div className="border border-border rounded-lg bg-card overflow-hidden flex flex-col h-[600px]">
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {ragSync.status !== 'idle' && (
+              {ragSync.status !== "idle" && (
                 <div className="rounded-lg border border-border bg-muted/50 p-4">
                   <div className="flex items-center justify-between gap-3 mb-2">
                     <div>
@@ -398,10 +533,14 @@ export function Insights() {
                         Chat is unavailable until the sync finishes.
                       </p>
                     </div>
-                    <span className="text-xs font-mono text-muted-foreground">{ragSync.progressPct}%</span>
+                    <span className="text-xs font-mono text-muted-foreground">
+                      {ragSync.progressPct}%
+                    </span>
                   </div>
                   <Progress value={ragSync.progressPct} className="h-2" />
-                  {ragSync.lastError && <p className="text-xs text-destructive mt-2">{ragSync.lastError}</p>}
+                  {ragSync.lastError && (
+                    <p className="text-xs text-destructive mt-2">{ragSync.lastError}</p>
+                  )}
                 </div>
               )}
 
@@ -410,12 +549,19 @@ export function Insights() {
                   <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
                     <Sparkles className="w-5 h-5" />
                   </div>
-                  <h3 className="text-base font-semibold tracking-tight mb-1">Financial Assistant</h3>
-                  <p className="text-sm text-muted-foreground mb-6">Ask anything about your spending patterns</p>
-                  <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">Try asking</p>
+                  <h3 className="text-base font-semibold tracking-tight mb-1">
+                    Financial Assistant
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Ask anything about your spending patterns
+                  </p>
+                  <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
+                    Try asking
+                  </p>
                   <div className="flex flex-col gap-2 w-full max-w-sm">
                     {examplePrompts.map(({ icon, text }) => (
                       <button
+                        type="button"
                         key={text}
                         onClick={() => setInput(text)}
                         className="flex items-center gap-2.5 rounded-lg border border-border px-4 py-2.5 text-left text-sm transition-colors hover:border-primary/20 hover:bg-muted"
@@ -428,18 +574,23 @@ export function Insights() {
                 </div>
               ) : (
                 messages.map((message, idx) => (
-                  <div key={idx} className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    {message.role === 'assistant' && (
+                  <div
+                    key={idx}
+                    className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    {message.role === "assistant" && (
                       <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                         <Sparkles className="w-3.5 h-3.5" />
                       </div>
                     )}
-                    <div className={[
-                      'max-w-[80%] px-4 py-3 rounded-lg text-sm whitespace-pre-wrap leading-relaxed',
-                      message.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-foreground',
-                    ].join(' ')}>
+                    <div
+                      className={[
+                        "max-w-[80%] px-4 py-3 rounded-lg text-sm whitespace-pre-wrap leading-relaxed",
+                        message.role === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-foreground",
+                      ].join(" ")}
+                    >
                       {message.content}
                     </div>
                   </div>
@@ -462,18 +613,30 @@ export function Insights() {
               <form onSubmit={handleSendMessage} className="flex gap-2">
                 <Input
                   value={input}
-                  onChange={e => setInput(e.target.value)}
-                  placeholder={ragSync.isChatAvailable ? 'Ask about your spending…' : 'Syncing insights index. Chat will unlock when finished.'}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder={
+                    ragSync.isChatAvailable
+                      ? "Ask about your spending…"
+                      : "Syncing insights index. Chat will unlock when finished."
+                  }
                   className="flex-1"
                   disabled={isSending || !currentUser || !ragSync.isChatAvailable}
                 />
-                <Button type="submit" size="icon" disabled={!input.trim() || isSending || !currentUser || !ragSync.isChatAvailable}>
+                <Button
+                  type="submit"
+                  size="icon"
+                  disabled={!input.trim() || isSending || !currentUser || !ragSync.isChatAvailable}
+                >
                   <Send className="w-4 h-4" />
                 </Button>
               </form>
-              {!currentUser && <p className="text-xs text-muted-foreground mt-2">Connecting to local auth…</p>}
+              {!currentUser && (
+                <p className="text-xs text-muted-foreground mt-2">Connecting to local auth…</p>
+              )}
               {currentUser && !ragSync.isChatAvailable && (
-                <p className="text-xs text-muted-foreground mt-2">Please wait for sync to finish before chatting.</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Please wait for sync to finish before chatting.
+                </p>
               )}
             </div>
           </div>

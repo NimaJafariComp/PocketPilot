@@ -1,8 +1,24 @@
-import { buildRagDocuments, DEFAULT_CATEGORIES, partitionNewTransactions, type Budget, type Category, type Goal, type Transaction } from '@pocketpilot/core';
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react';
-import type { RagDocument } from '../interfaces/rag';
-import { useAuth } from './auth-context';
-import { useServices } from './services-provider';
+import {
+  type Budget,
+  buildRagDocuments,
+  type Category,
+  DEFAULT_CATEGORIES,
+  type Goal,
+  partitionNewTransactions,
+  type Transaction,
+} from "@pocketpilot/core";
+import {
+  createContext,
+  type PropsWithChildren,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type { RagDocument } from "../interfaces/rag";
+import { useAuth } from "./auth-context";
+import { useServices } from "./services-provider";
 
 export interface DataContextValue {
   transactions: Transaction[];
@@ -10,20 +26,22 @@ export interface DataContextValue {
   goals: Goal[];
   categories: Category[];
   loading: boolean;
-  addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void>;
+  addTransaction: (transaction: Omit<Transaction, "id">) => Promise<void>;
   updateTransaction: (id: string, transaction: Partial<Transaction>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
-  addBudget: (budget: Omit<Budget, 'id'>) => Promise<void>;
+  addBudget: (budget: Omit<Budget, "id">) => Promise<void>;
   updateBudget: (id: string, budget: Partial<Budget>) => Promise<void>;
   deleteBudget: (id: string) => Promise<void>;
-  addGoal: (goal: Omit<Goal, 'id'>) => Promise<void>;
+  addGoal: (goal: Omit<Goal, "id">) => Promise<void>;
   updateGoal: (id: string, goal: Partial<Goal>) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
-  addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
-  importTransactions: (transactions: Omit<Transaction, 'id'>[]) => Promise<ImportTransactionsResult>;
+  addCategory: (category: Omit<Category, "id">) => Promise<void>;
+  importTransactions: (
+    transactions: Omit<Transaction, "id">[]
+  ) => Promise<ImportTransactionsResult>;
   clearAllData: () => Promise<void>;
   ragSync: {
-    status: 'idle' | 'scheduled' | 'syncing' | 'error';
+    status: "idle" | "scheduled" | "syncing" | "error";
     progressPct: number;
     statusText: string;
     isChatAvailable: boolean;
@@ -37,7 +55,7 @@ export interface ImportTransactionsResult {
 }
 
 const DataContext = createContext<DataContextValue | undefined>(undefined);
-const AUTO_CATEGORY_PLACEHOLDER = 'Uncategorized';
+const AUTO_CATEGORY_PLACEHOLDER = "Uncategorized";
 const RAG_SYNC_BATCH_SIZE = 25;
 
 function serializeRagDocument(document: RagDocument): string {
@@ -77,12 +95,12 @@ export function DataProvider({ children }: PropsWithChildren) {
     removedIds: string[];
     totalOperations: number;
   } | null>(null);
-  const [ragSync, setRagSync] = useState<DataContextValue['ragSync']>({
-    status: 'idle',
+  const [ragSync, setRagSync] = useState<DataContextValue["ragSync"]>({
+    status: "idle",
     progressPct: 100,
-    statusText: 'Insights index is ready',
+    statusText: "Insights index is ready",
     isChatAvailable: true,
-    lastError: '',
+    lastError: "",
   });
 
   const ragDocuments = useMemo(
@@ -93,15 +111,18 @@ export function DataProvider({ children }: PropsWithChildren) {
         goals,
         user,
       }),
-    [budgets, goals, transactions, user],
+    [budgets, goals, transactions, user]
   );
 
   const ragDocumentMap = useMemo(
     () =>
       new Map(
-        ragDocuments.map((document) => [document.id, { document, signature: serializeRagDocument(document) }] as const),
+        ragDocuments.map(
+          (document) =>
+            [document.id, { document, signature: serializeRagDocument(document) }] as const
+        )
       ),
-    [ragDocuments],
+    [ragDocuments]
   );
 
   useEffect(() => {
@@ -127,11 +148,11 @@ export function DataProvider({ children }: PropsWithChildren) {
       ragSyncInFlight.current = false;
       queuedRagSync.current = null;
       setRagSync({
-        status: 'idle',
+        status: "idle",
         progressPct: 100,
-        statusText: 'Insights index is ready',
+        statusText: "Insights index is ready",
         isChatAvailable: true,
-        lastError: '',
+        lastError: "",
       });
       return;
     }
@@ -162,8 +183,8 @@ export function DataProvider({ children }: PropsWithChildren) {
               name: category.name,
               color: category.color,
               icon: category.icon,
-            }),
-          ),
+            })
+          )
         ).catch(() => {
           seededCategoriesForUser.current = null;
         });
@@ -190,7 +211,7 @@ export function DataProvider({ children }: PropsWithChildren) {
         (transaction) =>
           transaction.category === AUTO_CATEGORY_PLACEHOLDER &&
           !transaction.categorySource &&
-          !backfilledTransactionIds.current.has(transaction.id),
+          !backfilledTransactionIds.current.has(transaction.id)
       )
       .slice(0, 10);
 
@@ -199,7 +220,9 @@ export function DataProvider({ children }: PropsWithChildren) {
     }
 
     backfillInFlight.current = true;
-    targets.forEach((transaction) => backfilledTransactionIds.current.add(transaction.id));
+    targets.forEach((transaction) => {
+      backfilledTransactionIds.current.add(transaction.id);
+    });
 
     const run = async () => {
       try {
@@ -207,7 +230,7 @@ export function DataProvider({ children }: PropsWithChildren) {
           transactions: targets.map((transaction) => ({
             merchant: transaction.merchant,
             amount: transaction.amount,
-            notes: transaction.notes ?? '',
+            notes: transaction.notes ?? "",
           })),
           categories: getAvailableCategoryNames(),
         });
@@ -225,16 +248,18 @@ export function DataProvider({ children }: PropsWithChildren) {
                 }
               : {
                   category: AUTO_CATEGORY_PLACEHOLDER,
-                  categorySource: 'auto-ai' as const,
+                  categorySource: "auto-ai" as const,
                   categoryConfidence: 0,
                   categoryNeedsReview: true,
                 };
 
             return services.dataStore.updateTransaction(user.id, transaction.id, updates as never);
-          }),
+          })
         );
       } catch {
-        targets.forEach((transaction) => backfilledTransactionIds.current.delete(transaction.id));
+        targets.forEach((transaction) => {
+          backfilledTransactionIds.current.delete(transaction.id);
+        });
       } finally {
         backfillInFlight.current = false;
       }
@@ -253,20 +278,22 @@ export function DataProvider({ children }: PropsWithChildren) {
       const previousSignature = lastSyncedRagDocs.current.get(document.id);
       return current ? current.signature !== previousSignature : false;
     });
-    const removedIds = Array.from(lastSyncedRagDocs.current.keys()).filter((id) => !ragDocumentMap.has(id));
+    const removedIds = Array.from(lastSyncedRagDocs.current.keys()).filter(
+      (id) => !ragDocumentMap.has(id)
+    );
     const totalOperations = changedDocuments.length + removedIds.length;
 
     if (totalOperations === 0) {
       setRagSync((prev) =>
-        prev.status === 'idle'
+        prev.status === "idle"
           ? prev
           : {
-              status: 'idle',
+              status: "idle",
               progressPct: 100,
-              statusText: 'Insights index is ready',
+              statusText: "Insights index is ready",
               isChatAvailable: true,
-              lastError: '',
-            },
+              lastError: "",
+            }
       );
       return;
     }
@@ -275,15 +302,15 @@ export function DataProvider({ children }: PropsWithChildren) {
       documents: RagDocument[],
       idsToRemove: string[],
       operationTotal: number,
-      version: number,
+      version: number
     ) => {
       ragSyncInFlight.current = true;
       setRagSync({
-        status: 'syncing',
+        status: "syncing",
         progressPct: 0,
-        statusText: 'Syncing insights index... 0%',
+        statusText: "Syncing insights index... 0%",
         isChatAvailable: false,
-        lastError: '',
+        lastError: "",
       });
 
       const batches = chunkArray(documents, RAG_SYNC_BATCH_SIZE);
@@ -300,13 +327,16 @@ export function DataProvider({ children }: PropsWithChildren) {
             totalOperations: operationTotal,
           });
           processedSoFar += result.processed;
-          const progressPct = operationTotal > 0 ? Math.min(100, Math.round((processedSoFar / operationTotal) * 100)) : 100;
+          const progressPct =
+            operationTotal > 0
+              ? Math.min(100, Math.round((processedSoFar / operationTotal) * 100))
+              : 100;
           setRagSync({
-            status: 'syncing',
+            status: "syncing",
             progressPct,
             statusText: `Syncing insights index... ${progressPct}%`,
             isChatAvailable: false,
-            lastError: '',
+            lastError: "",
           });
         } else {
           for (let index = 0; index < batches.length; index += 1) {
@@ -318,13 +348,16 @@ export function DataProvider({ children }: PropsWithChildren) {
               totalOperations: operationTotal,
             });
             processedSoFar += result.processed;
-            const progressPct = operationTotal > 0 ? Math.min(100, Math.round((processedSoFar / operationTotal) * 100)) : 100;
+            const progressPct =
+              operationTotal > 0
+                ? Math.min(100, Math.round((processedSoFar / operationTotal) * 100))
+                : 100;
             setRagSync({
-              status: 'syncing',
+              status: "syncing",
               progressPct,
               statusText: `Syncing insights index... ${progressPct}%`,
               isChatAvailable: false,
-              lastError: '',
+              lastError: "",
             });
           }
         }
@@ -343,22 +376,22 @@ export function DataProvider({ children }: PropsWithChildren) {
               lastSyncedRagDocs.current.delete(id);
             });
             setRagSync({
-              status: 'idle',
+              status: "idle",
               progressPct: 100,
-              statusText: 'Insights index is ready',
+              statusText: "Insights index is ready",
               isChatAvailable: true,
-              lastError: '',
+              lastError: "",
             });
           }
         })
         .catch((error) => {
-          console.error('RAG index sync failed', error);
+          console.error("RAG index sync failed", error);
           setRagSync({
-            status: 'error',
+            status: "error",
             progressPct: 100,
-            statusText: 'Insights sync failed',
+            statusText: "Insights sync failed",
             isChatAvailable: true,
-            lastError: error instanceof Error ? error.message : 'Insights sync failed',
+            lastError: error instanceof Error ? error.message : "Insights sync failed",
           });
         })
         .finally(() => {
@@ -370,15 +403,20 @@ export function DataProvider({ children }: PropsWithChildren) {
             ragSyncVersion.current += 1;
             const queuedVersion = ragSyncVersion.current;
             setRagSync({
-              status: 'scheduled',
+              status: "scheduled",
               progressPct: 0,
-              statusText: 'Insights sync queued...',
+              statusText: "Insights sync queued...",
               isChatAvailable: false,
-              lastError: '',
+              lastError: "",
             });
             ragSyncTimer.current = setTimeout(() => {
               ragSyncTimer.current = null;
-              runSync(queued.changedDocuments, queued.removedIds, queued.totalOperations, queuedVersion);
+              runSync(
+                queued.changedDocuments,
+                queued.removedIds,
+                queued.totalOperations,
+                queuedVersion
+              );
             }, 1000);
           }
         });
@@ -394,11 +432,11 @@ export function DataProvider({ children }: PropsWithChildren) {
     }
 
     setRagSync({
-      status: 'scheduled',
+      status: "scheduled",
       progressPct: 0,
-      statusText: 'Insights sync scheduled...',
+      statusText: "Insights sync scheduled...",
       isChatAvailable: false,
-      lastError: '',
+      lastError: "",
     });
 
     ragSyncTimer.current = setTimeout(() => {
@@ -424,17 +462,19 @@ export function DataProvider({ children }: PropsWithChildren) {
   }, [authLoading, loading, ragDocumentMap, ragDocuments, services, user]);
 
   function getAvailableCategoryNames() {
-    const categoryNames = (categories.length > 0 ? categories : DEFAULT_CATEGORIES).map((category) => category.name);
+    const categoryNames = (categories.length > 0 ? categories : DEFAULT_CATEGORIES).map(
+      (category) => category.name
+    );
     return Array.from(new Set(categoryNames));
   }
 
   async function categorizeIfNeeded(
-    transaction: Omit<Transaction, 'id'>,
-    mode: 'manual' | 'imported',
-  ): Promise<Omit<Transaction, 'id'>> {
+    transaction: Omit<Transaction, "id">,
+    mode: "manual" | "imported"
+  ): Promise<Omit<Transaction, "id">> {
     const baseTransaction = {
       ...transaction,
-      notes: transaction.notes ?? '',
+      notes: transaction.notes ?? "",
     };
 
     if (baseTransaction.category && baseTransaction.category !== AUTO_CATEGORY_PLACEHOLDER) {
@@ -461,7 +501,7 @@ export function DataProvider({ children }: PropsWithChildren) {
       return {
         ...baseTransaction,
         category: AUTO_CATEGORY_PLACEHOLDER,
-        categorySource: 'auto-ai',
+        categorySource: "auto-ai",
         categoryConfidence: 0,
         categoryNeedsReview: true,
       };
@@ -478,16 +518,16 @@ export function DataProvider({ children }: PropsWithChildren) {
   }
 
   async function categorizeManyIfNeeded(
-    newTransactions: Omit<Transaction, 'id'>[],
-  ): Promise<Omit<Transaction, 'id'>[]> {
+    newTransactions: Omit<Transaction, "id">[]
+  ): Promise<Omit<Transaction, "id">[]> {
     const prepared = newTransactions.map((transaction) => ({
       ...transaction,
-      notes: transaction.notes ?? '',
+      notes: transaction.notes ?? "",
     }));
 
     const pendingIndices = prepared
       .map((transaction, index) =>
-        !transaction.category || transaction.category === AUTO_CATEGORY_PLACEHOLDER ? index : -1,
+        !transaction.category || transaction.category === AUTO_CATEGORY_PLACEHOLDER ? index : -1
       )
       .filter((index) => index >= 0);
 
@@ -495,11 +535,11 @@ export function DataProvider({ children }: PropsWithChildren) {
       transaction.category && transaction.category !== AUTO_CATEGORY_PLACEHOLDER
         ? {
             ...transaction,
-            categorySource: 'imported' as const,
+            categorySource: "imported" as const,
             categoryConfidence: 1,
             categoryNeedsReview: false,
           }
-        : transaction,
+        : transaction
     );
 
     if (pendingIndices.length === 0) {
@@ -529,7 +569,7 @@ export function DataProvider({ children }: PropsWithChildren) {
         : {
             ...prepared[transactionIndex],
             category: AUTO_CATEGORY_PLACEHOLDER,
-            categorySource: 'auto-ai',
+            categorySource: "auto-ai",
             categoryConfidence: 0,
             categoryNeedsReview: true,
           };
@@ -538,13 +578,18 @@ export function DataProvider({ children }: PropsWithChildren) {
     return categorized;
   }
 
-  async function addTransaction(transaction: Omit<Transaction, 'id'>) {
+  async function addTransaction(transaction: Omit<Transaction, "id">) {
     if (!user) return;
-    const hadExplicitCategory = !!transaction.category && transaction.category !== AUTO_CATEGORY_PLACEHOLDER;
-    const prepared = await categorizeIfNeeded(transaction, 'manual');
+    const hadExplicitCategory =
+      !!transaction.category && transaction.category !== AUTO_CATEGORY_PLACEHOLDER;
+    const prepared = await categorizeIfNeeded(transaction, "manual");
     await services.dataStore.addTransaction(user.id, prepared as never);
 
-    if (hadExplicitCategory && prepared.category && prepared.category !== AUTO_CATEGORY_PLACEHOLDER) {
+    if (
+      hadExplicitCategory &&
+      prepared.category &&
+      prepared.category !== AUTO_CATEGORY_PLACEHOLDER
+    ) {
       await services.categorization.learnMerchantCategory({
         merchant: prepared.merchant,
         category: prepared.category,
@@ -562,7 +607,9 @@ export function DataProvider({ children }: PropsWithChildren) {
     await services.dataStore.deleteTransaction(user.id, id);
   }
 
-  async function importTransactions(newTransactions: Omit<Transaction, 'id'>[]): Promise<ImportTransactionsResult> {
+  async function importTransactions(
+    newTransactions: Omit<Transaction, "id">[]
+  ): Promise<ImportTransactionsResult> {
     if (!user || newTransactions.length === 0) {
       return { imported: 0, skippedDuplicates: 0 };
     }
@@ -575,7 +622,9 @@ export function DataProvider({ children }: PropsWithChildren) {
     }
 
     const preparedTransactions = await categorizeManyIfNeeded(unique);
-    await Promise.all(preparedTransactions.map((tx) => services.dataStore.addTransaction(user.id, tx as never)));
+    await Promise.all(
+      preparedTransactions.map((tx) => services.dataStore.addTransaction(user.id, tx as never))
+    );
 
     const rememberedPairs = Array.from(
       new Map(
@@ -584,10 +633,10 @@ export function DataProvider({ children }: PropsWithChildren) {
             (transaction) =>
               transaction.category &&
               transaction.category !== AUTO_CATEGORY_PLACEHOLDER &&
-              transaction.categorySource === 'imported',
+              transaction.categorySource === "imported"
           )
-          .map((transaction) => [`${transaction.merchant}::${transaction.category}`, transaction]),
-      ).values(),
+          .map((transaction) => [`${transaction.merchant}::${transaction.category}`, transaction])
+      ).values()
     );
 
     await Promise.all(
@@ -595,14 +644,14 @@ export function DataProvider({ children }: PropsWithChildren) {
         services.categorization.learnMerchantCategory({
           merchant: transaction.merchant,
           category: transaction.category,
-        }),
-      ),
+        })
+      )
     );
 
     return { imported: preparedTransactions.length, skippedDuplicates: duplicateCount };
   }
 
-  async function addBudget(budget: Omit<Budget, 'id'>) {
+  async function addBudget(budget: Omit<Budget, "id">) {
     if (!user) return;
     await services.dataStore.addBudget(user.id, budget as never);
   }
@@ -617,7 +666,7 @@ export function DataProvider({ children }: PropsWithChildren) {
     await services.dataStore.deleteBudget(user.id, id);
   }
 
-  async function addGoal(goal: Omit<Goal, 'id'>) {
+  async function addGoal(goal: Omit<Goal, "id">) {
     if (!user) return;
     await services.dataStore.addGoal(user.id, goal as never);
   }
@@ -632,7 +681,7 @@ export function DataProvider({ children }: PropsWithChildren) {
     await services.dataStore.deleteGoal(user.id, id);
   }
 
-  async function addCategory(category: Omit<Category, 'id'>) {
+  async function addCategory(category: Omit<Category, "id">) {
     if (!user) return;
     await services.dataStore.addCategory(user.id, category as never);
   }
@@ -647,8 +696,8 @@ export function DataProvider({ children }: PropsWithChildren) {
           name: category.name,
           color: category.color,
           icon: category.icon,
-        }),
-      ),
+        })
+      )
     );
   }
 
@@ -673,7 +722,7 @@ export function DataProvider({ children }: PropsWithChildren) {
       importTransactions,
       clearAllData,
     }),
-    [budgets, categories, goals, loading, ragSync, transactions],
+    [budgets, categories, goals, loading, ragSync, transactions]
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
@@ -682,7 +731,7 @@ export function DataProvider({ children }: PropsWithChildren) {
 export function useData() {
   const context = useContext(DataContext);
   if (!context) {
-    throw new Error('useData must be used within DataProvider');
+    throw new Error("useData must be used within DataProvider");
   }
   return context;
 }

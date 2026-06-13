@@ -1,7 +1,7 @@
-import { Text, View } from 'react-native';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies, type SectionTone } from '@/theme/tokens';
-import { FittedValueText } from '@/components/data/fitted-value-text';
+import { Text, View } from "react-native";
+import { FittedValueText } from "@/components/data/fitted-value-text";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies, type SectionTone } from "@/theme/tokens";
 
 interface StatCardProps {
   label: string;

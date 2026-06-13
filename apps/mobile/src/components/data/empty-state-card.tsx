@@ -1,13 +1,21 @@
-import { Text, View } from 'react-native';
-import type { PropsWithChildren } from 'react';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies } from '@/theme/tokens';
+import type { PropsWithChildren, ReactNode } from "react";
+import { Text, View } from "react-native";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
-export function EmptyStateCard({ title, description, children }: PropsWithChildren<{ title: string; description: string }>) {
+export function EmptyStateCard({
+  title,
+  description,
+  icon,
+  children,
+}: PropsWithChildren<{ title: string; description: string; icon?: ReactNode }>) {
   const { colors } = useAppTheme();
 
   return (
     <View className="items-center rounded-xl px-6 py-8" style={{ backgroundColor: colors.card }}>
+      {icon ? (
+        <View className="mb-3 items-center justify-center opacity-40">{icon}</View>
+      ) : null}
       <Text
         className="text-center text-[16px]"
         style={{ color: colors.foreground, fontFamily: fontFamilies.sans.semibold }}

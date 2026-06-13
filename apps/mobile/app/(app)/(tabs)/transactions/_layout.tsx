@@ -1,6 +1,6 @@
-import { Stack } from 'expo-router';
-import { useAppTheme } from '@/providers/theme-provider';
-import { largeTitleScreenOptions } from '@/lib/navigation';
+import { Stack } from "expo-router";
+import { largeTitleScreenOptions } from "@/lib/navigation";
+import { useAppTheme } from "@/providers/theme-provider";
 
 export default function TransactionsStackLayout() {
   const { colors } = useAppTheme();
@@ -10,7 +10,7 @@ export default function TransactionsStackLayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: 'Transactions',
+          title: "Transactions",
         }}
       />
     </Stack>

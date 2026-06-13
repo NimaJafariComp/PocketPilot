@@ -1,7 +1,7 @@
-import { Text, View } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies } from '@/theme/tokens';
+import { Text, View } from "react-native";
+import Svg, { Circle } from "react-native-svg";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 interface DonutChartSegment {
   label: string;

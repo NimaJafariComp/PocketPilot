@@ -1,50 +1,61 @@
-import { Pressable, Text, TextInput, View } from 'react-native';
-import { useMemo, useState } from 'react';
-import { useRouter } from 'expo-router';
-import { DatabaseZap, FileSpreadsheet, FileUp, TriangleAlert } from 'lucide-react-native';
-import Papa from 'papaparse';
 import {
   detectCsvTransactionColumns,
   generateSampleBudgets,
   generateSampleGoals,
   generateSampleTransactions,
   parseCsvTransactionRow,
-} from '@pocketpilot/core';
-import { useData } from '@pocketpilot/services/src/react';
-import { Screen } from '@/components/screen';
-import { EmptyStateCard } from '@/components/data/empty-state-card';
-import { KeyValueRow } from '@/components/data/key-value-row';
-import { SectionCard } from '@/components/data/section-card';
-import { StackScreenScroll } from '@/components/stack-screen-scroll';
-import { useAppTheme } from '@/providers/theme-provider';
-import { mobileServices } from '@/config/services';
-import { hapticSuccess } from '@/lib/haptics';
+} from "@pocketpilot/core";
+import { useData } from "@pocketpilot/services/src/react";
+import { useRouter } from "expo-router";
+import {
+  DatabaseZap,
+  FileSpreadsheet,
+  FileUp,
+  Plus,
+  TriangleAlert,
+  X,
+} from "lucide-react-native";
+import Papa from "papaparse";
+import { useMemo, useState } from "react";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { EmptyStateCard } from "@/components/data/empty-state-card";
+import { SectionCard } from "@/components/data/section-card";
+import { Screen } from "@/components/screen";
+import { StackScreenScroll } from "@/components/stack-screen-scroll";
+import { mobileServices } from "@/config/services";
+import { hapticSuccess } from "@/lib/haptics";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 type ParsedRow = Record<string, string>;
 
+interface CsvFile {
+  name: string;
+  rows: ParsedRow[];
+  account: string;
+}
+
 export default function ImportScreen() {
   const router = useRouter();
-  const { importTransactions, addBudget, addGoal } = useData();
+  const { importTransactions, addBudget, addGoal, transactions } = useData();
   const { colors } = useAppTheme();
-  const [fileName, setFileName] = useState('');
-  const [accountName, setAccountName] = useState('');
-  const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
-  const [error, setError] = useState('');
+  const [files, setFiles] = useState<CsvFile[]>([]);
+  const [error, setError] = useState("");
   const [isPickingFile, setIsPickingFile] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isLoadingSampleData, setIsLoadingSampleData] = useState(false);
 
-  const preview = useMemo(() => parsedRows.slice(0, 5), [parsedRows]);
+  const allRows = useMemo(() => files.flatMap((f) => f.rows), [files]);
+  const totalFiles = files.length;
+  const totalRows = allRows.length;
 
   async function handlePickFile() {
     setIsPickingFile(true);
-    setError('');
+    setError("");
 
     try {
       const pickedFile = await mobileServices.fileImport.pickCsvFile();
-      if (!pickedFile) {
-        return;
-      }
+      if (!pickedFile) return;
 
       const csvText = await pickedFile.text();
       Papa.parse(csvText, {
@@ -52,95 +63,117 @@ export default function ImportScreen() {
         skipEmptyLines: true,
         complete: (results) => {
           if (results.errors.length > 0) {
-            setError(results.errors.slice(0, 3).map((nextError) => `Row ${nextError.row ?? '?'}: ${nextError.message}`).join('\n'));
-            setParsedRows([]);
-            setFileName('');
+            setError(
+              results.errors
+                .slice(0, 3)
+                .map((e) => `Row ${e.row ?? "?"}: ${e.message}`)
+                .join("\n")
+            );
             return;
           }
 
           const nextRows = (results.data as ParsedRow[]).filter((row) =>
-            Object.values(row).some((value) => String(value || '').trim() !== ''),
+            Object.values(row).some((v) => String(v || "").trim() !== "")
           );
 
           if (nextRows.length === 0) {
-            setError('This CSV file did not contain any usable rows.');
-            setParsedRows([]);
-            setFileName('');
+            setError(`"${pickedFile.name}" contains no usable rows.`);
             return;
           }
 
-          setFileName(pickedFile.name);
-          setAccountName((current) => current || pickedFile.name.replace(/\.[^.]+$/, ''));
-          setParsedRows(nextRows);
+          const defaultAccount = pickedFile.name.replace(/\.[^.]+$/, "");
+          setFiles((current) => [
+            ...current,
+            { name: pickedFile.name, rows: nextRows, account: defaultAccount },
+          ]);
         },
-        error: (nextError: { message?: string }) => {
-          setError(nextError.message || 'Failed to parse the selected CSV file.');
-          setParsedRows([]);
-          setFileName('');
+        error: (e: { message?: string }) => {
+          setError(e.message || `Failed to parse "${pickedFile.name}".`);
         },
       });
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Failed to pick a CSV file.');
-      setParsedRows([]);
-      setFileName('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to pick a CSV file.");
     } finally {
       setIsPickingFile(false);
     }
   }
 
+  function handleRemoveFile(index: number) {
+    setFiles((current) => current.filter((_, i) => i !== index));
+  }
+
+  function handleUpdateAccount(index: number, account: string) {
+    setFiles((current) =>
+      current.map((f, i) => (i === index ? { ...f, account } : f))
+    );
+  }
+
   async function handleImport() {
-    if (parsedRows.length === 0 || isImporting) {
-      return;
-    }
+    if (allRows.length === 0 || isImporting) return;
 
     setIsImporting(true);
-    setError('');
+    setError("");
 
     try {
-      const headers = Object.keys(parsedRows[0] || {});
-      const mapping = detectCsvTransactionColumns(headers);
-
-      if (!mapping.date || !mapping.merchant || (!mapping.amount && !mapping.debit && !mapping.credit)) {
-        throw new Error('CSV must include recognizable date, merchant, and amount or debit/credit columns.');
-      }
-
       const importErrors: string[] = [];
-      const fallbackAccount = accountName.trim();
-      const transactions = parsedRows.map((row, index) => {
-        const result = parseCsvTransactionRow(row, mapping, index + 1, { fallbackAccount });
-        importErrors.push(...result.errors);
-        return result.transaction;
+      const transactions = files.flatMap(({ rows, account }) => {
+        const headers = Object.keys(rows[0] || {});
+        const mapping = detectCsvTransactionColumns(headers);
+
+        if (
+          !mapping.date ||
+          !mapping.merchant ||
+          (!mapping.amount && !mapping.debit && !mapping.credit)
+        ) {
+          throw new Error(
+            `"${account}": CSV must have recognizable date, merchant, and amount/debit/credit columns.`
+          );
+        }
+
+        return rows.map((row, index) => {
+          const result = parseCsvTransactionRow(row, mapping, index + 1, {
+            fallbackAccount: account.trim(),
+          });
+          importErrors.push(...result.errors);
+          return result.transaction;
+        });
       });
 
       if (importErrors.length > 0) {
-        throw new Error(importErrors.slice(0, 3).join('\n'));
+        throw new Error(importErrors.slice(0, 3).join("\n"));
       }
 
       const result = await importTransactions(transactions);
       hapticSuccess();
       const summary =
         result.imported > 0
-          ? `Imported ${result.imported} new transaction${result.imported === 1 ? '' : 's'}.`
-          : 'No new transactions found.';
+          ? `Imported ${result.imported} new transaction${result.imported === 1 ? "" : "s"} from ${totalFiles} file${totalFiles === 1 ? "" : "s"}.`
+          : "No new transactions found.";
       const duplicateNote =
         result.skippedDuplicates > 0
-          ? ` Skipped ${result.skippedDuplicates} duplicate${result.skippedDuplicates === 1 ? '' : 's'} already in your workspace.`
-          : '';
-      await mobileServices.dialog.alert(`${summary}${duplicateNote}`, 'Import Complete');
-      router.replace('/transactions');
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Import failed.');
+          ? ` Skipped ${result.skippedDuplicates} duplicate${result.skippedDuplicates === 1 ? "" : "s"}.`
+          : "";
+      await mobileServices.dialog.alert(`${summary}${duplicateNote}`, "Import Complete");
+      router.replace("/transactions");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Import failed.");
     } finally {
       setIsImporting(false);
     }
   }
 
   async function handleLoadSampleData() {
-    if (isLoadingSampleData) {
-      return;
+    if (isLoadingSampleData) return;
+
+    if (transactions.length > 0) {
+      const confirmed = await mobileServices.dialog.confirm(
+        `You already have ${transactions.length} transaction${transactions.length === 1 ? "" : "s"}. Loading sample data will add 50 more random transactions on top. Continue?`,
+        "Add sample data?"
+      );
+      if (!confirmed) return;
     }
 
-    setError('');
+    setError("");
     setIsLoadingSampleData(true);
 
     try {
@@ -155,11 +188,11 @@ export default function ImportScreen() {
       hapticSuccess();
       await mobileServices.dialog.alert(
         `Loaded ${sampleTransactions.length} sample transactions, ${sampleBudgets.length} budgets, and ${sampleGoals.length} goals.`,
-        'Sample workspace ready',
+        "Sample workspace ready"
       );
-      router.replace('/(app)/(tabs)/dashboard');
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Failed to load sample data.');
+      router.replace("/(app)/(tabs)/dashboard");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load sample data.");
     } finally {
       setIsLoadingSampleData(false);
     }
@@ -168,9 +201,14 @@ export default function ImportScreen() {
   return (
     <Screen>
       <StackScreenScroll>
+        {/* Add file button */}
         <SectionCard
-          title="Pick a CSV file"
-          subtitle="The file picker comes from the shared mobile services adapter and keeps import logic out of the UI layer."
+          title={totalFiles === 0 ? "Pick CSV files" : "Add another file"}
+          subtitle={
+            totalFiles === 0
+              ? "Add one or more bank statements — each file gets its own account label."
+              : `${totalFiles} file${totalFiles === 1 ? "" : "s"} loaded, ${totalRows} rows total.`
+          }
         >
           <Pressable
             className="flex-row items-center justify-center gap-2 rounded-xl px-4 py-4"
@@ -178,16 +216,74 @@ export default function ImportScreen() {
             onPress={handlePickFile}
             disabled={isPickingFile}
           >
-            <FileSpreadsheet size={18} color={colors.primaryForeground} strokeWidth={2.2} />
-            <Text className="text-sm font-semibold" style={{ color: colors.primaryForeground }}>
-              {isPickingFile ? 'Picking file...' : 'Choose CSV'}
+            {totalFiles === 0 ? (
+              <FileSpreadsheet size={18} color={colors.primaryForeground} strokeWidth={2.2} />
+            ) : (
+              <Plus size={18} color={colors.primaryForeground} strokeWidth={2.2} />
+            )}
+            <Text
+              className="text-[16px]"
+              style={{ color: colors.primaryForeground, fontFamily: fontFamilies.sans.semibold }}
+            >
+              {isPickingFile ? "Picking file..." : totalFiles === 0 ? "Choose CSV" : "Add CSV"}
             </Text>
           </Pressable>
         </SectionCard>
 
+        {/* Loaded files list */}
+        {files.length > 0 && (
+          <SectionCard
+            title="Files to import"
+            subtitle="Edit account labels to keep statements from different banks separate."
+          >
+            <View className="gap-3">
+              {files.map((file, index) => (
+                <View
+                  key={`${file.name}-${index}`}
+                  className="rounded-xl border px-4 py-3 gap-2"
+                  style={{ backgroundColor: colors.card, borderColor: colors.border }}
+                >
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-1 flex-row items-center gap-2">
+                      <FileSpreadsheet size={14} color={colors.mutedForeground} strokeWidth={2} />
+                      <Text
+                        className="text-[14px] flex-1"
+                        numberOfLines={1}
+                        style={{ color: colors.foreground, fontFamily: fontFamilies.sans.medium }}
+                      >
+                        {file.name}
+                      </Text>
+                    </View>
+                    <View className="flex-row items-center gap-2">
+                      <Text className="text-[12px]" style={{ color: colors.mutedForeground }}>
+                        {file.rows.length} rows
+                      </Text>
+                      <Pressable
+                        onPress={() => handleRemoveFile(index)}
+                        hitSlop={8}
+                      >
+                        <X size={16} color={colors.mutedForeground} strokeWidth={2} />
+                      </Pressable>
+                    </View>
+                  </View>
+                  <TextInput
+                    value={file.account}
+                    onChangeText={(text) => handleUpdateAccount(index, text)}
+                    placeholder="Account label (e.g. Chase Checking)"
+                    placeholderTextColor={colors.mutedForeground}
+                    className="rounded-lg px-3 py-2 text-[14px]"
+                    style={{ backgroundColor: colors.glass, color: colors.foreground }}
+                  />
+                </View>
+              ))}
+            </View>
+          </SectionCard>
+        )}
+
+        {/* Sample data */}
         <SectionCard
           title="Try sample data"
-          subtitle="Load a realistic PocketPilot workspace with transactions, budgets, and goals so the app is explorable right away."
+          subtitle="Load a realistic PocketPilot workspace with transactions, budgets, and goals."
         >
           <Pressable
             className="flex-row items-center justify-center gap-2 rounded-xl px-4 py-4"
@@ -196,12 +292,16 @@ export default function ImportScreen() {
             disabled={isLoadingSampleData}
           >
             <DatabaseZap size={18} color={colors.secondaryForeground} strokeWidth={2.2} />
-            <Text className="text-sm font-semibold" style={{ color: colors.secondaryForeground }}>
-              {isLoadingSampleData ? 'Loading sample data...' : 'Load sample workspace'}
+            <Text
+              className="text-[16px]"
+              style={{ color: colors.secondaryForeground, fontFamily: fontFamilies.sans.semibold }}
+            >
+              {isLoadingSampleData ? "Loading..." : "Load sample workspace"}
             </Text>
           </Pressable>
         </SectionCard>
 
+        {/* Error */}
         {error ? (
           <EmptyStateCard title="Import issue" description={error}>
             <View className="flex-row items-center gap-2">
@@ -213,68 +313,36 @@ export default function ImportScreen() {
           </EmptyStateCard>
         ) : null}
 
-        {parsedRows.length > 0 ? (
-          <>
-            <SectionCard
-              title="Preview"
-              subtitle={`${parsedRows.length} rows detected in ${fileName}`}
+        {/* Import button */}
+        {totalRows > 0 ? (
+          <SectionCard
+            title="Import into PocketPilot"
+            subtitle="Duplicates are skipped automatically."
+          >
+            <Pressable
+              className="flex-row items-center justify-center gap-2 rounded-xl px-4 py-4"
+              style={{ backgroundColor: colors.primary }}
+              onPress={handleImport}
+              disabled={isImporting}
             >
-              <View className="gap-3">
-                {preview.map((row, index) => (
-                  <View
-                    key={`${index}-${Object.values(row).join('-')}`}
-                    className="rounded-xl border px-4 py-4"
-                    style={{
-                      backgroundColor: colors.card,
-                      borderColor: colors.border,
-                    }}
-                  >
-                    {Object.entries(row)
-                      .slice(0, 4)
-                      .map(([label, value]) => (
-                        <KeyValueRow key={label} label={label} value={String(value || '')} emphasizeLabel={false} />
-                      ))}
-                  </View>
-                ))}
-              </View>
-            </SectionCard>
-
-            <SectionCard
-              title="Account"
-              subtitle="Detected automatically when the CSV has an account/card column; otherwise every imported row gets this label. Keeps statements from different banks separate."
-            >
-              <TextInput
-                value={accountName}
-                onChangeText={setAccountName}
-                placeholder="e.g. Chase Checking"
-                placeholderTextColor={colors.mutedForeground}
-                className="rounded-xl px-4 py-3 text-[16px]"
-                style={{ backgroundColor: colors.glass, color: colors.foreground }}
-              />
-            </SectionCard>
-
-            <SectionCard
-              title="Import into PocketPilot"
-              subtitle="Rows will be normalized, categorized through the shared layer, and added to your live transaction feed."
-            >
-              <Pressable
-                className="flex-row items-center justify-center gap-2 rounded-xl px-4 py-4"
-                style={{ backgroundColor: colors.primary }}
-                onPress={handleImport}
-                disabled={isImporting}
+              <FileUp size={18} color={colors.primaryForeground} strokeWidth={2.2} />
+              <Text
+                className="text-[16px]"
+                style={{ color: colors.primaryForeground, fontFamily: fontFamilies.sans.semibold }}
               >
-                <FileUp size={18} color={colors.primaryForeground} strokeWidth={2.2} />
-                <Text className="text-sm font-semibold" style={{ color: colors.primaryForeground }}>
-                  {isImporting ? 'Importing...' : `Import ${parsedRows.length} rows`}
-                </Text>
-              </Pressable>
-            </SectionCard>
-          </>
+                {isImporting
+                  ? "Importing..."
+                  : `Import ${totalRows} rows from ${totalFiles} file${totalFiles === 1 ? "" : "s"}`}
+              </Text>
+            </Pressable>
+          </SectionCard>
         ) : (
-          <EmptyStateCard
-            title="No file selected"
-            description="Choose a CSV or load the sample workspace to explore the mobile app with realistic data."
-          />
+          !error && (
+            <EmptyStateCard
+              title="No files selected"
+              description="Add CSV files or load the sample workspace to get started."
+            />
+          )
         )}
       </StackScreenScroll>
     </Screen>

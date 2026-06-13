@@ -1,34 +1,32 @@
-import { useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth } from '@pocketpilot/services/src/react';
-import { AuthErrorBanner } from '@/components/auth/auth-error-banner';
-import { AuthField } from '@/components/auth/auth-field';
-import { AuthScreenShell } from '@/components/auth/auth-screen-shell';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies } from '@/theme/tokens';
+import { useAuth } from "@pocketpilot/services/src/react";
+import { useRouter } from "expo-router";
+import { useMemo, useState } from "react";
+import { Pressable, Text, View } from "react-native";
+import { AuthErrorBanner } from "@/components/auth/auth-error-banner";
+import { AuthField } from "@/components/auth/auth-field";
+import { AuthScreenShell } from "@/components/auth/auth-screen-shell";
+import { fontFamilies } from "@/theme/tokens";
 
 export default function SignInScreen() {
-  const { colors } = useAppTheme();
   const router = useRouter();
   const { signIn } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const emailError = useMemo(() => {
     if (!email) {
-      return '';
+      return "";
     }
-    return /\S+@\S+\.\S+/.test(email) ? '' : 'Enter a valid email address.';
+    return /\S+@\S+\.\S+/.test(email) ? "" : "Enter a valid email address.";
   }, [email]);
 
   const passwordError = useMemo(() => {
     if (!password) {
-      return '';
+      return "";
     }
-    return password.length >= 6 ? '' : 'Password must be at least 6 characters.';
+    return password.length >= 6 ? "" : "Password must be at least 6 characters.";
   }, [password]);
 
   const isDisabled = isSubmitting || !email || !password || !!emailError || !!passwordError;
@@ -39,13 +37,13 @@ export default function SignInScreen() {
     }
 
     setIsSubmitting(true);
-    setError('');
+    setError("");
 
     try {
       await signIn(email.trim(), password);
-      router.replace('/(app)/(tabs)/dashboard');
+      router.replace("/(app)/(tabs)/dashboard");
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Sign in failed.');
+      setError(nextError instanceof Error ? nextError.message : "Sign in failed.");
     } finally {
       setIsSubmitting(false);
     }
@@ -60,9 +58,9 @@ export default function SignInScreen() {
       brandFontFamily={fontFamilies.serif.semibold}
       titleFontFamily={fontFamilies.serif.semibold}
       panelStyle={{
-        backgroundColor: 'rgba(255, 255, 255, 0.14)',
-        borderColor: 'rgba(203, 233, 255, 0.38)',
-        shadowColor: 'rgba(120, 200, 230, 0.35)',
+        backgroundColor: "rgba(255, 255, 255, 0.14)",
+        borderColor: "rgba(203, 233, 255, 0.38)",
+        shadowColor: "rgba(120, 200, 230, 0.35)",
         shadowRadius: 24,
         shadowOffset: { width: 0, height: 12 },
       }}
@@ -102,20 +100,22 @@ export default function SignInScreen() {
       <Pressable
         className="mt-6 rounded-xl px-5 py-4"
         style={{
-          backgroundColor: isDisabled ? 'rgba(255, 255, 255, 0.12)' : '#0A84FF',
+          backgroundColor: isDisabled ? "rgba(255, 255, 255, 0.12)" : "#0A84FF",
           opacity: isSubmitting ? 0.8 : 1,
         }}
         disabled={isDisabled}
         onPress={handleSubmit}
       >
         <Text
-          className="text-center text-base font-semibold"
-          style={{ color: isDisabled ? 'rgba(235, 235, 245, 0.45)' : '#FFFFFF' }}
+          className="text-center text-[16px]"
+          style={{
+            color: isDisabled ? "rgba(235, 235, 245, 0.45)" : "#FFFFFF",
+            fontFamily: fontFamilies.sans.semibold,
+          }}
         >
-          {isSubmitting ? 'Signing in...' : 'Sign in'}
+          {isSubmitting ? "Signing in..." : "Sign in"}
         </Text>
       </Pressable>
-
     </AuthScreenShell>
   );
 }

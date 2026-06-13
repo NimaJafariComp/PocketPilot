@@ -1,14 +1,14 @@
-import { initializeApp, getApps, type FirebaseOptions } from 'firebase/app';
-import { connectAuthEmulator, getAuth } from 'firebase/auth';
-import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
-import { createAuthFirebaseWeb } from '../web/auth.firebase.web';
-import { createDataStoreFirestoreWeb } from '../web/data-store.firestore.web';
-import { fileImportWeb } from '../web/file-import.web';
-import { exportWeb } from '../web/export.web';
-import { dialogWeb } from '../web/dialog.web';
-import { createRagHttpWeb } from '../web/rag.http.web';
-import { createCategorizationHttpWeb } from '../web/categorization.http.web';
-import type { PocketPilotServices } from '../types';
+import { type FirebaseOptions, getApps, initializeApp } from "firebase/app";
+import { connectAuthEmulator, getAuth } from "firebase/auth";
+import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
+import type { PocketPilotServices } from "../types";
+import { createAuthFirebaseWeb } from "../web/auth.firebase.web";
+import { createCategorizationHttpWeb } from "../web/categorization.http.web";
+import { createDataStoreFirestoreWeb } from "../web/data-store.firestore.web";
+import { dialogWeb } from "../web/dialog.web";
+import { exportWeb } from "../web/export.web";
+import { fileImportWeb } from "../web/file-import.web";
+import { createRagHttpWeb } from "../web/rag.http.web";
 
 export interface WebServicesConfig {
   firebaseConfig: FirebaseOptions;
@@ -27,19 +27,19 @@ export function createWebServices(config: WebServicesConfig): PocketPilotService
   const dbSdk = getFirestore(app);
 
   if (config.useEmulators) {
-    connectAuthEmulator(authSdk, config.authEmulatorUrl || 'http://127.0.0.1:9099', {
+    connectAuthEmulator(authSdk, config.authEmulatorUrl || "http://127.0.0.1:9099", {
       disableWarnings: true,
     });
     connectFirestoreEmulator(
       dbSdk,
-      config.firestoreEmulatorHost || '127.0.0.1',
-      config.firestoreEmulatorPort || 8080,
+      config.firestoreEmulatorHost || "127.0.0.1",
+      config.firestoreEmulatorPort || 8080
     );
   }
 
   const auth = createAuthFirebaseWeb(authSdk);
-  const categorizationBaseUrl = config.categorizationServiceUrl || config.functionsBaseUrl || '';
-  const ragBaseUrl = config.ragServiceUrl || config.functionsBaseUrl || '';
+  const categorizationBaseUrl = config.categorizationServiceUrl || config.functionsBaseUrl || "";
+  const ragBaseUrl = config.ragServiceUrl || config.functionsBaseUrl || "";
 
   return {
     auth,

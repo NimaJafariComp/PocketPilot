@@ -1,1 +1,23 @@
-{"rustc":15541343239192488793,"features":"[\"zerovec\"]","declared_features":"[\"alloc\", \"databake\", \"default\", \"serde\", \"std\", \"zerovec\"]","target":161691779326313357,"profile":4972266810624584510,"path":7938766442640078900,"deps":[[5298260564258778412,"displaydoc",false,16603748119199032287],[9119616491714376884,"zerovec",false,1152707842458456173]],"local":[{"CheckDepInfo":{"dep_info":"debug/.fingerprint/tinystr-cae121b200289af4/dep-lib-tinystr","checksum":false}}],"rustflags":[],"config":2069994364910194474,"compile_kind":0}
+{
+  "rustc": 15541343239192488793,
+  "features": "[\"zerovec\"]",
+  "declared_features": "[\"alloc\", \"databake\", \"default\", \"serde\", \"std\", \"zerovec\"]",
+  "target": 161691779326313357,
+  "profile": 4972266810624584510,
+  "path": 7938766442640078900,
+  "deps": [
+    [5298260564258778412, "displaydoc", false, 16603748119199032287],
+    [9119616491714376884, "zerovec", false, 1152707842458456173]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug/.fingerprint/tinystr-cae121b200289af4/dep-lib-tinystr",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

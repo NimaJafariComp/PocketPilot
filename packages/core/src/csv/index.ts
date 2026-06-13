@@ -1,4 +1,4 @@
-import type { Transaction } from '../models/index';
+import type { Transaction } from "../models/index";
 
 export interface CsvRow {
   [key: string]: string;
@@ -22,7 +22,7 @@ export interface CsvTransactionParseOptions {
 }
 
 export interface CsvTransactionParseResult {
-  transaction: Omit<Transaction, 'id'>;
+  transaction: Omit<Transaction, "id">;
   errors: string[];
 }
 
@@ -32,7 +32,7 @@ export function normalizeAmount(rawAmount: string): number {
 }
 
 export function parseCsvAmount(rawAmount: string): number | null {
-  const original = String(rawAmount || '').trim();
+  const original = String(rawAmount || "").trim();
   if (!original) {
     return null;
   }
@@ -43,12 +43,16 @@ export function parseCsvAmount(rawAmount: string): number | null {
   const hasLeadingMinus = /^\s*-/.test(original);
   const hasDebitMarker = /\b(debit|dr|withdrawal|withdrawn)\b/.test(normalized);
   const hasCreditMarker = /\b(credit|cr|deposit|deposited)\b/.test(normalized);
-  const isNegative = isParenthesizedNegative || hasTrailingMinus || hasLeadingMinus || (hasDebitMarker && !hasCreditMarker);
+  const isNegative =
+    isParenthesizedNegative ||
+    hasTrailingMinus ||
+    hasLeadingMinus ||
+    (hasDebitMarker && !hasCreditMarker);
 
   const numericText = original
-    .replace(/^\s*\((.*)\)\s*$/, '$1')
-    .replace(/-\s*$/, '')
-    .replace(/[^\d.]/g, '');
+    .replace(/^\s*\((.*)\)\s*$/, "$1")
+    .replace(/-\s*$/, "")
+    .replace(/[^\d.]/g, "");
 
   if (!numericText) {
     return null;
@@ -65,15 +69,15 @@ export function parseCsvAmount(rawAmount: string): number | null {
 export function resolveCsvAmount(
   row: CsvRow,
   mapping: CsvTransactionColumnMapping,
-  options: CsvTransactionParseOptions = {},
+  options: CsvTransactionParseOptions = {}
 ): number | null {
   let amount: number | null = null;
 
   if (mapping.amount) {
-    amount = parseCsvAmount(row[mapping.amount] || '');
+    amount = parseCsvAmount(row[mapping.amount] || "");
   } else {
-    const debit = mapping.debit ? parseCsvAmount(row[mapping.debit] || '') : null;
-    const credit = mapping.credit ? parseCsvAmount(row[mapping.credit] || '') : null;
+    const debit = mapping.debit ? parseCsvAmount(row[mapping.debit] || "") : null;
+    const credit = mapping.credit ? parseCsvAmount(row[mapping.credit] || "") : null;
 
     if (debit !== null || credit !== null) {
       amount = Math.abs(credit ?? 0) - Math.abs(debit ?? 0);
@@ -88,11 +92,13 @@ export function resolveCsvAmount(
 }
 
 function findHeader(headers: string[], patterns: RegExp[]): string {
-  return headers.find((header) => patterns.some((pattern) => pattern.test(header))) || '';
+  return headers.find((header) => patterns.some((pattern) => pattern.test(header))) || "";
 }
 
 export function detectCsvTransactionColumns(headers: string[]): CsvTransactionColumnMapping {
-  const debit = findHeader(headers, [/\b(debit|withdrawal|withdrawals|charge|charges|paid out|outflow)\b/i]);
+  const debit = findHeader(headers, [
+    /\b(debit|withdrawal|withdrawals|charge|charges|paid out|outflow)\b/i,
+  ]);
   const credit = findHeader(headers, [/\b(credit|deposit|deposits|paid in|inflow)\b/i]);
   const amount =
     headers.find(
@@ -100,8 +106,8 @@ export function detectCsvTransactionColumns(headers: string[]): CsvTransactionCo
         header !== debit &&
         header !== credit &&
         /\b(amount|total|value)\b/i.test(header) &&
-        !/\b(debit|withdrawal|withdrawals|credit|deposit|deposits)\b/i.test(header),
-    ) || '';
+        !/\b(debit|withdrawal|withdrawals|credit|deposit|deposits)\b/i.test(header)
+    ) || "";
 
   return {
     date: findHeader(headers, [/\b(date|posted|posting date|transaction date)\b/i]),
@@ -111,7 +117,9 @@ export function detectCsvTransactionColumns(headers: string[]): CsvTransactionCo
     credit,
     category: findHeader(headers, [/\b(category|type)\b/i]),
     notes: findHeader(headers, [/\b(note|notes|memo|details|location|time)\b/i]),
-    account: findHeader(headers, [/\b(account|account name|account number|acct|card|card number|card member)\b/i]),
+    account: findHeader(headers, [
+      /\b(account|account name|account number|acct|card|card number|card member)\b/i,
+    ]),
   };
 }
 
@@ -119,12 +127,12 @@ export function parseCsvTransactionRow(
   row: CsvRow,
   mapping: CsvTransactionColumnMapping,
   rowNumber: number,
-  options: CsvTransactionParseOptions = {},
+  options: CsvTransactionParseOptions = {}
 ): CsvTransactionParseResult {
   const errors: string[] = [];
-  const merchant = String(row[mapping.merchant] || '').trim();
+  const merchant = String(row[mapping.merchant] || "").trim();
   const amount = resolveCsvAmount(row, mapping, options);
-  const date = parseDateOnly(String(row[mapping.date] || ''));
+  const date = parseDateOnly(String(row[mapping.date] || ""));
 
   if (!merchant) {
     errors.push(`Row ${rowNumber}: Merchant is missing`);
@@ -139,15 +147,18 @@ export function parseCsvTransactionRow(
   }
 
   const account =
-    (mapping.account && row[mapping.account] ? String(row[mapping.account]).trim() : '') ||
-    String(options.fallbackAccount || '').trim();
+    (mapping.account && row[mapping.account] ? String(row[mapping.account]).trim() : "") ||
+    String(options.fallbackAccount || "").trim();
 
-  const transaction: Omit<Transaction, 'id'> = {
-    date: date || '1970-01-01',
+  const transaction: Omit<Transaction, "id"> = {
+    date: date || "1970-01-01",
     merchant,
     amount: amount ?? 0,
-    category: mapping.category && row[mapping.category] ? String(row[mapping.category]).trim() : 'Uncategorized',
-    notes: mapping.notes && row[mapping.notes] ? String(row[mapping.notes]).trim() : '',
+    category:
+      mapping.category && row[mapping.category]
+        ? String(row[mapping.category]).trim()
+        : "Uncategorized",
+    notes: mapping.notes && row[mapping.notes] ? String(row[mapping.notes]).trim() : "",
   };
 
   if (account) {
@@ -161,7 +172,7 @@ export function parseCsvTransactionRow(
 }
 
 function padDatePart(value: number): string {
-  return value.toString().padStart(2, '0');
+  return value.toString().padStart(2, "0");
 }
 
 export function formatLocalDate(date: Date): string {
@@ -185,11 +196,7 @@ export function parseDateOnly(rawDate: string): string | null {
     const day = Number(dateOnlyMatch[3]);
     const date = new Date(year, month - 1, day);
 
-    if (
-      date.getFullYear() === year &&
-      date.getMonth() === month - 1 &&
-      date.getDate() === day
-    ) {
+    if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
       return formatLocalDate(date);
     }
 
@@ -204,8 +211,4 @@ export function parseDateOnly(rawDate: string): string | null {
   return formatLocalDate(parsed);
 }
 
-export function parseIsoDate(rawDate: string): string | null {
-  return parseDateOnly(rawDate);
-}
-
-export * from './dedupe';
+export * from "./dedupe";

@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
-import { Outlet, useLocation } from 'react-router';
-import { AppSidebar } from './AppSidebar';
-import { AppHeader } from './AppHeader';
-import { Button } from './ui/button';
-import { X } from 'lucide-react';
-import { MobileSidebar } from './MobileSidebar';
+import { X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Outlet, useLocation } from "react-router";
+import { AppHeader } from "./AppHeader";
+import { AppSidebar } from "./AppSidebar";
+import { MobileSidebar } from "./MobileSidebar";
+import { Button } from "./ui/button";
 
-const DESKTOP_SIDEBAR_STORAGE_KEY = 'pocketpilot.desktop-sidebar-collapsed';
+const DESKTOP_SIDEBAR_STORAGE_KEY = "pocketpilot.desktop-sidebar-collapsed";
 
 export function AppLayout() {
   const location = useLocation();
@@ -15,7 +15,7 @@ export function AppLayout() {
 
   useEffect(() => {
     const storedValue = window.localStorage.getItem(DESKTOP_SIDEBAR_STORAGE_KEY);
-    setIsDesktopSidebarCollapsed(storedValue === 'true');
+    setIsDesktopSidebarCollapsed(storedValue === "true");
   }, []);
 
   useEffect(() => {
@@ -28,12 +28,12 @@ export function AppLayout() {
 
   useEffect(() => {
     if (!isMobileNavOpen) {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
       return;
     }
 
     const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = "hidden";
 
     return () => {
       document.body.style.overflow = previousOverflow;

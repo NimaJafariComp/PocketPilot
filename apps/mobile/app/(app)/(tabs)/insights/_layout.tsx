@@ -1,7 +1,7 @@
-import { Stack } from 'expo-router';
-import { HeaderActions } from '@/components/navigation/header-actions';
-import { useAppTheme } from '@/providers/theme-provider';
-import { largeTitleScreenOptions } from '@/lib/navigation';
+import { Stack } from "expo-router";
+import { HeaderActions } from "@/components/navigation/header-actions";
+import { largeTitleScreenOptions } from "@/lib/navigation";
+import { useAppTheme } from "@/providers/theme-provider";
 
 export default function InsightsStackLayout() {
   const { colors } = useAppTheme();
@@ -11,8 +11,8 @@ export default function InsightsStackLayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: 'Insights',
-        headerRight: () => <HeaderActions />,
+          title: "Insights",
+          headerRight: () => <HeaderActions />,
         }}
       />
     </Stack>

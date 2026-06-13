@@ -1,45 +1,46 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import { useMemo, useState } from 'react';
-import { useRouter } from 'expo-router';
-import { ChevronRight, Sparkles, Upload } from 'lucide-react-native';
 import {
   buildDashboardViewModel,
   generateSampleBudgets,
   generateSampleGoals,
   generateSampleTransactions,
-} from '@pocketpilot/core';
-import { useData } from '@pocketpilot/services/src/react';
-import { AlertBanner } from '@/components/data/alert-banner';
-import { EmptyStateCard } from '@/components/data/empty-state-card';
-import { ProgressSummaryRow } from '@/components/data/progress-summary-row';
-import { Screen } from '@/components/screen';
-import { useTabScrollPadding } from '@/lib/tab-scroll';
-import { SectionCard } from '@/components/data/section-card';
-import { TransactionRow } from '@/components/transactions/transaction-row';
-import { VerticalBarChart } from '@/components/charts/vertical-bar-chart';
-import { useAppTheme } from '@/providers/theme-provider';
-import { mobileServices } from '@/config/services';
-import { fontFamilies } from '@/theme/tokens';
-import { formatCurrency } from '@/lib/format';
-import { hapticSuccess } from '@/lib/haptics';
-import { FittedValueText } from '@/components/data/fitted-value-text';
-import type { ReactNode } from 'react';
+} from "@pocketpilot/core";
+import { useData } from "@pocketpilot/services/src/react";
+import { useRouter } from "expo-router";
+import { ChevronRight, Sparkles, Upload } from "lucide-react-native";
+import { hapticSelect } from "@/lib/haptics";
+import type { ReactNode } from "react";
+import { useMemo, useState } from "react";
+import { Pressable, ScrollView, Text, View } from "react-native";
+import { VerticalBarChart } from "@/components/charts/vertical-bar-chart";
+import { AlertBanner } from "@/components/data/alert-banner";
+import { EmptyStateCard } from "@/components/data/empty-state-card";
+import { FittedValueText } from "@/components/data/fitted-value-text";
+import { ProgressSummaryRow } from "@/components/data/progress-summary-row";
+import { SectionCard } from "@/components/data/section-card";
+import { Screen } from "@/components/screen";
+import { TransactionRow } from "@/components/transactions/transaction-row";
+import { mobileServices } from "@/config/services";
+import { formatCurrency } from "@/lib/format";
+import { hapticSuccess } from "@/lib/haptics";
+import { useTabScrollPadding } from "@/lib/tab-scroll";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 function PrimaryButton({
   label,
   icon,
   onPress,
   disabled,
-  variant = 'filled',
+  variant = "filled",
 }: {
   label: string;
   icon?: ReactNode;
   onPress: () => void;
   disabled?: boolean;
-  variant?: 'filled' | 'gray';
+  variant?: "filled" | "gray";
 }) {
   const { colors } = useAppTheme();
-  const filled = variant === 'filled';
+  const filled = variant === "filled";
 
   return (
     <Pressable
@@ -71,10 +72,14 @@ function ViewAllRow({ label, onPress }: { label: string; onPress: () => void }) 
   return (
     <Pressable
       className="flex-row items-center justify-between py-3"
-      onPress={onPress}
+      onPress={() => { hapticSelect(); onPress(); }}
+      hitSlop={8}
       style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
     >
-      <Text className="text-[16px]" style={{ color: colors.tint, fontFamily: fontFamilies.sans.regular }}>
+      <Text
+        className="text-[16px]"
+        style={{ color: colors.tint, fontFamily: fontFamilies.sans.medium }}
+      >
         {label}
       </Text>
       <ChevronRight size={17} color={colors.mutedForeground} strokeWidth={2} />
@@ -84,19 +89,28 @@ function ViewAllRow({ label, onPress }: { label: string; onPress: () => void }) 
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { transactions, budgets, goals, loading, importTransactions, addBudget, addGoal } = useData();
+  const { transactions, budgets, goals, loading, importTransactions, addBudget, addGoal } =
+    useData();
   const { colors } = useAppTheme();
   const tabScrollPadding = useTabScrollPadding();
   const [isLoadingSampleData, setIsLoadingSampleData] = useState(false);
 
   const model = useMemo(
     () => buildDashboardViewModel(transactions, budgets, goals),
-    [budgets, goals, transactions],
+    [budgets, goals, transactions]
   );
 
   async function handleLoadSampleData() {
     if (isLoadingSampleData) {
       return;
+    }
+
+    if (transactions.length > 0) {
+      const confirmed = await mobileServices.dialog.confirm(
+        `You already have ${transactions.length} transaction${transactions.length === 1 ? "" : "s"}. Loading sample data will add 50 more random transactions on top of your existing data. Continue?`,
+        "Add sample data?"
+      );
+      if (!confirmed) return;
     }
 
     setIsLoadingSampleData(true);
@@ -112,8 +126,8 @@ export default function DashboardScreen() {
 
       hapticSuccess();
       await mobileServices.dialog.alert(
-        'Sample data is ready. Explore transactions, budgets, goals, and insights across the mobile app.',
-        'Workspace loaded',
+        "Sample data is ready. Explore transactions, budgets, goals, and insights across the mobile app.",
+        "Workspace loaded"
       );
     } finally {
       setIsLoadingSampleData(false);
@@ -145,17 +159,18 @@ export default function DashboardScreen() {
                 className="mt-1 text-[15px] leading-5"
                 style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
               >
-                Import transactions, set budgets, track goals, and get insights. Supports CSV, OFX, QFX, and QBO files.
+                Import transactions, set budgets, track goals, and get insights. Supports CSV, OFX,
+                QFX, and QBO files.
               </Text>
 
               <View className="mt-5 flex-row gap-3">
                 <PrimaryButton
                   label="Import"
                   icon={<Upload size={17} color={colors.primaryForeground} strokeWidth={2} />}
-                  onPress={() => router.push('/import')}
+                  onPress={() => router.push("/import")}
                 />
                 <PrimaryButton
-                  label={isLoadingSampleData ? 'Loading…' : 'Try Sample Data'}
+                  label={isLoadingSampleData ? "Loading…" : "Try Sample Data"}
                   icon={<Sparkles size={17} color={colors.tint} strokeWidth={2} />}
                   onPress={handleLoadSampleData}
                   disabled={isLoadingSampleData}
@@ -167,9 +182,24 @@ export default function DashboardScreen() {
             <SectionCard title="Getting started">
               <View>
                 {[
-                  { step: '1', title: 'Import', description: 'Upload a CSV or load a sample workspace.', last: false },
-                  { step: '2', title: 'Categorize', description: 'Review AI-sorted merchants and adjust edge cases.', last: false },
-                  { step: '3', title: 'Understand', description: 'Use budgets, goals, and insights to plan ahead.', last: true },
+                  {
+                    step: "1",
+                    title: "Import",
+                    description: "Upload a CSV or load a sample workspace.",
+                    last: false,
+                  },
+                  {
+                    step: "2",
+                    title: "Categorize",
+                    description: "Review AI-sorted merchants and adjust edge cases.",
+                    last: false,
+                  },
+                  {
+                    step: "3",
+                    title: "Understand",
+                    description: "Use budgets, goals, and insights to plan ahead.",
+                    last: true,
+                  },
                 ].map((item) => (
                   <View key={item.step}>
                     <View className="flex-row items-center gap-3 py-3">
@@ -179,7 +209,10 @@ export default function DashboardScreen() {
                       >
                         <Text
                           className="text-[13px]"
-                          style={{ color: colors.primaryForeground, fontFamily: fontFamilies.sans.semibold }}
+                          style={{
+                            color: colors.primaryForeground,
+                            fontFamily: fontFamilies.sans.semibold,
+                          }}
                         >
                           {item.step}
                         </Text>
@@ -193,13 +226,18 @@ export default function DashboardScreen() {
                         </Text>
                         <Text
                           className="mt-0.5 text-[13px] leading-4"
-                          style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
+                          style={{
+                            color: colors.mutedForeground,
+                            fontFamily: fontFamilies.sans.regular,
+                          }}
                         >
                           {item.description}
                         </Text>
                       </View>
                     </View>
-                    {!item.last ? <View className="ml-10 h-px" style={{ backgroundColor: colors.border }} /> : null}
+                    {!item.last ? (
+                      <View className="ml-10 h-px" style={{ backgroundColor: colors.border }} />
+                    ) : null}
                   </View>
                 ))}
               </View>
@@ -210,26 +248,26 @@ export default function DashboardScreen() {
             {model.alerts.length > 0 ? (
               <View className="gap-2">
                 {model.alerts.map((alert) => {
-                  if (alert.kind === 'over-budget') {
+                  if (alert.kind === "over-budget") {
                     return (
                       <AlertBanner
                         key={alert.kind}
                         tone="danger"
                         message={`Over budget by ${formatCurrency(Math.round(alert.value))} this month.`}
                         actionLabel="Review"
-                        onActionPress={() => router.push('/budgets')}
+                        onActionPress={() => router.push("/budgets")}
                       />
                     );
                   }
 
-                  if (alert.kind === 'warning') {
+                  if (alert.kind === "warning") {
                     return (
                       <AlertBanner
                         key={alert.kind}
                         tone="warning"
                         message={`${Math.round(model.budgetPct)}% of budget used, ${formatCurrency(Math.round(alert.value))} left.`}
                         actionLabel="View"
-                        onActionPress={() => router.push('/budgets')}
+                        onActionPress={() => router.push("/budgets")}
                       />
                     );
                   }
@@ -238,9 +276,9 @@ export default function DashboardScreen() {
                     <AlertBanner
                       key={alert.kind}
                       tone="neutral"
-                      message={`${alert.value} transaction${alert.value === 1 ? '' : 's'} need categorizing.`}
+                      message={`${alert.value} transaction${alert.value === 1 ? "" : "s"} need categorizing.`}
                       actionLabel="Review"
-                      onActionPress={() => router.push('/transactions')}
+                      onActionPress={() => router.push("/transactions")}
                     />
                   );
                 })}
@@ -270,7 +308,10 @@ export default function DashboardScreen() {
                   </Text>
                 </View>
 
-                <View className="mt-3 h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: colors.glass }}>
+                <View
+                  className="mt-3 h-2 overflow-hidden rounded-full"
+                  style={{ backgroundColor: colors.glass }}
+                >
                   <View
                     className="h-full rounded-full"
                     style={{
@@ -299,7 +340,10 @@ export default function DashboardScreen() {
                   <View className="flex-1">
                     <Text
                       className="text-[13px]"
-                      style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
+                      style={{
+                        color: colors.mutedForeground,
+                        fontFamily: fontFamilies.sans.regular,
+                      }}
                     >
                       Income
                     </Text>
@@ -313,7 +357,10 @@ export default function DashboardScreen() {
                   <View className="flex-1">
                     <Text
                       className="text-[13px]"
-                      style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
+                      style={{
+                        color: colors.mutedForeground,
+                        fontFamily: fontFamilies.sans.regular,
+                      }}
                     >
                       Remaining
                     </Text>
@@ -350,7 +397,7 @@ export default function DashboardScreen() {
                     ))}
                   </View>
                   <View className="mt-2 h-px" style={{ backgroundColor: colors.border }} />
-                  <ViewAllRow label="View All Goals" onPress={() => router.push('/goals')} />
+                  <ViewAllRow label="View All Goals" onPress={() => router.push("/goals")} />
                 </View>
               ) : (
                 <View className="py-2">
@@ -360,10 +407,10 @@ export default function DashboardScreen() {
                   >
                     No goals yet. Create one to track savings progress.
                   </Text>
-                  <Pressable onPress={() => router.push('/goals')} hitSlop={6}>
+                  <Pressable onPress={() => router.push("/goals")} hitSlop={6}>
                     <Text
                       className="mt-2 text-[16px]"
-                      style={{ color: colors.tint, fontFamily: fontFamilies.sans.regular }}
+                      style={{ color: colors.tint, fontFamily: fontFamilies.sans.medium }}
                     >
                       Create Goal
                     </Text>
@@ -376,7 +423,7 @@ export default function DashboardScreen() {
               title="Recent transactions"
               subtitle={
                 model.uncategorizedCount > 0
-                  ? `${model.uncategorizedCount} uncategorized transaction${model.uncategorizedCount === 1 ? '' : 's'}.`
+                  ? `${model.uncategorizedCount} uncategorized transaction${model.uncategorizedCount === 1 ? "" : "s"}.`
                   : undefined
               }
             >
@@ -390,7 +437,10 @@ export default function DashboardScreen() {
                       onPress={() => router.push(`/transactions/${transaction.id}` as never)}
                     />
                   ))}
-                  <ViewAllRow label="View All Transactions" onPress={() => router.push('/transactions')} />
+                  <ViewAllRow
+                    label="View All Transactions"
+                    onPress={() => router.push("/transactions")}
+                  />
                 </View>
               ) : (
                 <View className="py-2">
@@ -400,10 +450,10 @@ export default function DashboardScreen() {
                   >
                     No transactions yet. Import a file to get started.
                   </Text>
-                  <Pressable onPress={() => router.push('/import')} hitSlop={6}>
+                  <Pressable onPress={() => router.push("/import")} hitSlop={6}>
                     <Text
                       className="mt-2 text-[16px]"
-                      style={{ color: colors.tint, fontFamily: fontFamilies.sans.regular }}
+                      style={{ color: colors.tint, fontFamily: fontFamilies.sans.medium }}
                     >
                       Import Transactions
                     </Text>

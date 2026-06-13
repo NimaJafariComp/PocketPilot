@@ -1,6 +1,3 @@
-import { FlatList, Pressable, Text, View } from 'react-native';
-import { useEffect, useMemo, useState } from 'react';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   buildTransactionsViewModel,
   DEFAULT_TRANSACTION_FILTERS,
@@ -8,28 +5,31 @@ import {
   type TransactionDateFilterType,
   type TransactionListFilter,
   type TransactionsFilterState,
-} from '@pocketpilot/core';
-import { Plus, SlidersHorizontal } from 'lucide-react-native';
-import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { useData } from '@pocketpilot/services/src/react';
-import { Screen } from '@/components/screen';
-import { HeaderIconButton } from '@/components/navigation/header-icon-button';
-import { useTabScrollPadding } from '@/lib/tab-scroll';
-import { AlertBanner } from '@/components/data/alert-banner';
-import { EmptyStateCard } from '@/components/data/empty-state-card';
-import { FilterChip } from '@/components/data/filter-chip';
-import { SummaryStrip } from '@/components/data/summary-strip';
-import { TransactionRow } from '@/components/transactions/transaction-row';
-import { useAppTheme } from '@/providers/theme-provider';
-import { formatCurrencyPrecise } from '@/lib/format';
-import { fontFamilies } from '@/theme/tokens';
-import { mobileServices } from '@/config/services';
-import { hapticSelect, hapticWarning } from '@/lib/haptics';
+} from "@pocketpilot/core";
+import { useData } from "@pocketpilot/services/src/react";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Plus, SlidersHorizontal } from "lucide-react-native";
+import { useEffect, useMemo, useState } from "react";
+import { FlatList, Pressable, Text, View } from "react-native";
+import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
+import { AlertBanner } from "@/components/data/alert-banner";
+import { EmptyStateCard } from "@/components/data/empty-state-card";
+import { FilterChip } from "@/components/data/filter-chip";
+import { SummaryStrip } from "@/components/data/summary-strip";
+import { HeaderIconButton } from "@/components/navigation/header-icon-button";
+import { Screen } from "@/components/screen";
+import { TransactionRow } from "@/components/transactions/transaction-row";
+import { mobileServices } from "@/config/services";
+import { formatCurrencyPrecise } from "@/lib/format";
+import { hapticSelect, hapticWarning } from "@/lib/haptics";
+import { useTabScrollPadding } from "@/lib/tab-scroll";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 const PAGE_SIZE = 30;
 
 function getStringParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] || '' : value || '';
+  return Array.isArray(value) ? value[0] || "" : value || "";
 }
 
 export default function TransactionsScreen() {
@@ -44,16 +44,20 @@ export default function TransactionsScreen() {
   useEffect(() => {
     setFilters({
       merchantFilter: getStringParam(params.merchantFilter as string | string[] | undefined),
-      categoryFilter: getStringParam(params.categoryFilter as string | string[] | undefined) || 'all',
+      categoryFilter:
+        getStringParam(params.categoryFilter as string | string[] | undefined) || "all",
       amountFilter: getStringParam(params.amountFilter as string | string[] | undefined),
       dateFilterType:
-        (getStringParam(params.dateFilterType as string | string[] | undefined) as TransactionDateFilterType) ||
-        'all',
+        (getStringParam(
+          params.dateFilterType as string | string[] | undefined
+        ) as TransactionDateFilterType) || "all",
       specificDate: getStringParam(params.specificDate as string | string[] | undefined),
       fromDate: getStringParam(params.fromDate as string | string[] | undefined),
       toDate: getStringParam(params.toDate as string | string[] | undefined),
       listFilter:
-        (getStringParam(params.listFilter as string | string[] | undefined) as TransactionListFilter) || 'all',
+        (getStringParam(
+          params.listFilter as string | string[] | undefined
+        ) as TransactionListFilter) || "all",
     });
   }, [
     params.amountFilter,
@@ -79,14 +83,14 @@ export default function TransactionsScreen() {
     filters.toDate,
   ]);
 
-  const viewModel = useMemo(() => buildTransactionsViewModel(transactions, filters, PAGE_SIZE), [
-    filters,
-    transactions,
-  ]);
+  const viewModel = useMemo(
+    () => buildTransactionsViewModel(transactions, filters, PAGE_SIZE),
+    [filters, transactions]
+  );
 
   const visibleTransactions = useMemo(
     () => viewModel.filteredTransactions.slice(0, visibleCount),
-    [visibleCount, viewModel.filteredTransactions],
+    [visibleCount, viewModel.filteredTransactions]
   );
 
   function updateFilters(next: Partial<TransactionsFilterState>) {
@@ -95,14 +99,14 @@ export default function TransactionsScreen() {
 
   function clearAllFilters() {
     setFilters(DEFAULT_TRANSACTION_FILTERS);
-    router.replace('/transactions');
+    router.replace("/transactions");
   }
 
   async function handleDelete(transaction: Transaction) {
     hapticWarning();
     const confirmed = await mobileServices.dialog.confirm(
       `Delete the ${transaction.merchant} transaction?`,
-      'Delete transaction',
+      "Delete transaction"
     );
 
     if (!confirmed) {
@@ -113,15 +117,15 @@ export default function TransactionsScreen() {
       await deleteTransaction(transaction.id);
     } catch (error) {
       await mobileServices.dialog.alert(
-        error instanceof Error ? error.message : 'Failed to delete the transaction.',
-        'Delete failed',
+        error instanceof Error ? error.message : "Failed to delete the transaction.",
+        "Delete failed"
       );
     }
   }
 
   function openFilters() {
     router.push({
-      pathname: '/transactions/filters' as never,
+      pathname: "/transactions/filters" as never,
       params: {
         merchantFilter: filters.merchantFilter || undefined,
         categoryFilter: filters.categoryFilter,
@@ -139,21 +143,21 @@ export default function TransactionsScreen() {
       {viewModel.needsReviewCount > 0 ? (
         <AlertBanner
           tone="warning"
-          message={`${viewModel.needsReviewCount} transaction${viewModel.needsReviewCount === 1 ? '' : 's'} need review.`}
+          message={`${viewModel.needsReviewCount} transaction${viewModel.needsReviewCount === 1 ? "" : "s"} need review.`}
           actionLabel="Review"
-          onActionPress={() => updateFilters({ listFilter: 'review' })}
+          onActionPress={() => updateFilters({ listFilter: "review" })}
         />
       ) : null}
 
       <SummaryStrip
         items={[
           {
-            label: 'Spent',
+            label: "Spent",
             value: formatCurrencyPrecise(viewModel.spent),
             valueColor: colors.danger,
           },
           {
-            label: 'Income',
+            label: "Income",
             value: formatCurrencyPrecise(viewModel.income),
             valueColor: colors.success,
           },
@@ -161,12 +165,14 @@ export default function TransactionsScreen() {
       />
 
       <View className="flex-row flex-wrap items-center gap-2">
-        {([
-          ['all', 'All'],
-          ['review', 'Needs Review'],
-          ['expense', 'Expenses'],
-          ['income', 'Income'],
-        ] as const).map(([value, label]) => (
+        {(
+          [
+            ["all", "All"],
+            ["review", "Needs Review"],
+            ["expense", "Expenses"],
+            ["income", "Income"],
+          ] as const
+        ).map(([value, label]) => (
           <FilterChip
             key={value}
             label={label}
@@ -183,8 +189,8 @@ export default function TransactionsScreen() {
             style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
           >
             {viewModel.filteredTransactions.length} of {transactions.length} shown
-            {filters.categoryFilter !== 'all' ? ` • ${filters.categoryFilter}` : ''}
-            {filters.dateFilterType !== 'all' ? ` • ${filters.dateFilterType}` : ''}
+            {filters.categoryFilter !== "all" ? ` • ${filters.categoryFilter}` : ""}
+            {filters.dateFilterType !== "all" ? ` • ${filters.dateFilterType}` : ""}
           </Text>
           <Pressable onPress={clearAllFilters} hitSlop={8}>
             <Text
@@ -227,7 +233,7 @@ export default function TransactionsScreen() {
             >
               <Text
                 className="text-[16px]"
-                style={{ color: '#FFFFFF', fontFamily: fontFamilies.sans.medium }}
+                style={{ color: "#FFFFFF", fontFamily: fontFamilies.sans.medium }}
               >
                 Delete
               </Text>
@@ -251,7 +257,7 @@ export default function TransactionsScreen() {
       <Stack.Screen
         options={{
           headerSearchBarOptions: {
-            placeholder: 'Search merchants',
+            placeholder: "Search merchants",
             textColor: colors.foreground,
             tintColor: colors.tint,
             onChangeText: (event) => updateFilters({ merchantFilter: event.nativeEvent.text }),
@@ -268,7 +274,7 @@ export default function TransactionsScreen() {
                 label="Add transaction"
                 symbol="plus"
                 fallback={<Plus size={22} color={colors.tint} strokeWidth={2} />}
-                onPress={() => router.push('/transactions/new' as never)}
+                onPress={() => router.push("/transactions/new" as never)}
               />
             </View>
           ),
@@ -284,7 +290,7 @@ export default function TransactionsScreen() {
         onEndReachedThreshold={0.4}
         onEndReached={() =>
           setVisibleCount((count) =>
-            Math.min(viewModel.filteredTransactions.length, count + PAGE_SIZE),
+            Math.min(viewModel.filteredTransactions.length, count + PAGE_SIZE)
           )
         }
         ListEmptyComponent={

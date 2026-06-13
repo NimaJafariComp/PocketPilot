@@ -1,11 +1,11 @@
-import type { FileImportAdapter } from '../interfaces/file-import';
+import type { FileImportAdapter } from "../interfaces/file-import";
 
 export const fileImportWeb: FileImportAdapter = {
   async pickCsvFile() {
     return new Promise((resolve) => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.csv,text/csv';
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".csv,text/csv";
       input.onchange = () => {
         const file = input.files?.[0];
         if (!file) {
@@ -15,10 +15,10 @@ export const fileImportWeb: FileImportAdapter = {
 
         resolve({
           name: file.name,
-          text: () => file.text()
+          text: () => file.text(),
         });
       };
       input.click();
     });
-  }
+  },
 };

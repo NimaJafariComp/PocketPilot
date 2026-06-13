@@ -1,18 +1,23 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SystemUI from 'expo-system-ui';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { StatusBar } from "expo-status-bar";
+import * as SystemUI from "expo-system-ui";
 import {
   createContext,
+  type PropsWithChildren,
   useContext,
   useEffect,
   useMemo,
   useState,
-  type PropsWithChildren,
-} from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { Appearance, useColorScheme } from 'react-native';
-import { themeColors, type ResolvedTheme, type ThemeColors, type ThemePreference } from '@/theme/tokens';
+} from "react";
+import { Appearance, useColorScheme } from "react-native";
+import {
+  type ResolvedTheme,
+  type ThemeColors,
+  type ThemePreference,
+  themeColors,
+} from "@/theme/tokens";
 
-const THEME_STORAGE_KEY = 'pocketpilot-mobile-theme';
+const THEME_STORAGE_KEY = "pocketpilot-mobile-theme";
 
 interface ThemeContextValue {
   themePreference: ThemePreference;
@@ -25,15 +30,15 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 export function MobileThemeProvider({ children }: PropsWithChildren) {
   const systemTheme = useColorScheme();
-  const [themePreference, setThemePreferenceState] = useState<ThemePreference>('system');
+  const [themePreference, setThemePreferenceState] = useState<ThemePreference>("system");
 
   const resolvedTheme: ResolvedTheme =
-    themePreference === 'system' ? (systemTheme === 'dark' ? 'dark' : 'light') : themePreference;
+    themePreference === "system" ? (systemTheme === "dark" ? "dark" : "light") : themePreference;
 
   useEffect(() => {
     AsyncStorage.getItem(THEME_STORAGE_KEY)
       .then((storedValue) => {
-        if (storedValue === 'light' || storedValue === 'dark' || storedValue === 'system') {
+        if (storedValue === "light" || storedValue === "dark" || storedValue === "system") {
           setThemePreferenceState(storedValue);
         }
       })
@@ -47,7 +52,7 @@ export function MobileThemeProvider({ children }: PropsWithChildren) {
   // Keep native chrome (nav-bar glass buttons, large titles, search bar,
   // keyboard, blur tints) in step with the in-app theme override.
   useEffect(() => {
-    Appearance.setColorScheme(themePreference === 'system' ? null : themePreference);
+    Appearance.setColorScheme(themePreference === "system" ? null : themePreference);
   }, [themePreference]);
 
   const value = useMemo<ThemeContextValue>(
@@ -60,12 +65,12 @@ export function MobileThemeProvider({ children }: PropsWithChildren) {
         void AsyncStorage.setItem(THEME_STORAGE_KEY, nextTheme).catch(() => {});
       },
     }),
-    [resolvedTheme, themePreference],
+    [resolvedTheme, themePreference]
   );
 
   return (
     <ThemeContext.Provider value={value}>
-      <StatusBar style={resolvedTheme === 'dark' ? 'light' : 'dark'} />
+      <StatusBar style={resolvedTheme === "dark" ? "light" : "dark"} />
       {children}
     </ThemeContext.Provider>
   );
@@ -74,7 +79,7 @@ export function MobileThemeProvider({ children }: PropsWithChildren) {
 export function useAppTheme() {
   const context = useContext(ThemeContext);
   if (!context) {
-    throw new Error('useAppTheme must be used within MobileThemeProvider');
+    throw new Error("useAppTheme must be used within MobileThemeProvider");
   }
   return context;
 }

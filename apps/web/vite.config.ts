@@ -1,7 +1,7 @@
-import { defineConfig } from 'vite'
-import path from 'path'
-import tailwindcss from '@tailwindcss/vite'
-import react from '@vitejs/plugin-react'
+import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
+import path from "path";
+import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [
@@ -13,39 +13,39 @@ export default defineConfig({
   resolve: {
     alias: {
       // Alias @ to the src directory
-      '@': path.resolve(__dirname, './src'),
+      "@": path.resolve(__dirname, "./src"),
     },
   },
   build: {
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (!id.includes('node_modules')) {
+          if (!id.includes("node_modules")) {
             return undefined;
           }
 
-          if (id.includes('recharts')) {
-            return 'charts';
+          if (id.includes("recharts")) {
+            return "charts";
           }
 
-          if (id.includes('firebase')) {
-            return 'firebase';
+          if (id.includes("firebase")) {
+            return "firebase";
           }
 
-          if (id.includes('@radix-ui') || id.includes('lucide-react') || id.includes('sonner')) {
-            return 'ui';
+          if (id.includes("@radix-ui") || id.includes("lucide-react") || id.includes("sonner")) {
+            return "ui";
           }
 
-          if (id.includes('react-router')) {
-            return 'router';
+          if (id.includes("react-router")) {
+            return "router";
           }
 
-          return 'vendor';
+          return "vendor";
         },
       },
     },
   },
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
-  assetsInclude: ['**/*.svg', '**/*.csv'],
-})
+  assetsInclude: ["**/*.svg", "**/*.csv"],
+});

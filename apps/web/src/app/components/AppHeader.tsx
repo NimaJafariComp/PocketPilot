@@ -1,16 +1,16 @@
-import { User, Menu, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import { Button } from './ui/button';
+import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, User } from "lucide-react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
+import { useAuth } from "../context/AuthContext";
+import { ThemeToggle } from "./ThemeToggle";
+import { Button } from "./ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from './ui/dropdown-menu';
-import { useNavigate } from 'react-router';
-import { useAuth } from '../context/AuthContext';
-import { toast } from 'sonner';
-import { ThemeToggle } from './ThemeToggle';
+} from "./ui/dropdown-menu";
 
 interface AppHeaderProps {
   isDesktopSidebarCollapsed?: boolean;
@@ -31,9 +31,9 @@ export function AppHeader({
   const handleSignOut = async () => {
     try {
       await signOut();
-      navigate('/signin');
+      navigate("/signin");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to sign out');
+      toast.error(error instanceof Error ? error.message : "Failed to sign out");
     }
   };
 
@@ -57,9 +57,13 @@ export function AppHeader({
           className="hidden lg:inline-flex"
           onClick={onToggleDesktopSidebar}
           aria-pressed={isDesktopSidebarCollapsed}
-          aria-label={isDesktopSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={isDesktopSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          {isDesktopSidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+          {isDesktopSidebarCollapsed ? (
+            <PanelLeftOpen className="w-5 h-5" />
+          ) : (
+            <PanelLeftClose className="w-5 h-5" />
+          )}
         </Button>
       </div>
 
@@ -74,7 +78,7 @@ export function AppHeader({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem onClick={() => navigate('/profile')}>
+            <DropdownMenuItem onClick={() => navigate("/profile")}>
               <User className="w-4 h-4 mr-2" />
               Profile
             </DropdownMenuItem>

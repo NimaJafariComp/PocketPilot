@@ -1,6 +1,13 @@
-import { createContext, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
-import type { AuthUser } from '../interfaces/auth';
-import { useServices } from './services-provider';
+import {
+  createContext,
+  type PropsWithChildren,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import type { AuthUser } from "../interfaces/auth";
+import { useServices } from "./services-provider";
 
 export interface AuthContextValue {
   user: AuthUser | null;
@@ -54,7 +61,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setUser(null);
       },
     }),
-    [loading, services, user],
+    [loading, services, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -63,7 +70,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 }

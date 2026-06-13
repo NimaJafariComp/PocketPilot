@@ -1,4 +1,4 @@
-import type { DialogAdapter } from '../interfaces/dialog';
+import type { DialogAdapter } from "../interfaces/dialog";
 
 export const dialogWeb: DialogAdapter = {
   async confirm(message, title) {
@@ -6,5 +6,5 @@ export const dialogWeb: DialogAdapter = {
   },
   async alert(message, title) {
     window.alert(title ? `${title}\n\n${message}` : message);
-  }
+  },
 };

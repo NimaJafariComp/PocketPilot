@@ -1,26 +1,27 @@
-import { Pressable, Text, View } from 'react-native';
-import { useMemo, useState } from 'react';
-import { useRouter } from 'expo-router';
-import { LogOut, Settings2, UserCircle2 } from 'lucide-react-native';
-import { useAuth, useData } from '@pocketpilot/services/src/react';
-import { Screen } from '@/components/screen';
-import { EmptyStateCard } from '@/components/data/empty-state-card';
-import { KeyValueRow } from '@/components/data/key-value-row';
-import { MetricGrid } from '@/components/data/metric-grid';
-import { SectionCard } from '@/components/data/section-card';
-import { StatCard } from '@/components/data/stat-card';
-import { MenuRow } from '@/components/navigation/menu-row';
-import { ShellCard } from '@/components/navigation/shell-card';
-import { StackScreenScroll } from '@/components/stack-screen-scroll';
-import { useAppTheme } from '@/providers/theme-provider';
-import { mobileServices } from '@/config/services';
+import { useAuth, useData } from "@pocketpilot/services/src/react";
+import { useRouter } from "expo-router";
+import { LogOut, Settings2, UserCircle2 } from "lucide-react-native";
+import { useMemo, useState } from "react";
+import { Pressable, Text, View } from "react-native";
+import { EmptyStateCard } from "@/components/data/empty-state-card";
+import { KeyValueRow } from "@/components/data/key-value-row";
+import { MetricGrid } from "@/components/data/metric-grid";
+import { SectionCard } from "@/components/data/section-card";
+import { StatCard } from "@/components/data/stat-card";
+import { MenuRow } from "@/components/navigation/menu-row";
+import { ShellCard } from "@/components/navigation/shell-card";
+import { Screen } from "@/components/screen";
+import { StackScreenScroll } from "@/components/stack-screen-scroll";
+import { mobileServices } from "@/config/services";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { transactions, budgets, goals } = useData();
   const { colors } = useAppTheme();
-  const [feedback, setFeedback] = useState('');
+  const [feedback, setFeedback] = useState("");
 
   const stats = useMemo(
     () => ({
@@ -28,13 +29,13 @@ export default function ProfileScreen() {
       budgets: budgets.length,
       goals: goals.length,
     }),
-    [budgets.length, goals.length, transactions.length],
+    [budgets.length, goals.length, transactions.length]
   );
 
   async function handleSignOut() {
     const confirmed = await mobileServices.dialog.confirm(
-      'You will be returned to the sign-in screen on this device.',
-      'Sign out?',
+      "You will be returned to the sign-in screen on this device.",
+      "Sign out?"
     );
 
     if (!confirmed) {
@@ -43,9 +44,9 @@ export default function ProfileScreen() {
 
     try {
       await signOut();
-      router.replace('/(auth)/signin');
+      router.replace("/(auth)/signin");
     } catch (error) {
-      setFeedback(error instanceof Error ? error.message : 'Failed to sign out.');
+      setFeedback(error instanceof Error ? error.message : "Failed to sign out.");
     }
   }
 
@@ -54,36 +55,33 @@ export default function ProfileScreen() {
       <StackScreenScroll>
         <ShellCard
           eyebrow="Account"
-          title={user?.displayName || 'PocketPilot user'}
-          description={user?.email || 'Signed in'}
-        >
-          <View className="gap-2">
-            <Text className="text-sm font-semibold" style={{ color: colors.foreground }}>
-              Shared auth is active
-            </Text>
-            <Text className="text-sm leading-6" style={{ color: colors.mutedForeground }}>
-              This profile route is powered by the same shared auth state as web, while staying fully presentation-only on mobile.
-            </Text>
-          </View>
-        </ShellCard>
+          title={user?.displayName || "PocketPilot user"}
+          description={user?.email || "Signed in"}
+        />
 
         <MetricGrid>
-          <StatCard label="Transactions" value={String(stats.transactions)} detail="In your workspace" />
-          <StatCard label="Budgets" value={String(stats.budgets)} detail={`${stats.goals} goals active`} />
+          <StatCard
+            label="Transactions"
+            value={String(stats.transactions)}
+            detail="In your workspace"
+          />
+          <StatCard
+            label="Budgets"
+            value={String(stats.budgets)}
+            detail={`${stats.goals} goals active`}
+          />
         </MetricGrid>
 
         <View className="gap-3">
           <MenuRow
             title="Settings"
-            description="Theme, preferences, and app-level controls"
             icon={<Settings2 size={20} color={colors.secondaryForeground} strokeWidth={2.2} />}
-            onPress={() => router.push('/(app)/settings')}
+            onPress={() => router.push("/(app)/settings")}
           />
         </View>
 
         <SectionCard
           title="Profile details"
-          subtitle="Current account identity from the shared auth layer."
         >
           <View className="gap-3">
             <View
@@ -97,19 +95,25 @@ export default function ProfileScreen() {
                 <UserCircle2 size={20} color={colors.secondaryForeground} strokeWidth={2.2} />
               </View>
               <View className="flex-1">
-                <Text className="text-sm font-semibold" style={{ color: colors.foreground }}>
-                  {user?.displayName || 'PocketPilot user'}
+                <Text
+                  className="text-[16px]"
+                  style={{ color: colors.foreground, fontFamily: fontFamilies.sans.semibold }}
+                >
+                  {user?.displayName || "PocketPilot user"}
                 </Text>
-                <Text className="mt-1 text-sm leading-5" style={{ color: colors.mutedForeground }}>
-                  {user?.email || 'Signed in account'}
+                <Text
+                  className="mt-1 text-[14px] leading-5"
+                  style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
+                >
+                  {user?.email || "Signed in account"}
                 </Text>
               </View>
             </View>
 
-            <KeyValueRow label="Display name" value={user?.displayName || 'Not set'} />
-            <KeyValueRow label="Email" value={user?.email || 'Not available'} />
-            <KeyValueRow label="Account ID" value={user?.id || 'Not available'} />
-            <KeyValueRow label="Auth status" value={user ? 'Connected' : 'Signed out'} />
+            <KeyValueRow label="Display name" value={user?.displayName || "Not set"} />
+            <KeyValueRow label="Email" value={user?.email || "Not available"} />
+            <KeyValueRow label="Account ID" value={user?.id || "Not available"} />
+            <KeyValueRow label="Auth status" value={user ? "Connected" : "Signed out"} />
           </View>
         </SectionCard>
 
@@ -119,7 +123,10 @@ export default function ProfileScreen() {
           onPress={handleSignOut}
         >
           <LogOut size={18} color={colors.primaryForeground} strokeWidth={2.2} />
-          <Text className="text-sm font-semibold" style={{ color: colors.primaryForeground }}>
+          <Text
+            className="text-[16px]"
+            style={{ color: colors.primaryForeground, fontFamily: fontFamilies.sans.semibold }}
+          >
             Sign out
           </Text>
         </Pressable>

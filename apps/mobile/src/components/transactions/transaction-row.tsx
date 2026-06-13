@@ -1,11 +1,12 @@
-import { Pressable, Text, View } from 'react-native';
-import { ChevronRight } from 'lucide-react-native';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies } from '@/theme/tokens';
-import { formatShortDate, formatCurrencyPrecise } from '@/lib/format';
-import { CategoryBadge } from '@/components/transactions/category-badge';
-import { CategorizationStatusBadge } from '@/components/transactions/categorization-status-badge';
-import type { Transaction } from '@pocketpilot/core';
+import type { Transaction } from "@pocketpilot/core";
+import { ChevronRight } from "lucide-react-native";
+import { Pressable, Text, View } from "react-native";
+import { CategorizationStatusBadge } from "@/components/transactions/categorization-status-badge";
+import { CategoryBadge } from "@/components/transactions/category-badge";
+import { formatCurrencyPrecise, formatShortDate } from "@/lib/format";
+import { hapticSelect } from "@/lib/haptics";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 interface TransactionRowProps {
   transaction: Transaction;
@@ -21,7 +22,15 @@ export function TransactionRow({ transaction, onPress, separator = false }: Tran
   const isIncome = transaction.amount > 0;
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed && onPress ? 0.6 : 1 })}>
+    <Pressable
+      onPress={() => {
+        if (onPress) {
+          hapticSelect();
+          onPress();
+        }
+      }}
+      style={({ pressed }) => ({ opacity: pressed && onPress ? 0.6 : 1 })}
+    >
       <View className="flex-row items-center gap-3 py-3">
         <View className="flex-1 gap-1">
           <Text
@@ -49,14 +58,12 @@ export function TransactionRow({ transaction, onPress, separator = false }: Tran
             fontFamily: fontFamilies.sans.semibold,
           }}
         >
-          {isIncome ? '+' : '-'}
+          {isIncome ? "+" : "-"}
           {formatCurrencyPrecise(Math.abs(transaction.amount))}
         </Text>
         {onPress ? <ChevronRight size={17} color={colors.mutedForeground} strokeWidth={2} /> : null}
       </View>
-      {separator ? (
-        <View className="h-px" style={{ backgroundColor: colors.border }} />
-      ) : null}
+      {separator ? <View className="h-px" style={{ backgroundColor: colors.border }} /> : null}
     </Pressable>
   );
 }

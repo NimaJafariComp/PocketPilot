@@ -1,21 +1,21 @@
-import { useMemo, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useData } from '@pocketpilot/services/src/react';
-import { FormField } from '@/components/forms/form-field';
-import { FormScreen } from '@/components/forms/form-screen';
-import { ProgressSummaryRow } from '@/components/data/progress-summary-row';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies } from '@/theme/tokens';
-import { formatCurrency } from '@/lib/format';
-import { mobileServices } from '@/config/services';
+import { useData } from "@pocketpilot/services/src/react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useMemo, useState } from "react";
+import { Pressable, Text, TextInput, View } from "react-native";
+import { ProgressSummaryRow } from "@/components/data/progress-summary-row";
+import { FormField } from "@/components/forms/form-field";
+import { FormScreen } from "@/components/forms/form-screen";
+import { mobileServices } from "@/config/services";
+import { formatCurrency } from "@/lib/format";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 export default function GoalContributionScreen() {
   const router = useRouter();
   const { goalId } = useLocalSearchParams<{ goalId: string }>();
   const { goals, updateGoal } = useData();
   const { colors } = useAppTheme();
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const goal = useMemo(() => goals.find((item) => item.id === goalId), [goalId, goals]);
 
@@ -26,7 +26,10 @@ export default function GoalContributionScreen() {
 
     const contributionAmount = Number.parseFloat(amount);
     if (Number.isNaN(contributionAmount) || contributionAmount <= 0) {
-      await mobileServices.dialog.alert('Enter a valid contribution amount greater than 0.', 'Invalid amount');
+      await mobileServices.dialog.alert(
+        "Enter a valid contribution amount greater than 0.",
+        "Invalid amount"
+      );
       return;
     }
 
@@ -43,11 +46,11 @@ export default function GoalContributionScreen() {
           },
         ],
       });
-      router.replace('/goals');
+      router.replace("/goals");
     } catch (error) {
       await mobileServices.dialog.alert(
-        error instanceof Error ? error.message : 'Failed to add the contribution.',
-        'Save failed',
+        error instanceof Error ? error.message : "Failed to add the contribution.",
+        "Save failed"
       );
     } finally {
       setIsSaving(false);
@@ -65,8 +68,11 @@ export default function GoalContributionScreen() {
               onPress={() => router.back()}
             >
               <Text
-                className="text-center text-sm"
-                style={{ color: colors.secondaryForeground, fontFamily: fontFamilies.sans.semibold }}
+                className="text-center text-[16px]"
+                style={{
+                  color: colors.secondaryForeground,
+                  fontFamily: fontFamilies.sans.semibold,
+                }}
               >
                 Cancel
               </Text>
@@ -78,10 +84,10 @@ export default function GoalContributionScreen() {
               disabled={isSaving}
             >
               <Text
-                className="text-center text-sm"
+                className="text-center text-[16px]"
                 style={{ color: colors.primaryForeground, fontFamily: fontFamilies.sans.semibold }}
               >
-                {isSaving ? 'Saving...' : `Add ${amount ? `$${amount}` : 'Contribution'}`}
+                {isSaving ? "Saving..." : `Add ${amount ? `$${amount}` : "Contribution"}`}
               </Text>
             </Pressable>
           </View>

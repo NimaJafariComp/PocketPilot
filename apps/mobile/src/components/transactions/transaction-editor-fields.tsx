@@ -1,14 +1,14 @@
-import { Pressable, Text, TextInput, View } from 'react-native';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies } from '@/theme/tokens';
-import { FormField } from '@/components/forms/form-field';
-import type { Category } from '@pocketpilot/core';
+import type { Category } from "@pocketpilot/core";
+import { Pressable, Text, TextInput, View } from "react-native";
+import { FormField } from "@/components/forms/form-field";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 export interface TransactionDraft {
   date: string;
   merchant: string;
   amount: string;
-  type: 'expense' | 'income';
+  type: "expense" | "income";
   category: string;
   notes: string;
 }
@@ -65,7 +65,7 @@ export function TransactionEditorFields({
 
       <FormField label="Type">
         <View className="flex-row gap-2">
-          {(['expense', 'income'] as const).map((value) => {
+          {(["expense", "income"] as const).map((value) => {
             const active = draft.type === value;
             return (
               <Pressable
@@ -81,7 +81,7 @@ export function TransactionEditorFields({
                     fontFamily: fontFamilies.sans.semibold,
                   }}
                 >
-                  {value === 'expense' ? 'Expense' : 'Income'}
+                  {value === "expense" ? "Expense" : "Income"}
                 </Text>
               </Pressable>
             );

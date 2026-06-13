@@ -1,7 +1,7 @@
-import { Text, View } from 'react-native';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies, type SectionTone } from '@/theme/tokens';
-import { FittedValueText } from '@/components/data/fitted-value-text';
+import { Text, View } from "react-native";
+import { FittedValueText } from "@/components/data/fitted-value-text";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies, type SectionTone } from "@/theme/tokens";
 
 export interface SummaryStripItem {
   label: string;
@@ -50,7 +50,7 @@ export function SummaryStrip({ items }: SummaryStripProps) {
           </FittedValueText>
           {item.detail ? (
             <Text
-              className="mt-1 text-[12px] leading-4"
+              className="mt-1 text-[12px] leading-[18px]"
               style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}
             >
               {item.detail}

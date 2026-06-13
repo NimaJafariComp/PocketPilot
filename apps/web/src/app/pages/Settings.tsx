@@ -1,11 +1,6 @@
-import { useState } from 'react';
-import { useData } from '../context/DataContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Badge } from '../components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+import { Download, Plus, Shield, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,25 +11,36 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '../components/ui/alert-dialog';
-import { Plus, Trash2, Download, Shield } from 'lucide-react';
-import { toast } from 'sonner';
-import { services } from '../lib/services';
+} from "../components/ui/alert-dialog";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../components/ui/dialog";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { useData } from "../context/DataContext";
+import { services } from "../lib/services";
 
 export function Settings() {
   const { categories, addCategory, transactions, budgets, goals, clearAllData } = useData();
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
-  const [newCategory, setNewCategory] = useState({ name: '', color: '#3B82F6' });
+  const [newCategory, setNewCategory] = useState({ name: "", color: "#3B82F6" });
 
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await addCategory(newCategory);
       setIsAddCategoryOpen(false);
-      setNewCategory({ name: '', color: '#3B82F6' });
-      toast.success('Category added successfully');
+      setNewCategory({ name: "", color: "#3B82F6" });
+      toast.success("Category added successfully");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to add category');
+      toast.error(error instanceof Error ? error.message : "Failed to add category");
     }
   };
 
@@ -49,21 +55,21 @@ export function Settings() {
 
     try {
       await services.dataExport.exportJson(
-        `pocketpilot-export-${new Date().toISOString().split('T')[0]}.json`,
-        data,
+        `pocketpilot-export-${new Date().toISOString().split("T")[0]}.json`,
+        data
       );
-      toast.success('Data exported successfully');
+      toast.success("Data exported successfully");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to export data');
+      toast.error(error instanceof Error ? error.message : "Failed to export data");
     }
   };
 
   const handleClearAllData = async () => {
     try {
       await clearAllData();
-      toast.success('All data cleared');
+      toast.success("All data cleared");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to clear data');
+      toast.error(error instanceof Error ? error.message : "Failed to clear data");
     }
   };
 
@@ -71,7 +77,9 @@ export function Settings() {
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="mt-1 text-muted-foreground">Manage your categories, data, and privacy settings</p>
+        <p className="mt-1 text-muted-foreground">
+          Manage your categories, data, and privacy settings
+        </p>
       </div>
 
       <Card>
@@ -130,9 +138,15 @@ export function Settings() {
         <CardContent>
           <div className="space-y-2">
             {categories.map((category) => (
-              <div key={category.id} className="flex items-center justify-between rounded-lg border p-3">
+              <div
+                key={category.id}
+                className="flex items-center justify-between rounded-lg border p-3"
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: category.color }} />
+                  <div
+                    className="w-4 h-4 rounded-full"
+                    style={{ backgroundColor: category.color }}
+                  />
                   <span className="font-medium">{category.name}</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -165,23 +179,13 @@ export function Settings() {
             <Shield className="w-5 h-5" />
             <CardTitle>Privacy & Data</CardTitle>
           </div>
-          <CardDescription>
-            Your financial data is stored in Firestore under your authenticated user
-          </CardDescription>
+          <CardDescription>Your data is private and tied to your account.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-lg border border-info/25 bg-info/10 p-4">
             <h4 className="mb-2 font-medium text-info-foreground">Data Storage</h4>
             <p className="text-sm text-info-foreground/90">
-              Your data is stored in your user-scoped Firestore collections and protected by Firebase Auth
-              and Firestore security rules.
-            </p>
-          </div>
-          <div className="rounded-lg border border-warning/25 bg-warning/12 p-4">
-            <h4 className="mb-2 font-medium text-warning-foreground">Important Note</h4>
-            <p className="text-sm text-warning-foreground/90">
-              PocketPilot is not meant for collecting personally identifiable information (PII)
-              or securing highly sensitive data. Always follow best practices for financial data security.
+              Your data is stored securely and only accessible to you.
             </p>
           </div>
           <AlertDialog>
@@ -201,7 +205,10 @@ export function Settings() {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleClearAllData} className="bg-destructive hover:bg-destructive/90">
+                <AlertDialogAction
+                  onClick={handleClearAllData}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
                   Clear All Data
                 </AlertDialogAction>
               </AlertDialogFooter>

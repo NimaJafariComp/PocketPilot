@@ -1,12 +1,18 @@
-import 'react-native-gesture-handler';
-import '@/styles/global.css';
+import "react-native-gesture-handler";
+import "@/styles/global.css";
 
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
-import { AppProviders } from '@/providers/app-providers';
-import { useAppTheme } from '@/providers/theme-provider';
-import { BootScreen } from '@/components/boot-screen';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from "@expo-google-fonts/inter";
+import { useFonts } from "expo-font";
+import { Stack } from "expo-router";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { BootScreen } from "@/components/boot-screen";
+import { AppProviders } from "@/providers/app-providers";
+import { useAppTheme } from "@/providers/theme-provider";
 
 function RootNavigator() {
   const { colors } = useAppTheme();
@@ -32,8 +38,10 @@ export default function RootLayout() {
   });
 
   return (
-    <AppProviders>
-      {fontsLoaded ? <RootNavigator /> : <BootScreen message="Loading PocketPilot." />}
-    </AppProviders>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AppProviders>
+        {fontsLoaded ? <RootNavigator /> : <BootScreen message="Loading PocketPilot." />}
+      </AppProviders>
+    </GestureHandlerRootView>
   );
 }

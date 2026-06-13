@@ -1,1 +1,20 @@
-{"rustc":15541343239192488793,"features":"[]","declared_features":"[\"no-panic\"]","target":18426369533666673425,"profile":15657897354478470176,"path":14680443036935392603,"deps":[],"local":[{"CheckDepInfo":{"dep_info":"debug/.fingerprint/itoa-9066f1feec96454c/dep-lib-itoa","checksum":false}}],"rustflags":[],"config":2069994364910194474,"compile_kind":0}
+{
+  "rustc": 15541343239192488793,
+  "features": "[]",
+  "declared_features": "[\"no-panic\"]",
+  "target": 18426369533666673425,
+  "profile": 15657897354478470176,
+  "path": 14680443036935392603,
+  "deps": [],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug/.fingerprint/itoa-9066f1feec96454c/dep-lib-itoa",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

@@ -1,1 +1,5 @@
-export { buildRagDocuments, type BuildRagDocumentsUser, type InsightRagDocument } from '@pocketpilot/core';
+export {
+  type BuildRagDocumentsUser,
+  buildRagDocuments,
+  type InsightRagDocument,
+} from "@pocketpilot/core";

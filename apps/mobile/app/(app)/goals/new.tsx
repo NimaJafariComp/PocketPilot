@@ -1,18 +1,18 @@
-import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useData } from '@pocketpilot/services/src/react';
-import { GoalEditorFields, type GoalDraft } from '@/components/goals/goal-editor-fields';
-import { FormScreen } from '@/components/forms/form-screen';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies } from '@/theme/tokens';
-import { mobileServices } from '@/config/services';
+import { useData } from "@pocketpilot/services/src/react";
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import { Pressable, Text, View } from "react-native";
+import { FormScreen } from "@/components/forms/form-screen";
+import { type GoalDraft, GoalEditorFields } from "@/components/goals/goal-editor-fields";
+import { mobileServices } from "@/config/services";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 function buildInitialDraft(): GoalDraft {
   return {
-    name: '',
-    targetAmount: '',
-    deadline: '',
+    name: "",
+    targetAmount: "",
+    deadline: "",
   };
 }
 
@@ -34,11 +34,14 @@ export default function NewGoalScreen() {
 
     const targetAmount = Number.parseFloat(draft.targetAmount);
     if (!draft.name.trim()) {
-      await mobileServices.dialog.alert('Enter a goal name.', 'Missing name');
+      await mobileServices.dialog.alert("Enter a goal name.", "Missing name");
       return;
     }
     if (Number.isNaN(targetAmount) || targetAmount <= 0) {
-      await mobileServices.dialog.alert('Enter a valid target amount greater than 0.', 'Invalid amount');
+      await mobileServices.dialog.alert(
+        "Enter a valid target amount greater than 0.",
+        "Invalid amount"
+      );
       return;
     }
 
@@ -52,11 +55,11 @@ export default function NewGoalScreen() {
         ...(draft.deadline ? { deadline: new Date(draft.deadline).toISOString() } : {}),
       };
       await addGoal(nextGoal);
-      router.replace('/goals');
+      router.replace("/goals");
     } catch (error) {
       await mobileServices.dialog.alert(
-        error instanceof Error ? error.message : 'Failed to create the goal.',
-        'Save failed',
+        error instanceof Error ? error.message : "Failed to create the goal.",
+        "Save failed"
       );
     } finally {
       setIsSaving(false);
@@ -73,7 +76,7 @@ export default function NewGoalScreen() {
             onPress={() => router.back()}
           >
             <Text
-              className="text-center text-sm"
+              className="text-center text-[16px]"
               style={{ color: colors.secondaryForeground, fontFamily: fontFamilies.sans.semibold }}
             >
               Cancel
@@ -86,10 +89,10 @@ export default function NewGoalScreen() {
             disabled={isSaving}
           >
             <Text
-              className="text-center text-sm"
+              className="text-center text-[16px]"
               style={{ color: colors.primaryForeground, fontFamily: fontFamilies.sans.semibold }}
             >
-              {isSaving ? 'Saving...' : 'Create Goal'}
+              {isSaving ? "Saving..." : "Create Goal"}
             </Text>
           </Pressable>
         </View>

@@ -1,9 +1,6 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "./firebaseAdmin.js";
-import type {
-  CategorizationRequestItem,
-  CategorizationResult,
-} from "./types.js";
+import type { CategorizationRequestItem, CategorizationResult } from "./types.js";
 
 const DEFAULT_CATEGORIES = [
   "Uncategorized",
@@ -60,7 +57,18 @@ const RULES: Rule[] = [
   },
   {
     category: "Dining",
-    patterns: [/subway/, /chipotle/, /starbucks/, /panera/, /mcdonald/, /restaurant/, /cafe/, /coffee/, /pizza/, /taco/],
+    patterns: [
+      /subway/,
+      /chipotle/,
+      /starbucks/,
+      /panera/,
+      /mcdonald/,
+      /restaurant/,
+      /cafe/,
+      /coffee/,
+      /pizza/,
+      /taco/,
+    ],
     reason: "Matched dining merchant keywords",
   },
   {
@@ -92,7 +100,16 @@ const RULES: Rule[] = [
   },
   {
     category: "Shopping",
-    patterns: [/amazon/, /target/, /walmart/, /best buy/, /apple store/, /home depot/, /ikea/, /etsy/],
+    patterns: [
+      /amazon/,
+      /target/,
+      /walmart/,
+      /best buy/,
+      /apple store/,
+      /home depot/,
+      /ikea/,
+      /etsy/,
+    ],
     reason: "Matched retail shopping merchant keywords",
   },
   {
@@ -208,7 +225,7 @@ function buildResult(
   category: string,
   categorySource: CategorizationResult["categorySource"],
   categoryConfidence: number,
-  reason: string,
+  reason: string
 ): CategorizationResult {
   return {
     category,
@@ -224,7 +241,7 @@ function refineAiResult(
   input: CategorizationRequestItem,
   normalizedMerchant: string,
   result: CategorizationResult,
-  categories: string[],
+  categories: string[]
 ): CategorizationResult {
   const searchText = buildSearchText(input, normalizedMerchant);
   const healthSignals = [
@@ -279,7 +296,7 @@ function refineAiResult(
       "Health",
       "auto-ai",
       Math.max(result.categoryConfidence, 0.84),
-      "Adjusted AI result toward Health based on fitness or wellness signals",
+      "Adjusted AI result toward Health based on fitness or wellness signals"
     );
   }
 
@@ -293,7 +310,7 @@ function refineAiResult(
       "Entertainment",
       "auto-ai",
       Math.max(result.categoryConfidence, 0.82),
-      "Adjusted AI result toward Entertainment based on subscription or media signals",
+      "Adjusted AI result toward Entertainment based on subscription or media signals"
     );
   }
 
@@ -303,7 +320,7 @@ function refineAiResult(
 function applyRule(
   input: CategorizationRequestItem,
   normalizedMerchant: string,
-  categories: string[],
+  categories: string[]
 ): CategorizationResult | null {
   const searchText = buildSearchText(input, normalizedMerchant);
 
@@ -327,7 +344,7 @@ function applyRule(
 
 async function loadMerchantMemories(
   userId: string,
-  normalizedMerchants: string[],
+  normalizedMerchants: string[]
 ): Promise<Map<string, { category: string; count: number }>> {
   const merchantMemory = new Map<string, { category: string; count: number }>();
   await Promise.all(
@@ -352,7 +369,7 @@ async function loadMerchantMemories(
         category: data.category,
         count: data.count || 1,
       });
-    }),
+    })
   );
 
   return merchantMemory;
@@ -416,7 +433,8 @@ async function askAiForCategory(params: {
   }
 
   const category = typeof parsed.category === "string" ? parsed.category.trim() : "";
-  const confidenceRaw = typeof parsed.confidence === "number" ? parsed.confidence : Number(parsed.confidence || 0);
+  const confidenceRaw =
+    typeof parsed.confidence === "number" ? parsed.confidence : Number(parsed.confidence || 0);
   const reason = typeof parsed.reason === "string" ? parsed.reason.trim() : "AI categorization";
 
   if (!params.categories.includes(category)) {
@@ -431,9 +449,9 @@ async function askAiForCategory(params: {
       category,
       "auto-ai",
       clampConfidence(confidenceRaw || 0.65),
-      reason,
+      reason
     ),
-    params.categories,
+    params.categories
   );
 }
 
@@ -445,8 +463,13 @@ export async function categorizeTransactions(params: {
   chatModel: string;
 }): Promise<CategorizationResult[]> {
   const categories = uniqueCategories(params.categories);
-  const normalizedMerchants = params.transactions.map((transaction) => normalizeMerchant(transaction.merchant));
-  const merchantMemories = await loadMerchantMemories(params.userId, Array.from(new Set(normalizedMerchants)));
+  const normalizedMerchants = params.transactions.map((transaction) =>
+    normalizeMerchant(transaction.merchant)
+  );
+  const merchantMemories = await loadMerchantMemories(
+    params.userId,
+    Array.from(new Set(normalizedMerchants))
+  );
 
   const results: CategorizationResult[] = [];
   for (let index = 0; index < params.transactions.length; index += 1) {
@@ -461,8 +484,8 @@ export async function categorizeTransactions(params: {
           memory.category,
           "auto-history",
           clampConfidence(Math.min(0.98, 0.82 + memory.count * 0.03)),
-          "Matched prior user categorization history",
-        ),
+          "Matched prior user categorization history"
+        )
       );
       continue;
     }
@@ -480,8 +503,8 @@ export async function categorizeTransactions(params: {
           categories.includes("Uncategorized") ? "Uncategorized" : categories[0],
           "auto-ai",
           0.1,
-          "Merchant text did not provide enough semantic signal",
-        ),
+          "Merchant text did not provide enough semantic signal"
+        )
       );
       continue;
     }
@@ -494,7 +517,11 @@ export async function categorizeTransactions(params: {
         normalizedMerchant,
         categories,
       });
-      if (aiResult && aiResult.category !== "Uncategorized" && aiResult.categoryConfidence >= 0.78) {
+      if (
+        aiResult &&
+        aiResult.category !== "Uncategorized" &&
+        aiResult.categoryConfidence >= 0.78
+      ) {
         results.push(aiResult);
         continue;
       }
@@ -508,8 +535,8 @@ export async function categorizeTransactions(params: {
         categories.includes("Uncategorized") ? "Uncategorized" : categories[0],
         "auto-ai",
         0.2,
-        "No confident rule, history, or AI match",
-      ),
+        "No confident rule, history, or AI match"
+      )
     );
   }
 
@@ -540,6 +567,6 @@ export async function learnMerchantCategory(params: {
       lastConfirmedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
-    { merge: true },
+    { merge: true }
   );
 }

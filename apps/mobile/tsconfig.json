@@ -4,16 +4,8 @@
     "strict": true,
     "resolveJsonModule": true,
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"]
     }
   },
-  "include": [
-    "app",
-    "src",
-    "nativewind-env.d.ts",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts"
-  ]
+  "include": ["app", "src", "nativewind-env.d.ts", ".expo/types/**/*.ts", "expo-env.d.ts"]
 }

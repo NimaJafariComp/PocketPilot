@@ -1,9 +1,9 @@
-import { Pressable, Text, TextInput, View } from 'react-native';
-import { useAppTheme } from '@/providers/theme-provider';
-import { fontFamilies } from '@/theme/tokens';
-import { FormField } from '@/components/forms/form-field';
-import { formatCurrency } from '@/lib/format';
-import type { Category } from '@pocketpilot/core';
+import type { Category } from "@pocketpilot/core";
+import { Pressable, Text, TextInput, View } from "react-native";
+import { FormField } from "@/components/forms/form-field";
+import { formatCurrency } from "@/lib/format";
+import { useAppTheme } from "@/providers/theme-provider";
+import { fontFamilies } from "@/theme/tokens";
 
 export interface BudgetDraft {
   category: string;
@@ -29,7 +29,7 @@ export function BudgetEditorFields({ categories, draft, setDraft }: BudgetEditor
   } as const;
 
   const filteredCategories = categories.filter(
-    (category) => category.name !== 'Uncategorized' && category.name !== 'Income',
+    (category) => category.name !== "Uncategorized" && category.name !== "Income"
   );
   const budgetAmount = Number.parseFloat(draft.amount) || 0;
 
@@ -89,7 +89,7 @@ export function BudgetEditorFields({ categories, draft, setDraft }: BudgetEditor
         hint={
           budgetAmount > 0
             ? `Warn me at ${formatCurrency(Math.round((budgetAmount * draft.warningThreshold) / 100))}.`
-            : 'Choose when a budget should move into warning.'
+            : "Choose when a budget should move into warning."
         }
       >
         <View className="flex-row flex-wrap gap-2">
@@ -122,7 +122,7 @@ export function BudgetEditorFields({ categories, draft, setDraft }: BudgetEditor
         hint={
           budgetAmount > 0
             ? `Stop me at ${formatCurrency(Math.round((budgetAmount * draft.limitThreshold) / 100))}.`
-            : 'Choose when the budget should be considered over limit.'
+            : "Choose when the budget should be considered over limit."
         }
       >
         <View className="flex-row flex-wrap gap-2">

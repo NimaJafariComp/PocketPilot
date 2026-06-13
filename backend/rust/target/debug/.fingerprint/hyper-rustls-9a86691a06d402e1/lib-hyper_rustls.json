@@ -1,1 +1,29 @@
-{"rustc":15541343239192488793,"features":"[\"http1\", \"ring\", \"tls12\", \"webpki-roots\", \"webpki-tokio\"]","declared_features":"[\"aws-lc-rs\", \"default\", \"fips\", \"http1\", \"http2\", \"log\", \"logging\", \"native-tokio\", \"ring\", \"rustls-native-certs\", \"rustls-platform-verifier\", \"tls12\", \"webpki-roots\", \"webpki-tokio\"]","target":12220062926890100908,"profile":15657897354478470176,"path":17182148849810157926,"deps":[[784494742817713399,"tower_service",false,5774348268784023043],[1566171736144735121,"tokio",false,8531635412783442258],[1991942485830005045,"tokio_rustls",false,4559158110224442637],[2620434475832828286,"http",false,16626236231885649541],[3626672138398771397,"hyper",false,18096717164821648559],[10341606545869227954,"webpki_roots",false,14374224968595389163],[10868706972573181834,"rustls",false,9486089687613412490],[11976082518617474977,"hyper_util",false,5512053709259798102]],"local":[{"CheckDepInfo":{"dep_info":"debug/.fingerprint/hyper-rustls-9a86691a06d402e1/dep-lib-hyper_rustls","checksum":false}}],"rustflags":[],"config":2069994364910194474,"compile_kind":0}
+{
+  "rustc": 15541343239192488793,
+  "features": "[\"http1\", \"ring\", \"tls12\", \"webpki-roots\", \"webpki-tokio\"]",
+  "declared_features": "[\"aws-lc-rs\", \"default\", \"fips\", \"http1\", \"http2\", \"log\", \"logging\", \"native-tokio\", \"ring\", \"rustls-native-certs\", \"rustls-platform-verifier\", \"tls12\", \"webpki-roots\", \"webpki-tokio\"]",
+  "target": 12220062926890100908,
+  "profile": 15657897354478470176,
+  "path": 17182148849810157926,
+  "deps": [
+    [784494742817713399, "tower_service", false, 5774348268784023043],
+    [1566171736144735121, "tokio", false, 8531635412783442258],
+    [1991942485830005045, "tokio_rustls", false, 4559158110224442637],
+    [2620434475832828286, "http", false, 16626236231885649541],
+    [3626672138398771397, "hyper", false, 18096717164821648559],
+    [10341606545869227954, "webpki_roots", false, 14374224968595389163],
+    [10868706972573181834, "rustls", false, 9486089687613412490],
+    [11976082518617474977, "hyper_util", false, 5512053709259798102]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug/.fingerprint/hyper-rustls-9a86691a06d402e1/dep-lib-hyper_rustls",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

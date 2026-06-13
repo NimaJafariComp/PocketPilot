@@ -1,7 +1,7 @@
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { PropsWithChildren, ReactNode } from 'react';
-import { useAppTheme } from '@/providers/theme-provider';
+import type { PropsWithChildren, ReactNode } from "react";
+import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAppTheme } from "@/providers/theme-provider";
 
 interface FormScreenProps extends PropsWithChildren {
   header?: ReactNode;
@@ -12,13 +12,15 @@ export function FormScreen({ header, footer, children }: FormScreenProps) {
   const insets = useSafeAreaInsets();
   const { colors } = useAppTheme();
   const footerBottomPadding = Math.max(16, insets.bottom + 8);
-  const scrollBottomPadding = footer ? Math.max(120, insets.bottom + 96) : Math.max(28, insets.bottom + 20);
+  const scrollBottomPadding = footer
+    ? Math.max(120, insets.bottom + 96)
+    : Math.max(28, insets.bottom + 20);
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <KeyboardAvoidingView
         className="flex-1"
-        behavior={Platform.select({ ios: 'padding', android: undefined })}
+        behavior={Platform.select({ ios: "padding", android: undefined })}
         keyboardVerticalOffset={18}
       >
         <ScrollView

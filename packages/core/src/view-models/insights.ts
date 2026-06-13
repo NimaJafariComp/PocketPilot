@@ -1,11 +1,5 @@
-import {
-  endOfMonth,
-  format,
-  parseISO,
-  startOfMonth,
-  subMonths,
-} from 'date-fns';
-import { type Transaction } from '../models/index';
+import { endOfMonth, format, parseISO, startOfMonth, subMonths } from "date-fns";
+import type { Transaction } from "../models/index";
 
 export interface InsightCategoryData {
   name: string;
@@ -40,7 +34,10 @@ export interface InsightsViewModel {
   previousMonthLabel: string;
 }
 
-export function buildInsightsViewModel(transactions: Transaction[], now = new Date()): InsightsViewModel {
+export function buildInsightsViewModel(
+  transactions: Transaction[],
+  now = new Date()
+): InsightsViewModel {
   const thisMonthStart = startOfMonth(now);
   const thisMonthEnd = endOfMonth(now);
   const lastMonthDate = subMonths(now, 1);
@@ -59,19 +56,22 @@ export function buildInsightsViewModel(transactions: Transaction[], now = new Da
   });
 
   const thisMonthSpent = Math.abs(
-    thisMonthExpenses.reduce((sum, transaction) => sum + transaction.amount, 0),
+    thisMonthExpenses.reduce((sum, transaction) => sum + transaction.amount, 0)
   );
   const lastMonthSpent = Math.abs(
-    lastMonthExpenses.reduce((sum, transaction) => sum + transaction.amount, 0),
+    lastMonthExpenses.reduce((sum, transaction) => sum + transaction.amount, 0)
   );
   const changePercent =
     lastMonthSpent > 0 ? ((thisMonthSpent - lastMonthSpent) / lastMonthSpent) * 100 : 0;
 
-  const categoryTotals = thisMonthExpenses.reduce<Record<string, number>>((accumulator, transaction) => {
-    accumulator[transaction.category] =
-      (accumulator[transaction.category] || 0) + Math.abs(transaction.amount);
-    return accumulator;
-  }, {});
+  const categoryTotals = thisMonthExpenses.reduce<Record<string, number>>(
+    (accumulator, transaction) => {
+      accumulator[transaction.category] =
+        (accumulator[transaction.category] || 0) + Math.abs(transaction.amount);
+      return accumulator;
+    },
+    {}
+  );
 
   const categoryData = Object.entries(categoryTotals)
     .map(([name, value]) => ({ name, value: Math.round(value) }))
@@ -85,7 +85,7 @@ export function buildInsightsViewModel(transactions: Transaction[], now = new Da
         (accumulator[transaction.category] || 0) + Math.abs(transaction.amount);
       return accumulator;
     },
-    {},
+    {}
   );
 
   const changes = Object.keys({ ...categoryTotals, ...lastMonthCategoryTotals })
@@ -109,14 +109,14 @@ export function buildInsightsViewModel(transactions: Transaction[], now = new Da
     transactions.reduce<Record<string, number>>((accumulator, transaction) => {
       accumulator[transaction.merchant] = (accumulator[transaction.merchant] || 0) + 1;
       return accumulator;
-    }, {}),
+    }, {})
   )
     .filter(([, count]) => count >= 3)
     .map(([merchant, count]) => {
       const avgAmount = Math.abs(
         transactions
           .filter((transaction) => transaction.merchant === merchant)
-          .reduce((sum, transaction) => sum + transaction.amount, 0) / count,
+          .reduce((sum, transaction) => sum + transaction.amount, 0) / count
       );
 
       return { merchant, count, avgAmount };
@@ -134,7 +134,7 @@ export function buildInsightsViewModel(transactions: Transaction[], now = new Da
     maxCategoryValue: categoryData[0]?.value ?? 1,
     changes,
     recurringCharges,
-    currentMonthLabel: format(now, 'MMM yyyy'),
-    previousMonthLabel: format(lastMonthDate, 'MMMM yyyy'),
+    currentMonthLabel: format(now, "MMM yyyy"),
+    previousMonthLabel: format(lastMonthDate, "MMMM yyyy"),
   };
 }

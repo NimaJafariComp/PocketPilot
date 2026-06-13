@@ -1,17 +1,13 @@
-import { ScrollView, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { PropsWithChildren, ReactNode } from 'react';
+import type { PropsWithChildren, ReactNode } from "react";
+import { ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface StackScreenScrollProps extends PropsWithChildren {
   header?: ReactNode;
   bottomInset?: number;
 }
 
-export function StackScreenScroll({
-  children,
-  header,
-  bottomInset,
-}: StackScreenScrollProps) {
+export function StackScreenScroll({ children, header, bottomInset }: StackScreenScrollProps) {
   const insets = useSafeAreaInsets();
   const resolvedBottomInset = bottomInset ?? Math.max(32, insets.bottom + 16);
 

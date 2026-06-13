@@ -105,7 +105,7 @@ async function qdrantRequest<T>(path: string, init: RequestInit = {}): Promise<T
 function createFilter(
   userId: string,
   kinds?: string[],
-  extraMust: PayloadFilterCondition[] = [],
+  extraMust: PayloadFilterCondition[] = []
 ): { must: Array<Record<string, unknown> | PayloadFilterCondition> } {
   const must: Array<Record<string, unknown> | PayloadFilterCondition> = [
     {
@@ -201,14 +201,17 @@ export function buildSparseVector(text: string, boosts: SparseBoost[] = []): Spa
   };
 }
 
-function hasExpectedCollectionSchema(collection: {
-  config?: {
-    params?: {
-      vectors?: Record<string, { size?: number }>;
-      sparse_vectors?: Record<string, unknown>;
+function hasExpectedCollectionSchema(
+  collection: {
+    config?: {
+      params?: {
+        vectors?: Record<string, { size?: number }>;
+        sparse_vectors?: Record<string, unknown>;
+      };
     };
-  };
-} | null, dimension: number): boolean {
+  } | null,
+  dimension: number
+): boolean {
   const vectors = collection?.config?.params?.vectors;
   const sparseVectors = collection?.config?.params?.sparse_vectors;
 
@@ -282,7 +285,7 @@ export async function upsertPoints(
     denseVector: number[];
     sparseVector: SparseVector;
     payload: VectorPayloadRecord;
-  }>,
+  }>
 ): Promise<void> {
   if (points.length === 0) {
     return;
@@ -338,7 +341,7 @@ async function queryPoints(params: {
         with_payload: true,
         with_vector: false,
       }),
-    },
+    }
   );
 
   return result.points || [];
@@ -367,7 +370,7 @@ function fuseReciprocalRank(
   dense: QdrantPoint[],
   sparse: QdrantPoint[],
   preferSparse: boolean,
-  limit: number,
+  limit: number
 ): QdrantPoint[] {
   const denseWeight = preferSparse ? 0.4 : 0.6;
   const sparseWeight = preferSparse ? 0.6 : 0.4;
@@ -454,7 +457,7 @@ export async function scrollUserSourcePoints(userId: string): Promise<QdrantPoin
           with_payload: true,
           with_vector: false,
         }),
-      },
+      }
     );
 
     const page = result.points || [];

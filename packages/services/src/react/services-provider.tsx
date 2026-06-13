@@ -1,5 +1,5 @@
-import { createContext, useContext, type PropsWithChildren } from 'react';
-import type { PocketPilotServices } from '../types';
+import { createContext, type PropsWithChildren, useContext } from "react";
+import type { PocketPilotServices } from "../types";
 
 const ServicesContext = createContext<PocketPilotServices | undefined>(undefined);
 
@@ -13,7 +13,7 @@ export function ServicesProvider({
 export function useServices() {
   const context = useContext(ServicesContext);
   if (!context) {
-    throw new Error('useServices must be used within ServicesProvider');
+    throw new Error("useServices must be used within ServicesProvider");
   }
   return context;
 }
