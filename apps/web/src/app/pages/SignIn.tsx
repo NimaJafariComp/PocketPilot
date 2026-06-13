@@ -60,9 +60,7 @@ export function SignIn() {
           <div className="absolute inset-x-0 top-0 h-px bg-white/20" />
 
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
-              <Wallet className="w-6 h-6" />
-            </div>
+            <img src="/logo.svg" alt="PocketPilot" className="h-10 w-10 rounded-xl object-cover shadow-lg shadow-black/20" />
             <span className="font-semibold text-xl">PocketPilot</span>
           </div>
 
@@ -112,9 +110,7 @@ export function SignIn() {
           <Card className="w-full max-w-md border-border/70 bg-background/80 shadow-none backdrop-blur lg:shadow-xl lg:shadow-black/5">
             <CardHeader className="space-y-1">
               <div className="mb-4 flex items-center gap-2 lg:hidden">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary via-info to-primary text-primary-foreground">
-                  <Wallet className="w-5 h-5 text-white" />
-                </div>
+                <img src="/logo.svg" alt="PocketPilot" className="h-8 w-8 rounded-lg object-cover" />
                 <span className="text-lg font-semibold">PocketPilot</span>
               </div>
               <CardTitle className="text-2xl">Welcome back</CardTitle>
