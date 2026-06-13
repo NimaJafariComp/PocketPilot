@@ -35,6 +35,16 @@ export function SignUp() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
+      <video
+        className="absolute inset-0 h-full w-full object-cover"
+        src="/login-bg.mp4"
+        autoPlay
+        muted
+        loop
+        playsInline
+      />
+      <div className="absolute inset-0 bg-slate-950/60" />
+
       <div className="absolute right-6 top-6 z-10">
         <ThemeToggle />
       </div>
