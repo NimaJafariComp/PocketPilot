@@ -51,9 +51,7 @@ export function SignUp() {
           <div className="absolute inset-x-0 top-0 h-px bg-white/20" />
 
           <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
-              <Wallet className="h-6 w-6" />
-            </div>
+            <img src="/logo.svg" alt="PocketPilot" className="h-10 w-10 rounded-xl object-cover shadow-lg shadow-black/20" />
             <span className="text-xl font-semibold">PocketPilot</span>
           </div>
 
