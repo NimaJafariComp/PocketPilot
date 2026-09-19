@@ -8,3 +8,6 @@ backend/functions/lib
 backend/functions/node_modules
 backend/firebase/.firebase
 backend/firebase/firebase-debug.log
+REPO_TECHNICAL_INTERVIEW_REPORT.md
+backend/rust/target/
+.DS_Store
