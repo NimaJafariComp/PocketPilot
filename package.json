@@ -2,12 +2,25 @@
   "name": "pocketpilot",
   "private": true,
   "version": "1.0.0",
+  "packageManager": "npm@11.13.0",
+  "engines": {
+    "node": "24.16.0",
+    "npm": "11.13.0"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "scripts": {
-    "setup": "npm install",
+    "setup": "npm ci",
+    "baseline": "node scripts/baseline.mjs",
+    "check:lockfiles": "node scripts/check-lockfiles.mjs",
+    "typecheck:web": "tsc --noEmit -p apps/web/tsconfig.json",
+    "typecheck:core": "tsc --noEmit -p packages/core/tsconfig.json",
+    "typecheck:services": "tsc --noEmit -p packages/services/tsconfig.json",
+    "typecheck:shared": "npm run typecheck:core && npm run typecheck:services",
+    "typecheck:mobile": "tsc --noEmit -p apps/mobile/tsconfig.json",
+    "test:unit": "vitest run",
     "dev": "npm --prefix apps/web run dev",
     "build": "npm --prefix apps/web run build",
     "web:dev": "npm --prefix apps/web run dev",
@@ -31,14 +44,17 @@
     "check:fix": "biome check --write ."
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.0",
+    "@biomejs/biome": "2.5.0",
+    "@types/node": "25.3.0",
     "@types/react": "~19.1.10",
     "@types/react-dom": "~19.1.11",
     "metro": "^0.82.5",
     "metro-config": "^0.82.5",
     "metro-resolver": "^0.82.5",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
   },
   "dependencies": {
     "@react-navigation/native": "^7.3.1",

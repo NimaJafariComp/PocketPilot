@@ -1,0 +1,8 @@
+# Match Biome's LF policy on every platform without changing local Git settings.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.mp4 binary
+*.ttf binary
+*.woff2 binary
