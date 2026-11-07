@@ -12,6 +12,12 @@ import { exportMobile } from "../mobile/export.mobile";
 import { fileImportMobile } from "../mobile/file-import.mobile";
 import { createRagHttpMobile } from "../mobile/rag.http.mobile";
 import type { PocketPilotServices } from "../types";
+import {
+  type FeatureCapabilities,
+  resolveCapabilities,
+  selectCategorizationAdapter,
+  selectRagAdapter,
+} from "../capabilities";
 
 export interface MobileServicesConfig {
   firebaseConfig: FirebaseOptions;
@@ -22,6 +28,7 @@ export interface MobileServicesConfig {
   functionsBaseUrl?: string;
   categorizationServiceUrl?: string;
   ragServiceUrl?: string;
+  capabilities?: FeatureCapabilities;
 }
 
 const getReactNativePersistence = (
@@ -31,6 +38,7 @@ const getReactNativePersistence = (
 ).getReactNativePersistence;
 
 export function createMobileServices(config: MobileServicesConfig): PocketPilotServices {
+  const capabilities = config.capabilities ?? resolveCapabilities();
   const existingApps = getApps();
   const app = existingApps.length > 0 ? existingApps[0] : initializeApp(config.firebaseConfig);
   const authSdk =
@@ -53,16 +61,20 @@ export function createMobileServices(config: MobileServicesConfig): PocketPilotS
   }
 
   const auth = createAuthFirebaseMobile(authSdk);
-  const categorizationBaseUrl = config.categorizationServiceUrl || config.functionsBaseUrl || "";
-  const ragBaseUrl = config.ragServiceUrl || config.functionsBaseUrl || "";
+  const categorizationBaseUrl = config.categorizationServiceUrl ?? "";
+  const ragBaseUrl = config.ragServiceUrl ?? "";
 
   return {
+    capabilities,
     auth,
     dataStore: createDataStoreFirestoreMobile(dbSdk),
     fileImport: fileImportMobile,
     dataExport: exportMobile,
     dialog: dialogMobile,
-    categorization: createCategorizationHttpMobile(auth, categorizationBaseUrl),
-    rag: createRagHttpMobile(auth, ragBaseUrl),
+    categorization: selectCategorizationAdapter(
+      capabilities,
+      createCategorizationHttpMobile(auth, categorizationBaseUrl)
+    ),
+    rag: selectRagAdapter(capabilities, createRagHttpMobile(auth, ragBaseUrl)),
   };
 }

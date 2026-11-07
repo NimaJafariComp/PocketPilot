@@ -101,7 +101,7 @@ export default function DashboardScreen() {
   );
 
   async function handleLoadSampleData() {
-    if (isLoadingSampleData) {
+    if (!mobileServices.capabilities.demoDataTools || isLoadingSampleData) {
       return;
     }
 
@@ -169,13 +169,15 @@ export default function DashboardScreen() {
                   icon={<Upload size={17} color={colors.primaryForeground} strokeWidth={2} />}
                   onPress={() => router.push("/import")}
                 />
-                <PrimaryButton
-                  label={isLoadingSampleData ? "Loading…" : "Try Sample Data"}
-                  icon={<Sparkles size={17} color={colors.tint} strokeWidth={2} />}
-                  onPress={handleLoadSampleData}
-                  disabled={isLoadingSampleData}
-                  variant="gray"
-                />
+                {mobileServices.capabilities.demoDataTools && (
+                  <PrimaryButton
+                    label={isLoadingSampleData ? "Loading…" : "Try Sample Data"}
+                    icon={<Sparkles size={17} color={colors.tint} strokeWidth={2} />}
+                    onPress={handleLoadSampleData}
+                    disabled={isLoadingSampleData}
+                    variant="gray"
+                  />
+                )}
               </View>
             </View>
 

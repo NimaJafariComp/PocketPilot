@@ -23,6 +23,7 @@ export interface RagSyncIndexParams {
   batchIndex?: number;
   batchCount?: number;
   totalOperations?: number;
+  signal?: AbortSignal;
 }
 
 export interface RagSyncIndexResult {
@@ -43,5 +44,6 @@ export interface RagAdapter {
     query: string;
     messages: RagMessage[];
     topK?: number;
+    signal?: AbortSignal;
   }): Promise<{ answer: string; retrieved: number; model: string }>;
 }

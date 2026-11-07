@@ -92,7 +92,10 @@ export default function TransactionDetailScreen() {
         notes: draft.notes.trim(),
       };
 
-      if (transactionToSave.category === "Uncategorized") {
+      if (
+        transactionToSave.category === "Uncategorized" &&
+        services.capabilities.remoteCategorization
+      ) {
         const [result] = await services.categorization.categorizeTransactions({
           transactions: [
             {
@@ -114,7 +117,10 @@ export default function TransactionDetailScreen() {
             normalizedMerchant: result.normalizedMerchant,
           };
         }
-      } else if (transactionToSave.category !== transaction.category) {
+      } else if (
+        services.capabilities.merchantLearning &&
+        transactionToSave.category !== transaction.category
+      ) {
         transactionToSave = {
           ...transactionToSave,
           categorySource: "manual",
@@ -122,10 +128,10 @@ export default function TransactionDetailScreen() {
           categoryNeedsReview: false,
         };
 
-        await services.categorization.learnMerchantCategory({
+        void services.categorization.learnMerchantCategory({
           merchant: transactionToSave.merchant,
           category: transactionToSave.category,
-        });
+        }).catch(() => undefined);
       }
 
       await updateTransaction(transaction.id, transactionToSave);

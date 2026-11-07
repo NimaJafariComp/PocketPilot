@@ -71,4 +71,25 @@ export const env = {
   functionsBaseUrl,
   categorizationServiceUrl,
   ragServiceUrl,
+  releaseProfile:
+    process.env.EXPO_PUBLIC_RELEASE_PROFILE ??
+    (extra.releaseProfile as string | undefined),
+  capabilityAiAssistant:
+    process.env.EXPO_PUBLIC_CAPABILITY_AI_ASSISTANT ??
+    (extra.capabilityAiAssistant as string | undefined),
+  capabilityRagSync:
+    process.env.EXPO_PUBLIC_CAPABILITY_RAG_SYNC ??
+    (extra.capabilityRagSync as string | undefined),
+  capabilityRemoteCategorization:
+    process.env.EXPO_PUBLIC_CAPABILITY_REMOTE_CATEGORIZATION ??
+    (extra.capabilityRemoteCategorization as string | undefined),
+  capabilityMerchantLearning:
+    process.env.EXPO_PUBLIC_CAPABILITY_MERCHANT_LEARNING ??
+    (extra.capabilityMerchantLearning as string | undefined),
+  capabilityDemoDataTools:
+    process.env.EXPO_PUBLIC_CAPABILITY_DEMO_DATA_TOOLS ??
+    (extra.capabilityDemoDataTools as string | undefined),
+  capabilityUseEmulators:
+    process.env.EXPO_PUBLIC_CAPABILITY_USE_EMULATORS ??
+    (extra.capabilityUseEmulators as string | undefined),
 };

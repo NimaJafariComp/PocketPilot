@@ -27,6 +27,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
 import { useData } from "../context/DataContext";
+import { services } from "../lib/services";
 import {
   generateSampleBudgets,
   generateSampleGoals,
@@ -57,6 +58,9 @@ export function Dashboard() {
   const currentMonth = format(new Date(), "yyyy-MM");
 
   const handleLoadSampleData = async () => {
+    if (!services.capabilities.demoDataTools) {
+      return;
+    }
     try {
       const sampleTransactions = generateSampleTransactions(50);
       const sampleBudgets = generateSampleBudgets();
@@ -136,10 +140,12 @@ export function Dashboard() {
               <Upload className="w-4 h-4" />
               Import Transactions
             </Button>
-            <Button onClick={handleLoadSampleData} variant="outline" size="lg" className="gap-2">
-              <Sparkles className="w-4 h-4" />
-              Try Sample Data
-            </Button>
+            {services.capabilities.demoDataTools && (
+              <Button onClick={handleLoadSampleData} variant="outline" size="lg" className="gap-2">
+                <Sparkles className="w-4 h-4" />
+                Try Sample Data
+              </Button>
+            )}
           </div>
           <p className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap justify-center">
             Supports

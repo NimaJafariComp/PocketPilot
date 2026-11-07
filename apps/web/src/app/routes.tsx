@@ -6,7 +6,6 @@ const AppLayout = lazy(() =>
   import("./components/AppLayout").then((module) => ({ default: module.AppLayout }))
 );
 const SignIn = lazy(() => import("./pages/SignIn").then((module) => ({ default: module.SignIn })));
-const SignUp = lazy(() => import("./pages/SignUp").then((module) => ({ default: module.SignUp })));
 const Dashboard = lazy(() =>
   import("./pages/Dashboard").then((module) => ({ default: module.Dashboard }))
 );
@@ -43,7 +42,7 @@ function withSuspense(node: ReactNode, className?: string) {
 }
 
 function RequireAuth() {
-  const { user, loading } = useAuth();
+  const { user, loading, access, signOut } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -57,6 +56,28 @@ function RequireAuth() {
         replace
         state={{ redirectTo: `${location.pathname}${location.search}${location.hash}` }}
       />
+    );
+  }
+
+  if (access === "checking") {
+    return <LoadingScreen />;
+  }
+
+  if (access !== "active") {
+    const message =
+      access === "revoked"
+        ? "Your beta access has been revoked. Contact PocketPilot support if you believe this is a mistake."
+        : access === "unavailable"
+          ? "We could not verify your beta access. Check your connection and try again."
+          : "This account is not invited to the PocketPilot beta yet.";
+    return (
+      <main className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <h1 className="text-2xl font-semibold">Beta access required</h1>
+        <p className="max-w-md text-muted-foreground">{message}</p>
+        <button type="button" className="underline" onClick={() => void signOut()}>
+          Sign out
+        </button>
+      </main>
     );
   }
 
@@ -98,10 +119,6 @@ export const router = createBrowserRouter([
           {
             path: "signin",
             element: withSuspense(<SignIn />),
-          },
-          {
-            path: "signup",
-            element: withSuspense(<SignUp />),
           },
         ],
       },

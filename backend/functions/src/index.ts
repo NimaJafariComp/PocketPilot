@@ -163,6 +163,12 @@ async function verifyUserId(request: Request): Promise<string> {
 
   const idToken = authHeader.replace("Bearer ", "").trim();
   const decoded = await adminAuth.verifyIdToken(idToken);
+  const membership = await adminDb.collection("betaMembers").doc(decoded.uid).get();
+  if (membership.data()?.status !== "active") {
+    const error = new Error("Invitation required or access revoked");
+    Object.assign(error, { code: "permission-denied" });
+    throw error;
+  }
   return decoded.uid;
 }
 

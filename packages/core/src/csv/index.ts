@@ -26,40 +26,109 @@ export interface CsvTransactionParseResult {
   errors: string[];
 }
 
+/**
+ * Bounds are intentionally small enough for a local, interactive import. They
+ * cap memory and error handling before rows reach the data store.
+ */
+export const CSV_IMPORT_LIMITS = {
+  maxFileBytes: 5 * 1024 * 1024,
+  maxRows: 10_000,
+  maxColumns: 40,
+  maxFieldLength: 4_096,
+} as const;
+
+export function validateCsvText(csvText: string): string | null {
+  const byteLength = new TextEncoder().encode(csvText).byteLength;
+  if (byteLength > CSV_IMPORT_LIMITS.maxFileBytes) {
+    return `CSV exceeds the ${CSV_IMPORT_LIMITS.maxFileBytes} byte import limit`;
+  }
+
+  // This is an inexpensive pre-parse bound. The parsed-row bound below remains
+  // authoritative because quoted cells may legally contain line breaks.
+  const physicalRows = csvText.split(/\r\n|\n|\r/).length - 1;
+  if (physicalRows > CSV_IMPORT_LIMITS.maxRows + 1) {
+    return `CSV exceeds the ${CSV_IMPORT_LIMITS.maxRows} rows import limit`;
+  }
+
+  return null;
+}
+
+export function validateCsvHeaders(headers: string[]): { headers: string[]; error: string | null } {
+  if (headers.length === 0) {
+    return { headers: [], error: "CSV has no headers" };
+  }
+  if (headers.length > CSV_IMPORT_LIMITS.maxColumns) {
+    return { headers: [], error: `CSV exceeds the ${CSV_IMPORT_LIMITS.maxColumns} column import limit` };
+  }
+
+  const normalizedHeaders = headers.map((header, index) =>
+    (index === 0 ? header.replace(/^\uFEFF/, "") : header).trim()
+  );
+  const seen = new Set<string>();
+  for (const [index, header] of normalizedHeaders.entries()) {
+    if (!header) {
+      return { headers: [], error: `CSV header ${index + 1} is empty` };
+    }
+    if (seen.has(header)) {
+      return { headers: [], error: `Duplicate CSV header: ${header}` };
+    }
+    seen.add(header);
+  }
+
+  return { headers: normalizedHeaders, error: null };
+}
+
+export function validateCsvRow(row: CsvRow, rowNumber: number): string | null {
+  const fields = Object.entries(row);
+  if (fields.length > CSV_IMPORT_LIMITS.maxColumns) {
+    return `Row ${rowNumber}: exceeds the ${CSV_IMPORT_LIMITS.maxColumns} column import limit`;
+  }
+  for (const [header, value] of fields) {
+    if (String(value).length > CSV_IMPORT_LIMITS.maxFieldLength) {
+      return `Row ${rowNumber}: field "${header}" exceeds the ${CSV_IMPORT_LIMITS.maxFieldLength} character import limit`;
+    }
+  }
+  return null;
+}
+
 export function normalizeAmount(rawAmount: string): number {
   const amount = parseCsvAmount(rawAmount);
   return amount ?? Number.NaN;
 }
 
 export function parseCsvAmount(rawAmount: string): number | null {
-  const original = String(rawAmount || "").trim();
+  let original = String(rawAmount || "").trim();
   if (!original) {
     return null;
   }
 
-  const normalized = original.toLowerCase();
-  const isParenthesizedNegative = /^\s*\(.*\)\s*$/.test(original);
-  const hasTrailingMinus = /-\s*$/.test(original);
-  const hasLeadingMinus = /^\s*-/.test(original);
-  const hasDebitMarker = /\b(debit|dr|withdrawal|withdrawn)\b/.test(normalized);
-  const hasCreditMarker = /\b(credit|cr|deposit|deposited)\b/.test(normalized);
-  const isNegative =
-    isParenthesizedNegative ||
-    hasTrailingMinus ||
-    hasLeadingMinus ||
-    (hasDebitMarker && !hasCreditMarker);
+  let isNegative = false;
+  if (original.startsWith("(") || original.endsWith(")")) {
+    if (!/^\([^()]+\)$/.test(original)) {
+      return null;
+    }
+    isNegative = true;
+    original = original.slice(1, -1);
+  } else if (original.startsWith("-")) {
+    isNegative = true;
+    original = original.slice(1);
+  } else if (original.endsWith("-")) {
+    isNegative = true;
+    original = original.slice(0, -1);
+  }
 
-  const numericText = original
-    .replace(/^\s*\((.*)\)\s*$/, "$1")
-    .replace(/-\s*$/, "")
-    .replace(/[^\d.]/g, "");
+  if (original.startsWith("$")) {
+    original = original.slice(1);
+  }
 
-  if (!numericText) {
+  // The beta accepts one explicit US-dollar representation only. Locale
+  // formats and scientific notation are rejected instead of guessed.
+  if (!/^(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?$/.test(original)) {
     return null;
   }
 
-  const parsed = Number.parseFloat(numericText);
-  if (Number.isNaN(parsed)) {
+  const parsed = Number(original.replace(/,/g, ""));
+  if (!Number.isFinite(parsed) || !Number.isSafeInteger(Math.round(parsed * 100))) {
     return null;
   }
 
@@ -92,7 +161,8 @@ export function resolveCsvAmount(
 }
 
 function findHeader(headers: string[], patterns: RegExp[]): string {
-  return headers.find((header) => patterns.some((pattern) => pattern.test(header))) || "";
+  const matches = headers.filter((header) => patterns.some((pattern) => pattern.test(header)));
+  return matches.length === 1 ? matches[0] : "";
 }
 
 export function detectCsvTransactionColumns(headers: string[]): CsvTransactionColumnMapping {
@@ -130,6 +200,10 @@ export function parseCsvTransactionRow(
   options: CsvTransactionParseOptions = {}
 ): CsvTransactionParseResult {
   const errors: string[] = [];
+  const rowError = validateCsvRow(row, rowNumber);
+  if (rowError) {
+    errors.push(rowError);
+  }
   const merchant = String(row[mapping.merchant] || "").trim();
   const amount = resolveCsvAmount(row, mapping, options);
   const date = parseDateOnly(String(row[mapping.date] || ""));
@@ -190,25 +264,23 @@ export function parseDateOnly(rawDate: string): string | null {
   }
 
   const dateOnlyMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (dateOnlyMatch) {
-    const year = Number(dateOnlyMatch[1]);
-    const month = Number(dateOnlyMatch[2]);
-    const day = Number(dateOnlyMatch[3]);
-    const date = new Date(year, month - 1, day);
-
-    if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
-      return formatLocalDate(date);
-    }
-
+  if (!dateOnlyMatch) {
     return null;
   }
 
-  const parsed = new Date(normalized);
-  if (Number.isNaN(parsed.getTime())) {
+  const year = Number(dateOnlyMatch[1]);
+  const month = Number(dateOnlyMatch[2]);
+  const day = Number(dateOnlyMatch[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
     return null;
   }
 
-  return formatLocalDate(parsed);
+  return normalized;
 }
 
 export * from "./dedupe";

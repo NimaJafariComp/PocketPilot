@@ -286,7 +286,10 @@ export function Transactions() {
     try {
       let transactionToSave = { ...editedTransaction };
 
-      if (transactionToSave.category === "Uncategorized") {
+      if (
+        transactionToSave.category === "Uncategorized" &&
+        services.capabilities.remoteCategorization
+      ) {
         const [result] = await services.categorization.categorizeTransactions({
           transactions: [
             {
@@ -309,6 +312,7 @@ export function Transactions() {
           };
         }
       } else if (
+        services.capabilities.merchantLearning &&
         selectedTransaction &&
         transactionToSave.category !== selectedTransaction.category
       ) {
@@ -319,10 +323,10 @@ export function Transactions() {
           categoryNeedsReview: false,
         };
 
-        await services.categorization.learnMerchantCategory({
+        void services.categorization.learnMerchantCategory({
           merchant: transactionToSave.merchant,
           category: transactionToSave.category,
-        });
+        }).catch(() => undefined);
       }
 
       await updateTransaction(transactionToSave.id, transactionToSave);

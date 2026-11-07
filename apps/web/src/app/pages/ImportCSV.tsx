@@ -3,6 +3,8 @@ import {
   parseCsvTransactionRow,
   parseDateOnly,
   resolveCsvAmount,
+  validateCsvHeaders,
+  validateCsvText,
 } from "@pocketpilot/core";
 import { format, parseISO } from "date-fns";
 import { AlertCircle, CheckCircle2, FileSpreadsheet, Plus, Upload, X } from "lucide-react";
@@ -62,6 +64,7 @@ export function ImportCSV() {
     account: "",
   });
   const [accountLabel, setAccountLabel] = useState("");
+  const [accountId, setAccountId] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
   const [importedCount, setImportedCount] = useState(0);
   const [skippedDuplicates, setSkippedDuplicates] = useState(0);
@@ -72,7 +75,13 @@ export function ImportCSV() {
 
   const addCsvFile = useCallback(
     (file: File) => {
-      Papa.parse(file, {
+      void file.text().then((csvText) => {
+        const textError = validateCsvText(csvText);
+        if (textError) {
+          setErrors([`"${file.name}": ${textError}`]);
+          return;
+        }
+      Papa.parse(csvText, {
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
@@ -80,7 +89,7 @@ export function ImportCSV() {
             setErrors(
               results.errors
                 .slice(0, 10)
-                .map((error) => `${file.name} — Row ${error.row ?? "?"}: ${error.message}`)
+                .map((error: { row?: number; message: string }) => `${file.name} — Row ${error.row ?? "?"}: ${error.message}`)
             );
             return;
           }
@@ -91,7 +100,12 @@ export function ImportCSV() {
           }
 
           const data = results.data as ParsedRow[];
-          const cols = Object.keys(data[0]);
+          const headerCheck = validateCsvHeaders(results.meta.fields || Object.keys(data[0]));
+          if (headerCheck.error) {
+            setErrors([`"${file.name}": ${headerCheck.error}`]);
+            return;
+          }
+          const cols = headerCheck.headers;
 
           setErrors([]);
 
@@ -109,7 +123,6 @@ export function ImportCSV() {
               notes: detectedMapping.notes || "",
               account: detectedMapping.account || "",
             });
-            setAccountLabel((current) => current || file.name.replace(/\.[^.]+$/, ""));
             setStep("mapping");
           } else {
             const missingCols = headers.filter((h) => !cols.includes(h));
@@ -123,10 +136,11 @@ export function ImportCSV() {
 
           setLoadedFiles((current) => [...current, { name: file.name, rows: data }]);
         },
-        error: (error) => {
+        error: (error: { message: string }) => {
           setErrors([`Failed to parse "${file.name}": ${error.message}`]);
         },
       });
+      }).catch(() => setErrors([`Failed to read "${file.name}".`]));
     },
     [loadedFiles, headers]
   );
@@ -179,6 +193,7 @@ export function ImportCSV() {
     if (!mapping.amount && !mapping.debit && !mapping.credit) {
       newErrors.push("Amount column or debit/credit columns are required");
     }
+    if (!accountId.trim()) newErrors.push("Stable account identity is required");
 
     setErrors(newErrors);
     return newErrors.length === 0;
@@ -197,13 +212,14 @@ export function ImportCSV() {
     const importErrors: string[] = [];
 
     const fallbackAccount = accountLabel.trim();
+    const stableAccountId = accountId.trim();
     const transactions = parsedData.map((row, index) => {
       const result = parseCsvTransactionRow(row, mapping, index + 1, {
         invertAmounts,
         fallbackAccount,
       });
       importErrors.push(...result.errors);
-      return result.transaction;
+      return { ...result.transaction, accountId: stableAccountId };
     });
 
     if (importErrors.length > 0) {
@@ -483,13 +499,22 @@ export function ImportCSV() {
 
             <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
               <div className="space-y-1">
-                <Label className="font-medium">Account</Label>
+                <Label className="font-medium">Account identity</Label>
                 <p className="text-sm text-muted-foreground">
-                  Keeps statements from different banks or cards separate, so identical-looking
-                  transactions across accounts are never merged as duplicates.
+                  Choose a stable key for this bank or card. Reuse it when importing later
+                  statements; filenames and display labels are never used for deduplication.
                 </p>
               </div>
-              <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="account-id">Stable account identity</Label>
+                    <Input
+                      id="account-id"
+                      value={accountId}
+                      onChange={(event) => setAccountId(event.target.value)}
+                      placeholder="e.g. chase-checking-2026"
+                    />
+                  </div>
                 <div className="space-y-2">
                   <Label>Account column (auto-detected)</Label>
                   <Select

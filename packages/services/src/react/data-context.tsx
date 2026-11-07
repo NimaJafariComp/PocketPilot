@@ -2,9 +2,11 @@ import {
   type Budget,
   buildRagDocuments,
   type Category,
+  type Contribution,
   DEFAULT_CATEGORIES,
   type Goal,
   partitionNewTransactions,
+  createImportOperation,
   type Transaction,
 } from "@pocketpilot/core";
 import {
@@ -17,6 +19,12 @@ import {
   useState,
 } from "react";
 import type { RagDocument } from "../interfaces/rag";
+import type { CategorizationResult } from "../interfaces/categorization";
+import {
+  canRunBackgroundCategorization,
+  canRunMerchantLearning,
+  canRunRagSync,
+} from "../capabilities";
 import { useAuth } from "./auth-context";
 import { useServices } from "./services-provider";
 
@@ -34,6 +42,7 @@ export interface DataContextValue {
   deleteBudget: (id: string) => Promise<void>;
   addGoal: (goal: Omit<Goal, "id">) => Promise<void>;
   updateGoal: (id: string, goal: Partial<Goal>) => Promise<void>;
+  addGoalContribution: (id: string, contribution: Contribution) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
   addCategory: (category: Omit<Category, "id">) => Promise<void>;
   importTransactions: (
@@ -52,6 +61,7 @@ export interface DataContextValue {
 export interface ImportTransactionsResult {
   imported: number;
   skippedDuplicates: number;
+  operationId?: string;
 }
 
 const DataContext = createContext<DataContextValue | undefined>(undefined);
@@ -87,7 +97,9 @@ export function DataProvider({ children }: PropsWithChildren) {
   const backfillInFlight = useRef(false);
   const backfilledTransactionIds = useRef<Set<string>>(new Set());
   const ragSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ragSyncAbortController = useRef<AbortController | null>(null);
   const ragSyncVersion = useRef(0);
+  const sessionGeneration = useRef(0);
   const lastSyncedRagDocs = useRef<Map<string, string>>(new Map());
   const ragSyncInFlight = useRef(false);
   const queuedRagSync = useRef<{
@@ -95,6 +107,7 @@ export function DataProvider({ children }: PropsWithChildren) {
     removedIds: string[];
     totalOperations: number;
   } | null>(null);
+  const pendingManualOperationIds = useRef<Map<string, string>>(new Map());
   const [ragSync, setRagSync] = useState<DataContextValue["ragSync"]>({
     status: "idle",
     progressPct: 100,
@@ -103,15 +116,24 @@ export function DataProvider({ children }: PropsWithChildren) {
     lastError: "",
   });
 
+  useEffect(() => {
+    sessionGeneration.current += 1;
+    return () => {
+      sessionGeneration.current += 1;
+    };
+  }, [user?.id]);
+
   const ragDocuments = useMemo(
     () =>
-      buildRagDocuments({
-        transactions,
-        budgets,
-        goals,
-        user,
-      }),
-    [budgets, goals, transactions, user]
+      canRunRagSync(services.capabilities)
+        ? buildRagDocuments({
+            transactions,
+            budgets,
+            goals,
+            user,
+          })
+        : [],
+    [budgets, goals, services.capabilities, transactions, user]
   );
 
   const ragDocumentMap = useMemo(
@@ -202,7 +224,7 @@ export function DataProvider({ children }: PropsWithChildren) {
   }, [authLoading, services, user]);
 
   useEffect(() => {
-    if (!user || loading || backfillInFlight.current) {
+    if (!canRunBackgroundCategorization(services.capabilities) || !user || loading || backfillInFlight.current) {
       return;
     }
 
@@ -248,7 +270,7 @@ export function DataProvider({ children }: PropsWithChildren) {
                 }
               : {
                   category: AUTO_CATEGORY_PLACEHOLDER,
-                  categorySource: "auto-ai" as const,
+                  categorySource: "auto-rule" as const,
                   categoryConfidence: 0,
                   categoryNeedsReview: true,
                 };
@@ -269,9 +291,32 @@ export function DataProvider({ children }: PropsWithChildren) {
   }, [categories, loading, services, transactions, user]);
 
   useEffect(() => {
+    if (!canRunRagSync(services.capabilities)) {
+      ragSyncAbortController.current?.abort();
+      ragSyncAbortController.current = null;
+      if (ragSyncTimer.current) {
+        clearTimeout(ragSyncTimer.current);
+        ragSyncTimer.current = null;
+      }
+      ragSyncVersion.current += 1;
+      queuedRagSync.current = null;
+      setRagSync({
+        status: "idle",
+        progressPct: 100,
+        statusText: "AI insights are coming soon",
+        isChatAvailable: false,
+        lastError: "",
+      });
+      return;
+    }
+
     if (!user || authLoading || loading) {
       return;
     }
+
+    const abortController = new AbortController();
+    const syncSessionGeneration = sessionGeneration.current;
+    ragSyncAbortController.current = abortController;
 
     const changedDocuments = ragDocuments.filter((document) => {
       const current = ragDocumentMap.get(document.id);
@@ -325,6 +370,7 @@ export function DataProvider({ children }: PropsWithChildren) {
             batchIndex: 1,
             batchCount: 1,
             totalOperations: operationTotal,
+            signal: abortController.signal,
           });
           processedSoFar += result.processed;
           const progressPct =
@@ -346,6 +392,7 @@ export function DataProvider({ children }: PropsWithChildren) {
               batchIndex: index + 1,
               batchCount: totalBatches,
               totalOperations: operationTotal,
+              signal: abortController.signal,
             });
             processedSoFar += result.processed;
             const progressPct =
@@ -365,7 +412,11 @@ export function DataProvider({ children }: PropsWithChildren) {
 
       void syncSequence()
         .then(() => {
-          if (ragSyncVersion.current === version) {
+          if (
+            !abortController.signal.aborted &&
+            ragSyncVersion.current === version &&
+            sessionGeneration.current === syncSessionGeneration
+          ) {
             documents.forEach((document) => {
               const current = ragDocumentMap.get(document.id);
               if (current) {
@@ -385,6 +436,13 @@ export function DataProvider({ children }: PropsWithChildren) {
           }
         })
         .catch((error) => {
+          if (
+            abortController.signal.aborted ||
+            ragSyncVersion.current !== version ||
+            sessionGeneration.current !== syncSessionGeneration
+          ) {
+            return;
+          }
           console.error("RAG index sync failed", error);
           setRagSync({
             status: "error",
@@ -395,6 +453,13 @@ export function DataProvider({ children }: PropsWithChildren) {
           });
         })
         .finally(() => {
+          if (
+            abortController.signal.aborted ||
+            ragSyncVersion.current !== version ||
+            sessionGeneration.current !== syncSessionGeneration
+          ) {
+            return;
+          }
           ragSyncInFlight.current = false;
           const queued = queuedRagSync.current;
           queuedRagSync.current = null;
@@ -454,6 +519,10 @@ export function DataProvider({ children }: PropsWithChildren) {
     }, 10000);
 
     return () => {
+      abortController.abort();
+      if (ragSyncAbortController.current === abortController) {
+        ragSyncAbortController.current = null;
+      }
       if (ragSyncTimer.current) {
         clearTimeout(ragSyncTimer.current);
         ragSyncTimer.current = null;
@@ -477,7 +546,11 @@ export function DataProvider({ children }: PropsWithChildren) {
       notes: transaction.notes ?? "",
     };
 
-    if (baseTransaction.category && baseTransaction.category !== AUTO_CATEGORY_PLACEHOLDER) {
+    if (
+      baseTransaction.category &&
+      baseTransaction.category !== AUTO_CATEGORY_PLACEHOLDER &&
+      getAvailableCategoryNames().includes(baseTransaction.category)
+    ) {
       return {
         ...baseTransaction,
         categorySource: mode,
@@ -486,22 +559,27 @@ export function DataProvider({ children }: PropsWithChildren) {
       };
     }
 
-    const [result] = await services.categorization.categorizeTransactions({
-      transactions: [
-        {
-          merchant: baseTransaction.merchant,
-          amount: baseTransaction.amount,
-          notes: baseTransaction.notes,
-        },
-      ],
-      categories: getAvailableCategoryNames(),
-    });
+    let result;
+    try {
+      [result] = await services.categorization.categorizeTransactions({
+        transactions: [
+          {
+            merchant: baseTransaction.merchant,
+            amount: baseTransaction.amount,
+            notes: baseTransaction.notes,
+          },
+        ],
+        categories: getAvailableCategoryNames(),
+      });
+    } catch {
+      result = undefined;
+    }
 
     if (!result) {
       return {
         ...baseTransaction,
         category: AUTO_CATEGORY_PLACEHOLDER,
-        categorySource: "auto-ai",
+        categorySource: "auto-rule",
         categoryConfidence: 0,
         categoryNeedsReview: true,
       };
@@ -527,12 +605,18 @@ export function DataProvider({ children }: PropsWithChildren) {
 
     const pendingIndices = prepared
       .map((transaction, index) =>
-        !transaction.category || transaction.category === AUTO_CATEGORY_PLACEHOLDER ? index : -1
+        !transaction.category ||
+        transaction.category === AUTO_CATEGORY_PLACEHOLDER ||
+        !getAvailableCategoryNames().includes(transaction.category)
+          ? index
+          : -1
       )
       .filter((index) => index >= 0);
 
     const categorized = prepared.map((transaction) =>
-      transaction.category && transaction.category !== AUTO_CATEGORY_PLACEHOLDER
+      transaction.category &&
+      transaction.category !== AUTO_CATEGORY_PLACEHOLDER &&
+      getAvailableCategoryNames().includes(transaction.category)
         ? {
             ...transaction,
             categorySource: "imported" as const,
@@ -546,14 +630,19 @@ export function DataProvider({ children }: PropsWithChildren) {
       return categorized;
     }
 
-    const results = await services.categorization.categorizeTransactions({
-      transactions: pendingIndices.map((index) => ({
-        merchant: prepared[index].merchant,
-        amount: prepared[index].amount,
-        notes: prepared[index].notes,
-      })),
-      categories: getAvailableCategoryNames(),
-    });
+    let results: CategorizationResult[] = [];
+    try {
+      results = await services.categorization.categorizeTransactions({
+        transactions: pendingIndices.map((index) => ({
+          merchant: prepared[index].merchant,
+          amount: prepared[index].amount,
+          notes: prepared[index].notes,
+        })),
+        categories: getAvailableCategoryNames(),
+      });
+    } catch {
+      results = [];
+    }
 
     pendingIndices.forEach((transactionIndex, resultIndex) => {
       const result = results[resultIndex];
@@ -569,7 +658,7 @@ export function DataProvider({ children }: PropsWithChildren) {
         : {
             ...prepared[transactionIndex],
             category: AUTO_CATEGORY_PLACEHOLDER,
-            categorySource: "auto-ai",
+            categorySource: "auto-rule",
             categoryConfidence: 0,
             categoryNeedsReview: true,
           };
@@ -583,17 +672,34 @@ export function DataProvider({ children }: PropsWithChildren) {
     const hadExplicitCategory =
       !!transaction.category && transaction.category !== AUTO_CATEGORY_PLACEHOLDER;
     const prepared = await categorizeIfNeeded(transaction, "manual");
-    await services.dataStore.addTransaction(user.id, prepared as never);
+    const operationKey = JSON.stringify([
+      prepared.date,
+      prepared.merchant,
+      prepared.amount,
+      prepared.category,
+      prepared.notes || "",
+      prepared.accountId || "",
+    ]);
+    const operationId = pendingManualOperationIds.current.get(operationKey) || crypto.randomUUID();
+    pendingManualOperationIds.current.set(operationKey, operationId);
+    try {
+      await services.dataStore.addTransaction(user.id, operationId, prepared as never);
+      pendingManualOperationIds.current.delete(operationKey);
+    } catch (error) {
+      // Keep the key for a retry after an uncertain network outcome.
+      throw error;
+    }
 
     if (
+      canRunMerchantLearning(services.capabilities) &&
       hadExplicitCategory &&
       prepared.category &&
       prepared.category !== AUTO_CATEGORY_PLACEHOLDER
     ) {
-      await services.categorization.learnMerchantCategory({
+      void services.categorization.learnMerchantCategory({
         merchant: prepared.merchant,
         category: prepared.category,
-      });
+      }).catch(() => undefined);
     }
   }
 
@@ -614,17 +720,50 @@ export function DataProvider({ children }: PropsWithChildren) {
       return { imported: 0, skippedDuplicates: 0 };
     }
 
-    // Statements from different banks (or re-imports of the same file) may
-    // overlap; only rows not already in the workspace are written.
-    const { unique, duplicateCount } = partitionNewTransactions(transactions, newTransactions);
-    if (unique.length === 0) {
-      return { imported: 0, skippedDuplicates: duplicateCount };
+    const byAccount = new Map<string, Omit<Transaction, "id">[]>();
+    for (const transaction of newTransactions) {
+      const accountId = transaction.accountId?.trim();
+      if (!accountId || accountId.length > 80) {
+        throw new Error("Choose a stable account identity (1–80 characters) before importing.");
+      }
+      const rows = byAccount.get(accountId) || [];
+      rows.push({ ...transaction, accountId });
+      byAccount.set(accountId, rows);
     }
 
-    const preparedTransactions = await categorizeManyIfNeeded(unique);
-    await Promise.all(
-      preparedTransactions.map((tx) => services.dataStore.addTransaction(user.id, tx as never))
-    );
+    let imported = 0;
+    let skippedDuplicates = 0;
+    const preparedTransactions: Omit<Transaction, "id">[] = [];
+    const operationIds: string[] = [];
+
+    for (const [accountId, accountRows] of byAccount) {
+      // Assign IDs to the complete statement before excluding existing rows.
+      // On refresh/retry the remaining rows retain their original IDs.
+      const operation = createImportOperation(accountRows);
+      const { unique, duplicateCount } = partitionNewTransactions(transactions, operation.rows);
+      skippedDuplicates += duplicateCount;
+      if (unique.length === 0) continue;
+
+      const categorized = await categorizeManyIfNeeded(unique);
+      const rows = categorized.map((transaction, index) => ({
+        ...transaction,
+        id: unique[index].id,
+      })) as Transaction[];
+      await services.dataStore.writeImportedTransactions(user.id, {
+        operationId: operation.id,
+        accountId,
+        totalRows: operation.rows.length,
+        completedRows: duplicateCount,
+        rows,
+      });
+      preparedTransactions.push(...categorized);
+      imported += rows.length;
+      operationIds.push(operation.id);
+    }
+
+    if (preparedTransactions.length === 0) {
+      return { imported: 0, skippedDuplicates };
+    }
 
     const rememberedPairs = Array.from(
       new Map(
@@ -639,16 +778,18 @@ export function DataProvider({ children }: PropsWithChildren) {
       ).values()
     );
 
-    await Promise.all(
-      rememberedPairs.map((transaction) =>
-        services.categorization.learnMerchantCategory({
-          merchant: transaction.merchant,
-          category: transaction.category,
-        })
-      )
-    );
+    if (canRunMerchantLearning(services.capabilities)) {
+      void Promise.all(
+        rememberedPairs.map((transaction) =>
+          services.categorization.learnMerchantCategory({
+            merchant: transaction.merchant,
+            category: transaction.category,
+          })
+        )
+      ).catch(() => undefined);
+    }
 
-    return { imported: preparedTransactions.length, skippedDuplicates: duplicateCount };
+    return { imported, skippedDuplicates, operationId: operationIds.join(",") };
   }
 
   async function addBudget(budget: Omit<Budget, "id">) {
@@ -674,6 +815,11 @@ export function DataProvider({ children }: PropsWithChildren) {
   async function updateGoal(id: string, updates: Partial<Goal>) {
     if (!user) return;
     await services.dataStore.updateGoal(user.id, id, updates as never);
+  }
+
+  async function addGoalContribution(id: string, contribution: Contribution) {
+    if (!user) return;
+    await services.dataStore.addGoalContribution(user.id, id, contribution);
   }
 
   async function deleteGoal(id: string) {
@@ -717,6 +863,7 @@ export function DataProvider({ children }: PropsWithChildren) {
       deleteBudget,
       addGoal,
       updateGoal,
+      addGoalContribution,
       deleteGoal,
       addCategory,
       importTransactions,

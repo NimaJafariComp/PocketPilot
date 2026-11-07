@@ -12,6 +12,7 @@ import { useServices } from "./services-provider";
 export interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
+  access: "checking" | "active" | "not-invited" | "revoked" | "unavailable";
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -23,6 +24,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const services = useServices();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [access, setAccess] = useState<AuthContextValue["access"]>("checking");
 
   useEffect(() => {
     let isMounted = true;
@@ -42,10 +44,35 @@ export function AuthProvider({ children }: PropsWithChildren) {
     };
   }, [services]);
 
+  useEffect(() => {
+    let isCurrent = true;
+    if (!user) {
+      setAccess("checking");
+      return () => {
+        isCurrent = false;
+      };
+    }
+
+    setAccess("checking");
+    void services.dataStore
+      .getMembershipStatus(user.id)
+      .then((status) => {
+        if (isCurrent) setAccess(status);
+      })
+      .catch(() => {
+        if (isCurrent) setAccess("unavailable");
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [services, user]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       loading,
+      access,
       async signIn(email: string, password: string) {
         await services.auth.signIn(email, password);
         const refreshedUser = await services.auth.getCurrentUser();
@@ -59,9 +86,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       async signOut() {
         await services.auth.signOut();
         setUser(null);
+        setAccess("checking");
       },
     }),
-    [loading, services, user]
+    [access, loading, services, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

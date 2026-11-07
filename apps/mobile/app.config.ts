@@ -24,6 +24,13 @@ const config: ExpoConfig = {
     ragServiceUrl: process.env.EXPO_PUBLIC_RAG_SERVICE_URL,
     useFirebaseEmulators: process.env.EXPO_PUBLIC_USE_FIREBASE_EMULATORS,
     firebaseEmulatorHost: process.env.EXPO_PUBLIC_FIREBASE_EMULATOR_HOST,
+    releaseProfile: process.env.EXPO_PUBLIC_RELEASE_PROFILE,
+    capabilityAiAssistant: process.env.EXPO_PUBLIC_CAPABILITY_AI_ASSISTANT,
+    capabilityRagSync: process.env.EXPO_PUBLIC_CAPABILITY_RAG_SYNC,
+    capabilityRemoteCategorization: process.env.EXPO_PUBLIC_CAPABILITY_REMOTE_CATEGORIZATION,
+    capabilityMerchantLearning: process.env.EXPO_PUBLIC_CAPABILITY_MERCHANT_LEARNING,
+    capabilityDemoDataTools: process.env.EXPO_PUBLIC_CAPABILITY_DEMO_DATA_TOOLS,
+    capabilityUseEmulators: process.env.EXPO_PUBLIC_CAPABILITY_USE_EMULATORS,
   },
   ios: {
     supportsTablet: true,

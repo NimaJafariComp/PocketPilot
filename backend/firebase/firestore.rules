@@ -9,18 +9,151 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // User-scoped data model:
-    // users/{uid}/transactions/{docId}
-    // users/{uid}/budgets/{docId}
-    // users/{uid}/goals/{docId}
-    // users/{uid}/categories/{docId}
-    // users/{uid}/settings/{docId}
-    match /users/{userId} {
-      allow read, write: if isOwner(userId);
+    function isActiveMember() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/betaMembers/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/betaMembers/$(request.auth.uid)).data.status == 'active';
+    }
 
-      match /{subCollection}/{docId} {
-        allow read, write: if isOwner(userId);
+    function hasOnlyKeys(data, keys) {
+      return data.keys().hasOnly(keys);
+    }
+
+    function isDate(value) {
+      return value is string && value.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$');
+    }
+
+    function optionalString(data, key, maxLength) {
+      return !data.keys().hasAny([key]) || (data[key] is string && data[key].size() <= maxLength);
+    }
+
+    function validTransaction(data) {
+      return (hasOnlyKeys(data, ['date', 'merchant', 'amount', 'category', 'notes', 'account', 'accountId', 'categorySource', 'categoryConfidence', 'categoryNeedsReview', 'normalizedMerchant']) &&
+        data.keys().hasAll(['date', 'merchant', 'amount', 'category']) &&
+        isDate(data.date) && data.merchant is string && data.merchant.size() > 0 && data.merchant.size() <= 120 &&
+        data.amount is number && data.amount > -100000000 && data.amount < 100000000 && data.amount != 0 &&
+        data.category is string && data.category.size() > 0 && data.category.size() <= 60 &&
+        optionalString(data, 'notes', 1000) && optionalString(data, 'normalizedMerchant', 120) &&
+        optionalString(data, 'account', 80) && optionalString(data, 'accountId', 80) &&
+        (!data.keys().hasAny(['account']) || !data.account.matches('.*[0-9]{12,}.*')) &&
+        (!data.keys().hasAny(['categoryConfidence']) || (data.categoryConfidence is number && data.categoryConfidence >= 0 && data.categoryConfidence <= 1)) &&
+        (!data.keys().hasAny(['categoryNeedsReview']) || data.categoryNeedsReview is bool) &&
+        (!data.keys().hasAny(['categorySource']) || data.categorySource in ['imported', 'manual', 'auto-rule', 'auto-history'])) ||
+        (hasOnlyKeys(data, ['date', 'merchant', 'amountMinor', 'currency', 'schemaVersion', 'category', 'notes', 'account', 'accountId', 'categorySource', 'categoryConfidence', 'categoryNeedsReview', 'normalizedMerchant']) &&
+        data.keys().hasAll(['date', 'merchant', 'amountMinor', 'currency', 'schemaVersion', 'category']) &&
+        data.schemaVersion == 2 && data.currency == 'USD' && data.amountMinor is int && data.amountMinor > -10000000000 && data.amountMinor < 10000000000 && data.amountMinor != 0 &&
+        isDate(data.date) && data.merchant is string && data.merchant.size() > 0 && data.merchant.size() <= 120 && data.category is string && data.category.size() > 0 && data.category.size() <= 60 &&
+        optionalString(data, 'notes', 1000) && optionalString(data, 'normalizedMerchant', 120) && optionalString(data, 'account', 80) && optionalString(data, 'accountId', 80) &&
+        (!data.keys().hasAny(['account']) || !data.account.matches('.*[0-9]{12,}.*')) &&
+        (!data.keys().hasAny(['categoryConfidence']) || (data.categoryConfidence is number && data.categoryConfidence >= 0 && data.categoryConfidence <= 1)) &&
+        (!data.keys().hasAny(['categoryNeedsReview']) || data.categoryNeedsReview is bool) &&
+        (!data.keys().hasAny(['categorySource']) || data.categorySource in ['imported', 'manual', 'auto-rule', 'auto-history']));
+    }
+
+    function validBudget(data) {
+      return (hasOnlyKeys(data, ['category', 'amount', 'month', 'warningThreshold', 'limitThreshold']) &&
+        data.keys().hasAll(['category', 'amount', 'month', 'warningThreshold', 'limitThreshold']) &&
+        data.category is string && data.category.size() > 0 && data.category.size() <= 60 &&
+        data.amount is number && data.amount > 0 && data.amount < 100000000 &&
+        data.month is string && data.month.matches('^[0-9]{4}-(0[1-9]|1[0-2])$') &&
+        data.warningThreshold is number && data.warningThreshold >= 0 && data.warningThreshold <= 1 &&
+        data.limitThreshold is number && data.limitThreshold >= data.warningThreshold && data.limitThreshold <= 2) ||
+        (hasOnlyKeys(data, ['category', 'amountMinor', 'currency', 'schemaVersion', 'month', 'warningThreshold', 'limitThreshold']) &&
+        data.keys().hasAll(['category', 'amountMinor', 'currency', 'schemaVersion', 'month', 'warningThreshold', 'limitThreshold']) &&
+        data.schemaVersion == 2 && data.currency == 'USD' && data.category is string && data.category.size() > 0 && data.category.size() <= 60 &&
+        data.amountMinor is int && data.amountMinor > 0 && data.amountMinor < 10000000000 &&
+        data.month is string && data.month.matches('^[0-9]{4}-(0[1-9]|1[0-2])$') &&
+        data.warningThreshold is number && data.warningThreshold >= 0 && data.warningThreshold <= 1 &&
+        data.limitThreshold is number && data.limitThreshold >= data.warningThreshold && data.limitThreshold <= 2);
+    }
+
+    function validGoal(data) {
+      return (hasOnlyKeys(data, ['name', 'targetAmount', 'currentAmount', 'deadline', 'contributions']) &&
+        data.keys().hasAll(['name', 'targetAmount', 'currentAmount', 'contributions']) &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 120 &&
+        data.targetAmount is number && data.targetAmount > 0 && data.targetAmount < 100000000 &&
+        data.currentAmount is number && data.currentAmount >= 0 && data.currentAmount <= data.targetAmount &&
+        (!data.keys().hasAny(['deadline']) || isDate(data.deadline)) &&
+        data.contributions is list && data.contributions.size() <= 200) ||
+        (hasOnlyKeys(data, ['name', 'targetAmountMinor', 'currentAmountMinor', 'currency', 'schemaVersion', 'deadline', 'contributions']) &&
+        data.keys().hasAll(['name', 'targetAmountMinor', 'currentAmountMinor', 'currency', 'schemaVersion', 'contributions']) &&
+        data.schemaVersion == 2 && data.currency == 'USD' && data.name is string && data.name.size() > 0 && data.name.size() <= 120 &&
+        data.targetAmountMinor is int && data.targetAmountMinor > 0 && data.targetAmountMinor < 10000000000 &&
+        data.currentAmountMinor is int && data.currentAmountMinor >= 0 && data.currentAmountMinor <= data.targetAmountMinor &&
+        (!data.keys().hasAny(['deadline']) || isDate(data.deadline)) && data.contributions is list && data.contributions.size() <= 200);
+    }
+
+    function validCategory(data) {
+      return hasOnlyKeys(data, ['name', 'color', 'icon']) && data.keys().hasAll(['name', 'color']) &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 60 &&
+        data.color is string && data.color.matches('^#[0-9A-Fa-f]{6}$') && optionalString(data, 'icon', 40);
+    }
+
+    // The current clients do not persist settings. Reserve a single, bounded
+    // preferences document for a future explicit settings UI; all other
+    // settings records remain denied rather than becoming a data escape hatch.
+    function validSettings(data) {
+      return hasOnlyKeys(data, ['theme']) && data.keys().hasAll(['theme']) &&
+        data.theme in ['light', 'dark', 'system'];
+    }
+
+    function validImportOperation(data) {
+      return hasOnlyKeys(data, ['status', 'accountId', 'totalRows', 'completedRows', 'error']) &&
+        data.keys().hasAll(['status', 'accountId', 'totalRows']) &&
+        data.status in ['in-progress', 'complete', 'failed'] &&
+        data.accountId is string && data.accountId.size() > 0 && data.accountId.size() <= 80 &&
+        data.totalRows is int && data.totalRows > 0 && data.totalRows <= 10000 &&
+        (!data.keys().hasAny(['completedRows']) || (data.completedRows is int && data.completedRows >= 0 && data.completedRows <= data.totalRows)) &&
+        (!data.keys().hasAny(['error']) || (data.error is string && data.error.size() <= 240));
+    }
+
+    // Trusted operators/Admin SDK provision and revoke these records. A member
+    // may inspect only their own status; enumeration and self-escalation deny.
+    match /betaMembers/{memberId} {
+      allow get: if isOwner(memberId);
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isActiveMember();
+      allow create, update, delete, list: if false;
+
+      match /transactions/{documentId} {
+        allow read, delete: if isOwner(userId) && isActiveMember();
+        allow create, update: if isOwner(userId) && isActiveMember() && validTransaction(request.resource.data);
       }
+      match /budgets/{documentId} {
+        allow read, delete: if isOwner(userId) && isActiveMember();
+        allow create, update: if isOwner(userId) && isActiveMember() && validBudget(request.resource.data);
+      }
+      match /goals/{documentId} {
+        allow read, delete: if isOwner(userId) && isActiveMember();
+        allow create, update: if isOwner(userId) && isActiveMember() && validGoal(request.resource.data);
+      }
+      match /categories/{documentId} {
+        allow read, delete: if isOwner(userId) && isActiveMember();
+        allow create, update: if isOwner(userId) && isActiveMember() && validCategory(request.resource.data);
+      }
+      match /settings/{documentId} {
+        allow read, delete: if isOwner(userId) && isActiveMember();
+        allow create, update: if isOwner(userId) && isActiveMember() &&
+          documentId == 'preferences' && validSettings(request.resource.data);
+      }
+      match /importOperations/{operationId} {
+        allow read: if isOwner(userId) && isActiveMember();
+        allow create: if isOwner(userId) && isActiveMember() && validImportOperation(request.resource.data);
+        allow update: if isOwner(userId) && isActiveMember() &&
+          validImportOperation(request.resource.data) &&
+          request.resource.data.accountId == resource.data.accountId &&
+          request.resource.data.totalRows == resource.data.totalRows &&
+          request.resource.data.completedRows >= resource.data.completedRows;
+        allow delete: if isOwner(userId) && isActiveMember();
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

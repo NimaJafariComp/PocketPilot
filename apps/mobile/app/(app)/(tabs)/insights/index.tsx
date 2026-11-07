@@ -413,7 +413,7 @@ export default function InsightsScreen() {
               </SectionCard>
             ) : null}
           </>
-        ) : (
+        ) : mobileServices.capabilities.aiAssistant ? (
           <>
             {assistantError ? <AlertBanner tone="danger" message={assistantError} /> : null}
 
@@ -571,6 +571,18 @@ export default function InsightsScreen() {
 
             </View>
           </>
+        ) : (
+          <View className="items-center gap-3 rounded-2xl px-6 py-8" style={{ backgroundColor: colors.card }}>
+            <View className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: colors.muted }}>
+              <Sparkles size={18} color={colors.mutedForeground} strokeWidth={2.2} />
+            </View>
+            <Text className="text-[16px]" style={{ color: colors.foreground, fontFamily: fontFamilies.sans.semibold }}>
+              Financial Assistant is coming soon
+            </Text>
+            <Text className="text-center text-[13px]" style={{ color: colors.mutedForeground, fontFamily: fontFamilies.sans.regular }}>
+              Your local charts and spending summaries remain available. AI and remote indexing are disabled in this beta.
+            </Text>
+          </View>
         )}
       </ScrollView>
     </Screen>

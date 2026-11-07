@@ -508,7 +508,8 @@ export function Insights() {
       )}
 
       {/* ══════════ AI ASSISTANT ══════════ */}
-      {tab === "assistant" && (
+      {tab === "assistant" && (services.capabilities.aiAssistant ? (
+        <>
         <div className="space-y-4">
           <div className="flex items-center gap-2 rounded-lg border border-info/20 bg-info/10 px-4 py-3 text-sm text-info-foreground">
             <Info className="w-3.5 h-3.5 flex-shrink-0" />
@@ -641,7 +642,16 @@ export function Insights() {
             </div>
           </div>
         </div>
-      )}
+        </>
+      ) : (
+        <div className="rounded-lg border border-border bg-card p-6 text-center">
+          <Sparkles className="mx-auto mb-3 h-6 w-6 text-muted-foreground" />
+          <h2 className="text-base font-semibold">Financial Assistant is coming soon</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Your local charts and spending summaries remain available. AI and remote indexing are disabled in this beta.
+          </p>
+        </div>
+      ))}
     </div>
   );
 }

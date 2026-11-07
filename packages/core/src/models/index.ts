@@ -7,6 +7,12 @@ export interface Transaction {
   notes?: string;
   /** Source account/card label, e.g. "Chase Checking" or "Amex ...1234". */
   account?: string;
+  /**
+   * User-selected stable account identity used only for import idempotency.
+   * Unlike the display label, it must remain unchanged when a statement file
+   * is renamed or its account label is edited.
+   */
+  accountId?: string;
   tags?: string[];
   categorySource?: "imported" | "manual" | "auto-rule" | "auto-history" | "auto-ai";
   categoryConfidence?: number;

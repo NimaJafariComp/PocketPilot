@@ -1,4 +1,8 @@
-import { parseDateOnly } from "@pocketpilot/core";
+import {
+  decimalToMinorUnits,
+  minorUnitsToDecimal,
+  normalizeOptionalCalendarDate,
+} from "@pocketpilot/core";
 import { format, parseISO } from "date-fns";
 import { Calendar, Plus, TrendingUp } from "lucide-react";
 import { useState } from "react";
@@ -40,18 +44,24 @@ const TOOLTIP_STYLE = {
 };
 
 export function Goals() {
-  const { goals, addGoal, updateGoal } = useData();
+  const { goals, addGoal, addGoalContribution } = useData();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isContributeDialogOpen, setIsContributeDialogOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
   const [formData, setFormData] = useState({ name: "", targetAmount: "", deadline: "" });
   const [contributionAmount, setContributionAmount] = useState("");
-  const parsedTargetAmount = parseFloat(formData.targetAmount);
-  const isGoalTargetValid = Number.isFinite(parsedTargetAmount) && parsedTargetAmount > 0;
-  const isGoalFormValid = formData.name.trim().length > 0 && isGoalTargetValid;
-  const parsedContributionAmount = parseFloat(contributionAmount);
+  const [contributionOperationId, setContributionOperationId] = useState("");
+  const targetMinorUnits = decimalToMinorUnits(formData.targetAmount);
+  const parsedTargetAmount = targetMinorUnits === null ? null : minorUnitsToDecimal(targetMinorUnits);
+  const normalizedDeadline = normalizeOptionalCalendarDate(formData.deadline);
+  const isGoalTargetValid = parsedTargetAmount !== null && parsedTargetAmount > 0;
+  const isGoalFormValid =
+    formData.name.trim().length > 0 && isGoalTargetValid && normalizedDeadline !== null;
+  const contributionMinorUnits = decimalToMinorUnits(contributionAmount);
+  const parsedContributionAmount =
+    contributionMinorUnits === null ? null : minorUnitsToDecimal(contributionMinorUnits);
   const isContributionAmountValid =
-    Number.isFinite(parsedContributionAmount) && parsedContributionAmount > 0;
+    parsedContributionAmount !== null && parsedContributionAmount > 0;
 
   const handleCreateGoal = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +74,7 @@ export function Goals() {
         name: formData.name,
         targetAmount: parsedTargetAmount,
         currentAmount: 0,
-        deadline: formData.deadline ? parseDateOnly(formData.deadline) || undefined : undefined,
+        deadline: normalizedDeadline,
         contributions: [],
       });
       setIsCreateDialogOpen(false);
@@ -85,18 +95,16 @@ export function Goals() {
 
     const amount = parsedContributionAmount;
     const newContribution: Contribution = {
-      id: Date.now().toString(),
+      id: contributionOperationId || crypto.randomUUID(),
       amount,
-      date: new Date().toISOString(),
+      date: new Date().toISOString().slice(0, 10),
     };
     try {
-      await updateGoal(selectedGoal.id, {
-        currentAmount: selectedGoal.currentAmount + amount,
-        contributions: [...selectedGoal.contributions, newContribution],
-      });
+      await addGoalContribution(selectedGoal.id, newContribution);
       setIsContributeDialogOpen(false);
       setContributionAmount("");
       setSelectedGoal(null);
+      setContributionOperationId("");
       toast.success("Contribution added");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to add contribution");
@@ -105,6 +113,7 @@ export function Goals() {
 
   const openContributeDialog = (goal: Goal) => {
     setSelectedGoal(goal);
+    setContributionOperationId(crypto.randomUUID());
     setIsContributeDialogOpen(true);
   };
 

@@ -21,8 +21,8 @@ interface AuthScreenShellProps extends PropsWithChildren {
   title: string;
   description?: string;
   footerPrompt: string;
-  footerLinkLabel: string;
-  footerLinkHref: "/(auth)/signin" | "/(auth)/signup";
+  footerLinkLabel?: string;
+  footerLinkHref?: "/(auth)/signin" | "/(auth)/signup";
   highlights?: string[];
   headerAction?: ReactNode;
   panelStyle?: StyleProp<ViewStyle>;
@@ -148,16 +148,18 @@ export function AuthScreenShell({
               >
                 {footerPrompt}
               </Text>
-              <Link href={footerLinkHref} asChild>
-                <Pressable hitSlop={10}>
-                  <Text
-                    className="text-[14px]"
-                    style={{ color: onVideo.link, fontFamily: fontFamilies.sans.semibold }}
-                  >
-                    {footerLinkLabel}
-                  </Text>
-                </Pressable>
-              </Link>
+              {footerLinkLabel && footerLinkHref ? (
+                <Link href={footerLinkHref} asChild>
+                  <Pressable hitSlop={10}>
+                    <Text
+                      className="text-[14px]"
+                      style={{ color: onVideo.link, fontFamily: fontFamilies.sans.semibold }}
+                    >
+                      {footerLinkLabel}
+                    </Text>
+                  </Pressable>
+                </Link>
+              ) : null}
             </View>
           </View>
         </View>

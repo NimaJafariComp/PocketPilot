@@ -4,6 +4,8 @@ import {
   generateSampleGoals,
   generateSampleTransactions,
   parseCsvTransactionRow,
+  validateCsvHeaders,
+  validateCsvText,
 } from "@pocketpilot/core";
 import { useData } from "@pocketpilot/services/src/react";
 import { useRouter } from "expo-router";
@@ -33,6 +35,7 @@ interface CsvFile {
   name: string;
   rows: ParsedRow[];
   account: string;
+  accountId: string;
 }
 
 export default function ImportScreen() {
@@ -58,6 +61,11 @@ export default function ImportScreen() {
       if (!pickedFile) return;
 
       const csvText = await pickedFile.text();
+      const textError = validateCsvText(csvText);
+      if (textError) {
+        setError(textError);
+        return;
+      }
       Papa.parse(csvText, {
         header: true,
         skipEmptyLines: true,
@@ -80,11 +88,15 @@ export default function ImportScreen() {
             setError(`"${pickedFile.name}" contains no usable rows.`);
             return;
           }
+          const headerCheck = validateCsvHeaders(results.meta.fields || Object.keys(nextRows[0] || {}));
+          if (headerCheck.error) {
+            setError(headerCheck.error);
+            return;
+          }
 
-          const defaultAccount = pickedFile.name.replace(/\.[^.]+$/, "");
           setFiles((current) => [
             ...current,
-            { name: pickedFile.name, rows: nextRows, account: defaultAccount },
+            { name: pickedFile.name, rows: nextRows, account: "", accountId: "" },
           ]);
         },
         error: (e: { message?: string }) => {
@@ -108,6 +120,12 @@ export default function ImportScreen() {
     );
   }
 
+  function handleUpdateAccountId(index: number, accountId: string) {
+    setFiles((current) =>
+      current.map((f, i) => (i === index ? { ...f, accountId } : f))
+    );
+  }
+
   async function handleImport() {
     if (allRows.length === 0 || isImporting) return;
 
@@ -116,7 +134,11 @@ export default function ImportScreen() {
 
     try {
       const importErrors: string[] = [];
-      const transactions = files.flatMap(({ rows, account }) => {
+      const transactions = files.flatMap(({ rows, account, accountId }) => {
+        const stableAccountId = accountId.trim();
+        if (!stableAccountId) {
+          throw new Error(`"${account || "Unnamed account"}": enter a stable account identity before importing.`);
+        }
         const headers = Object.keys(rows[0] || {});
         const mapping = detectCsvTransactionColumns(headers);
 
@@ -135,7 +157,7 @@ export default function ImportScreen() {
             fallbackAccount: account.trim(),
           });
           importErrors.push(...result.errors);
-          return result.transaction;
+          return { ...result.transaction, accountId: stableAccountId };
         });
       });
 
@@ -163,7 +185,7 @@ export default function ImportScreen() {
   }
 
   async function handleLoadSampleData() {
-    if (isLoadingSampleData) return;
+    if (!mobileServices.capabilities.demoDataTools || isLoadingSampleData) return;
 
     if (transactions.length > 0) {
       const confirmed = await mobileServices.dialog.confirm(
@@ -177,7 +199,10 @@ export default function ImportScreen() {
     setIsLoadingSampleData(true);
 
     try {
-      const sampleTransactions = generateSampleTransactions(50);
+      const sampleTransactions = generateSampleTransactions(50).map((transaction) => ({
+        ...transaction,
+        accountId: "sample-workspace",
+      }));
       const sampleBudgets = generateSampleBudgets();
       const sampleGoals = generateSampleGoals();
 
@@ -202,7 +227,7 @@ export default function ImportScreen() {
     <Screen>
       <StackScreenScroll>
         {/* Add file button */}
-        <SectionCard
+        {mobileServices.capabilities.demoDataTools && <SectionCard
           title={totalFiles === 0 ? "Pick CSV files" : "Add another file"}
           subtitle={
             totalFiles === 0
@@ -228,7 +253,7 @@ export default function ImportScreen() {
               {isPickingFile ? "Picking file..." : totalFiles === 0 ? "Choose CSV" : "Add CSV"}
             </Text>
           </Pressable>
-        </SectionCard>
+        </SectionCard>}
 
         {/* Loaded files list */}
         {files.length > 0 && (
@@ -270,6 +295,14 @@ export default function ImportScreen() {
                     value={file.account}
                     onChangeText={(text) => handleUpdateAccount(index, text)}
                     placeholder="Account label (e.g. Chase Checking)"
+                    placeholderTextColor={colors.mutedForeground}
+                    className="rounded-lg px-3 py-2 text-[14px]"
+                    style={{ backgroundColor: colors.glass, color: colors.foreground }}
+                  />
+                  <TextInput
+                    value={file.accountId}
+                    onChangeText={(text) => handleUpdateAccountId(index, text)}
+                    placeholder="Stable account identity (reuse for future statements)"
                     placeholderTextColor={colors.mutedForeground}
                     className="rounded-lg px-3 py-2 text-[14px]"
                     style={{ backgroundColor: colors.glass, color: colors.foreground }}

@@ -1,6 +1,6 @@
 import { useData } from "@pocketpilot/services/src/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { ProgressSummaryRow } from "@/components/data/progress-summary-row";
 import { FormField } from "@/components/forms/form-field";
@@ -13,10 +13,11 @@ import { fontFamilies } from "@/theme/tokens";
 export default function GoalContributionScreen() {
   const router = useRouter();
   const { goalId } = useLocalSearchParams<{ goalId: string }>();
-  const { goals, updateGoal } = useData();
+  const { goals, addGoalContribution } = useData();
   const { colors } = useAppTheme();
   const [amount, setAmount] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const contributionOperationId = useRef<string | null>(null);
   const goal = useMemo(() => goals.find((item) => item.id === goalId), [goalId, goals]);
 
   async function handleSave() {
@@ -35,18 +36,13 @@ export default function GoalContributionScreen() {
 
     try {
       setIsSaving(true);
-      await updateGoal(goal.id, {
-        currentAmount: goal.currentAmount + contributionAmount,
-        contributions: [
-          ...goal.contributions,
-          {
-            id: Date.now().toString(),
-            amount: contributionAmount,
-            date: new Date().toISOString(),
-          },
-        ],
+      await addGoalContribution(goal.id, {
+        id: contributionOperationId.current || (contributionOperationId.current = crypto.randomUUID()),
+        amount: contributionAmount,
+        date: new Date().toISOString().slice(0, 10),
       });
       router.replace("/goals");
+      contributionOperationId.current = null;
     } catch (error) {
       await mobileServices.dialog.alert(
         error instanceof Error ? error.message : "Failed to add the contribution.",

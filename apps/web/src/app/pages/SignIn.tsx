@@ -1,6 +1,6 @@
 import { Check } from "lucide-react";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Button } from "../components/ui/button";
@@ -149,12 +149,9 @@ export function SignIn() {
                   {isSubmitting ? "Signing In..." : "Sign In"}
                 </Button>
               </form>
-              <div className="mt-4 text-center text-sm">
-                Don't have an account?{" "}
-                <Link to="/signup" className="text-primary hover:underline">
-                  Sign up
-                </Link>
-              </div>
+              <p className="mt-4 text-center text-sm text-muted-foreground">
+                Accounts are provisioned by invitation. Contact PocketPilot support if you need access.
+              </p>
             </CardContent>
           </Card>
         </div>

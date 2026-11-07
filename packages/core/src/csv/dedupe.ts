@@ -7,7 +7,24 @@ export interface ImportPartition<T> {
   duplicateCount: number;
 }
 
-type TransactionLike = Pick<Transaction, "date" | "merchant" | "amount"> & { account?: string };
+type TransactionLike = Pick<Transaction, "date" | "merchant" | "amount"> & {
+  account?: string;
+  accountId?: string;
+};
+
+export interface ImportOperation<T extends TransactionLike> {
+  id: string;
+  rows: Array<T & { id: string }>;
+}
+
+function stableHash(value: string): string {
+  let hash = 0xcbf29ce484222325n;
+  for (const character of value) {
+    hash ^= BigInt(character.codePointAt(0) || 0);
+    hash = BigInt.asUintN(64, hash * 0x100000001b3n);
+  }
+  return hash.toString(16).padStart(16, "0");
+}
 
 function dateKey(isoDate: string): string {
   const parsed = new Date(isoDate);
@@ -26,7 +43,7 @@ function normalizeMerchantKey(merchant: string): string {
 
 /**
  * Identity for statement rows that lack bank transaction ids:
- * account + calendar day + amount in cents + normalized merchant.
+ * stable account identity + calendar day + amount in cents + normalized merchant.
  *
  * Scoping by account means identical-looking rows from two different
  * banks/cards (same merchant, day, and amount) are never treated as
@@ -35,10 +52,39 @@ function normalizeMerchantKey(merchant: string): string {
  */
 export function transactionFingerprint(transaction: TransactionLike): string {
   const cents = Math.round(Number(transaction.amount) * 100);
-  const account = String(transaction.account || "")
+  const account = String(transaction.accountId || transaction.account || "")
     .toLowerCase()
     .trim();
   return `${account}|${dateKey(transaction.date)}|${cents}|${normalizeMerchantKey(transaction.merchant)}`;
+}
+
+/** Stable per-statement identity: retries derive the same bounded write IDs. */
+export function createImportOperationId(transactions: readonly TransactionLike[]): string {
+  return `import_${stableHash(transactions.map(transactionFingerprint).sort().join("\n"))}`;
+}
+
+/** Occurrence suffixes retain legitimate equal statement rows. */
+export function createImportRowIds(operationId: string, transactions: readonly TransactionLike[]): string[] {
+  const occurrences = new Map<string, number>();
+  return transactions.map((transaction) => {
+    const fingerprint = transactionFingerprint(transaction);
+    const occurrence = (occurrences.get(fingerprint) || 0) + 1;
+    occurrences.set(fingerprint, occurrence);
+    return `${operationId}_${stableHash(fingerprint)}_${String(occurrence).padStart(6, "0")}`;
+  });
+}
+
+/**
+ * Assign IDs before comparing a statement with the current workspace.  A retry
+ * therefore retains every original row ID even if a prior batch already wrote
+ * some of those rows and they are excluded from the next write attempt.
+ */
+export function createImportOperation<T extends TransactionLike>(
+  transactions: readonly T[]
+): ImportOperation<T> {
+  const id = createImportOperationId(transactions);
+  const rowIds = createImportRowIds(id, transactions);
+  return { id, rows: transactions.map((row, index) => ({ ...row, id: rowIds[index] })) };
 }
 
 /**

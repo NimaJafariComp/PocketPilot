@@ -5,14 +5,17 @@ Recommended path is Docker-first.
 
 Prerequisites:
 - Docker Desktop
-- Node.js 20+ and npm
+- Node.js 24.16.0 and npm 11.13.0 for host development (see `.nvmrc`)
+
+For reproducible installation, validation commands, known failures, and lockfile
+ownership, see [Development baseline](docs/development-baseline.md).
 
 First run:
 1. Clone and enter repo:
    - `git clone <your-repo-url>`
    - `cd PocketPilot`
 2. Install workspace dependencies once from the repo root:
-   - `npm install`
+   - `npm ci`
 3. Start full stack (web + mobile):
    - `npm run docker:up`
 4. Verify services:
@@ -38,7 +41,7 @@ Useful:
 
 ## Web app
 Install dependencies from the repo root first:
-- `npm install`
+- `npm ci`
 
 Then either:
 - `cd apps/web && npm run dev`
@@ -52,7 +55,7 @@ Run the Expo React Native app against the local backend/emulator stack.
 1. Start the local backend first:
    - `npm run docker:up`
 2. Install workspace dependencies from the repo root:
-   - `npm install`
+   - `npm ci`
 3. Create a local Expo env file:
    - `cp apps/mobile/.env.example apps/mobile/.env`
 4. Start Expo:

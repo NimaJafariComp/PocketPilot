@@ -3,7 +3,7 @@ import type { RagAdapter } from "../interfaces/rag";
 
 export function createRagHttp(auth: AuthAdapter, functionsBaseUrl: string): RagAdapter {
   return {
-    async syncIndex(params) {
+    async syncIndex({ signal, ...params }) {
       const token = await auth.getIdToken();
       if (!token) {
         throw new Error("Not authenticated");
@@ -16,6 +16,7 @@ export function createRagHttp(auth: AuthAdapter, functionsBaseUrl: string): RagA
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(params),
+        signal,
       });
 
       const json = await response.json();
@@ -35,7 +36,7 @@ export function createRagHttp(auth: AuthAdapter, functionsBaseUrl: string): RagA
         done: json.done,
       };
     },
-    async ask(params) {
+    async ask({ signal, ...params }) {
       const token = await auth.getIdToken();
       if (!token) {
         throw new Error("Not authenticated");
@@ -48,6 +49,7 @@ export function createRagHttp(auth: AuthAdapter, functionsBaseUrl: string): RagA
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(params),
+        signal,
       });
 
       const json = await response.json();

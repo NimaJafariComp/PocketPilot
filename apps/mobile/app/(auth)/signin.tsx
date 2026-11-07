@@ -52,9 +52,7 @@ export default function SignInScreen() {
   return (
     <AuthScreenShell
       title="Own your financial control. Own your data."
-      footerPrompt="Need an account?"
-      footerLinkLabel="Create one"
-      footerLinkHref="/(auth)/signup"
+      footerPrompt="Accounts are provisioned by invitation. Contact PocketPilot support if you need access."
       brandFontFamily={fontFamilies.serif.semibold}
       titleFontFamily={fontFamilies.serif.semibold}
       panelStyle={{

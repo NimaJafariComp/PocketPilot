@@ -5,8 +5,10 @@ import type { DialogAdapter } from "./interfaces/dialog";
 import type { ExportAdapter } from "./interfaces/export";
 import type { FileImportAdapter } from "./interfaces/file-import";
 import type { RagAdapter } from "./interfaces/rag";
+import type { FeatureCapabilities } from "./capabilities";
 
 export interface PocketPilotServices {
+  capabilities: FeatureCapabilities;
   auth: AuthAdapter;
   dataStore: DataStoreAdapter;
   fileImport: FileImportAdapter;
